@@ -23,5 +23,7 @@ namespace QuanLyThuChi_DoAn
         [Required]
         [StringLength(10)]
         public string Type { get; set; } // 'IN' hoặc 'OUT'
+
+        public bool IsActive { get; set; } = true;
     }
 }

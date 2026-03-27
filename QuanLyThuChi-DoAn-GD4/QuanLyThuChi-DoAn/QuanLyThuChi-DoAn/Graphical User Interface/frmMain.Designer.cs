@@ -37,7 +37,7 @@
             mnuCatalog = new ToolStripMenuItem();
             mnuPartners = new ToolStripMenuItem();
             mnuCashFunds = new ToolStripMenuItem();
-            mnuCategories = new ToolStripMenuItem();
+            mnuTransactionCategory = new ToolStripMenuItem();
             mnuTransactions = new ToolStripMenuItem();
             mnuReceiptVoucher = new ToolStripMenuItem();
             mnuPaymentVoucher = new ToolStripMenuItem();
@@ -49,8 +49,8 @@
             mnuDebtSummary = new ToolStripMenuItem();
             toolStrip1 = new ToolStrip();
             statusStrip1 = new StatusStrip();
-            pnlContent = new Panel();
             lblUserStatus = new ToolStripStatusLabel();
+            pnlContent = new Panel();
             menuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             SuspendLayout();
@@ -101,7 +101,7 @@
             // 
             // mnuCatalog
             // 
-            mnuCatalog.DropDownItems.AddRange(new ToolStripItem[] { mnuPartners, mnuCashFunds, mnuCategories });
+            mnuCatalog.DropDownItems.AddRange(new ToolStripItem[] { mnuPartners, mnuCashFunds, mnuTransactionCategory });
             mnuCatalog.Name = "mnuCatalog";
             mnuCatalog.ShortcutKeys = Keys.Alt | Keys.D;
             mnuCatalog.Size = new Size(74, 20);
@@ -120,11 +120,12 @@
             mnuCashFunds.Size = new Size(241, 22);
             mnuCashFunds.Text = "Quỹ tiền (Tiền mặt/Ngân hàng)";
             // 
-            // mnuCategories
+            // mnuTransactionCategory
             // 
-            mnuCategories.Name = "mnuCategories";
-            mnuCategories.Size = new Size(241, 22);
-            mnuCategories.Text = "Loại thu chi";
+            mnuTransactionCategory.Name = "mnuTransactionCategory";
+            mnuTransactionCategory.Size = new Size(241, 22);
+            mnuTransactionCategory.Text = "Loại thu chi";
+            mnuTransactionCategory.Click += mnuTransactionCategory_Click;
             // 
             // mnuTransactions
             // 
@@ -204,6 +205,12 @@
             statusStrip1.TabIndex = 2;
             statusStrip1.Text = "statusStrip1";
             // 
+            // lblUserStatus
+            // 
+            lblUserStatus.Name = "lblUserStatus";
+            lblUserStatus.Size = new Size(118, 17);
+            lblUserStatus.Text = "toolStripStatusLabel1";
+            // 
             // pnlContent
             // 
             pnlContent.BackColor = Color.White;
@@ -212,12 +219,6 @@
             pnlContent.Name = "pnlContent";
             pnlContent.Size = new Size(1168, 697);
             pnlContent.TabIndex = 3;
-            // 
-            // lblUserStatus
-            // 
-            lblUserStatus.Name = "lblUserStatus";
-            lblUserStatus.Size = new Size(118, 17);
-            lblUserStatus.Text = "toolStripStatusLabel1";
             // 
             // frmMain
             // 
@@ -258,7 +259,7 @@
         private ToolStripMenuItem mnuCatalog;
         private ToolStripMenuItem mnuPartners;
         private ToolStripMenuItem mnuCashFunds;
-        private ToolStripMenuItem mnuCategories;
+        private ToolStripMenuItem mnuTransactionCategory;
         private ToolStripMenuItem mnuTransactions;
         private ToolStripMenuItem mnuReceiptVoucher;
         private ToolStripMenuItem mnuPaymentVoucher;

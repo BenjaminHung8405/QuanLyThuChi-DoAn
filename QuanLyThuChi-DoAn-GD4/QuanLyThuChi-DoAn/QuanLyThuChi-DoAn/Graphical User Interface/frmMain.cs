@@ -95,6 +95,20 @@ namespace QuanLyThuChi_DoAn
             ShowUserControl(new ucPartner());
         }
 
+        private void mnuTransactionCategory_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Nạp UserControl Quản lý Danh mục Thu/Chi vào khung chính
+                ShowUserControl(new ucTransactionCategory());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Danh mục: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void menuLogout_Click(object sender, EventArgs e)
         {
             // 1. Xác nhận đăng xuất
