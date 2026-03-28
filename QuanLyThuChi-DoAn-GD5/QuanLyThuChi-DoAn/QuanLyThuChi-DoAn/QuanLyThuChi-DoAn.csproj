@@ -5,6 +5,7 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>QuanLyThuChi_DoAn</RootNamespace>
     <Nullable>enable</Nullable>
+	<ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>

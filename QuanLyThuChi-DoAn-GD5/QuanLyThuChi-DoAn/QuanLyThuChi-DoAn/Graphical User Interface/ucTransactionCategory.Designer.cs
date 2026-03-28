@@ -141,6 +141,7 @@
             dgvCategories.Name = "dgvCategories";
             dgvCategories.ReadOnly = true;
             dgvCategories.RowHeadersVisible = false;
+            dgvCategories.RowHeadersWidth = 62;
             dgvCategories.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCategories.Size = new Size(662, 560);
             dgvCategories.TabIndex = 1;
@@ -151,6 +152,7 @@
             colCategoryName.DataPropertyName = "CategoryName";
             colCategoryName.FillWeight = 250F;
             colCategoryName.HeaderText = "Tên Danh Mục";
+            colCategoryName.MinimumWidth = 8;
             colCategoryName.Name = "colCategoryName";
             colCategoryName.ReadOnly = true;
             // 
@@ -159,6 +161,7 @@
             colType.DataPropertyName = "Type";
             colType.FillWeight = 327.411163F;
             colType.HeaderText = "Phân Loại";
+            colType.MinimumWidth = 8;
             colType.Name = "colType";
             colType.ReadOnly = true;
             // 

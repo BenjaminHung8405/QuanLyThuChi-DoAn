@@ -27,7 +27,8 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
             if (!optionsBuilder.IsConfigured)
             {
                 // TODO: Thay "TEN_MAY_TINH_CUA_BAN" bằng tên Server SQL của bạn (ví dụ: .\SQLEXPRESS)
-                string connectionString = @"Server=.\SQLEXPRESS;Database=CashFlowDB;Trusted_Connection=True;TrustServerCertificate=True;";
+                //string connectionString = @"Server=.\SQLEXPRESS;Database=CashFlowDB;Trusted_Connection=True;TrustServerCertificate=True;";
+                string connectionString = @"Server=MR-BEN;Database=CashFlowDB;Trusted_Connection=True;TrustServerCertificate=True;";
                 optionsBuilder.UseSqlServer(connectionString);
             }
         }

@@ -59,5 +59,7 @@ namespace QuanLyThuChi_DoAn
         public virtual Transaction TransferRefTransaction { get; set; }
 
         public virtual ICollection<TransactionAttachment> Attachments { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 }

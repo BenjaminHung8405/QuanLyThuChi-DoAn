@@ -38,9 +38,8 @@
             mnuPartners = new ToolStripMenuItem();
             mnuCashFunds = new ToolStripMenuItem();
             mnuTransactionCategory = new ToolStripMenuItem();
-            mnuTransactions = new ToolStripMenuItem();
-            mnuReceiptVoucher = new ToolStripMenuItem();
-            mnuPaymentVoucher = new ToolStripMenuItem();
+            mnuOperations = new ToolStripMenuItem();
+            mnuTransaction = new ToolStripMenuItem();
             mnuDebtManagement = new ToolStripMenuItem();
             mnuInternalTransfer = new ToolStripMenuItem();
             mnuReports = new ToolStripMenuItem();
@@ -58,7 +57,8 @@
             // menuStrip1
             // 
             menuStrip1.BackColor = Color.White;
-            menuStrip1.Items.AddRange(new ToolStripItem[] { mnuSystem, mnuCatalog, mnuTransactions, mnuReports });
+            menuStrip1.ImageScalingSize = new Size(24, 24);
+            menuStrip1.Items.AddRange(new ToolStripItem[] { mnuSystem, mnuCatalog, mnuOperations, mnuReports });
             menuStrip1.Location = new Point(16, 16);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
@@ -110,42 +110,37 @@
             // mnuPartners
             // 
             mnuPartners.Name = "mnuPartners";
-            mnuPartners.Size = new Size(241, 22);
+            mnuPartners.Size = new Size(240, 22);
             mnuPartners.Text = "Đối tác (Khách hàng/NCC)";
             mnuPartners.Click += menuPartner_Click;
             // 
             // mnuCashFunds
             // 
             mnuCashFunds.Name = "mnuCashFunds";
-            mnuCashFunds.Size = new Size(241, 22);
+            mnuCashFunds.Size = new Size(240, 22);
             mnuCashFunds.Text = "Quỹ tiền (Tiền mặt/Ngân hàng)";
             // 
             // mnuTransactionCategory
             // 
             mnuTransactionCategory.Name = "mnuTransactionCategory";
-            mnuTransactionCategory.Size = new Size(241, 22);
+            mnuTransactionCategory.Size = new Size(240, 22);
             mnuTransactionCategory.Text = "Loại thu chi";
             mnuTransactionCategory.Click += mnuTransactionCategory_Click;
             // 
-            // mnuTransactions
+            // mnuOperations
             // 
-            mnuTransactions.DropDownItems.AddRange(new ToolStripItem[] { mnuReceiptVoucher, mnuPaymentVoucher, mnuDebtManagement, mnuInternalTransfer });
-            mnuTransactions.Name = "mnuTransactions";
-            mnuTransactions.ShortcutKeys = Keys.Alt | Keys.N;
-            mnuTransactions.Size = new Size(74, 20);
-            mnuTransactions.Text = "Nghiệp vụ";
+            mnuOperations.DropDownItems.AddRange(new ToolStripItem[] { mnuTransaction, mnuDebtManagement, mnuInternalTransfer });
+            mnuOperations.Name = "mnuOperations";
+            mnuOperations.ShortcutKeys = Keys.Alt | Keys.N;
+            mnuOperations.Size = new Size(74, 20);
+            mnuOperations.Text = "Nghiệp vụ";
             // 
-            // mnuReceiptVoucher
+            // mnuTransaction
             // 
-            mnuReceiptVoucher.Name = "mnuReceiptVoucher";
-            mnuReceiptVoucher.Size = new Size(175, 22);
-            mnuReceiptVoucher.Text = "Lập phiếu Thu tiền";
-            // 
-            // mnuPaymentVoucher
-            // 
-            mnuPaymentVoucher.Name = "mnuPaymentVoucher";
-            mnuPaymentVoucher.Size = new Size(175, 22);
-            mnuPaymentVoucher.Text = "Lập phiếu Chi tiền";
+            mnuTransaction.Name = "mnuTransaction";
+            mnuTransaction.Size = new Size(175, 22);
+            mnuTransaction.Text = "Sổ Giao Dịch";
+            mnuTransaction.Click += mnuTransaction_Click;
             // 
             // mnuDebtManagement
             // 
@@ -188,8 +183,10 @@
             // toolStrip1
             // 
             toolStrip1.BackColor = Color.White;
+            toolStrip1.ImageScalingSize = new Size(24, 24);
             toolStrip1.Location = new Point(16, 40);
             toolStrip1.Name = "toolStrip1";
+            toolStrip1.Padding = new Padding(0, 0, 2, 0);
             toolStrip1.RenderMode = ToolStripRenderMode.Professional;
             toolStrip1.Size = new Size(1168, 25);
             toolStrip1.TabIndex = 1;
@@ -197,8 +194,9 @@
             // 
             // statusStrip1
             // 
+            statusStrip1.ImageScalingSize = new Size(24, 24);
             statusStrip1.Items.AddRange(new ToolStripItem[] { lblUserStatus });
-            statusStrip1.Location = new Point(16, 762);
+            statusStrip1.Location = new Point(16, 702);
             statusStrip1.Name = "statusStrip1";
             statusStrip1.RenderMode = ToolStripRenderMode.Professional;
             statusStrip1.Size = new Size(1168, 22);
@@ -217,14 +215,15 @@
             pnlContent.Dock = DockStyle.Fill;
             pnlContent.Location = new Point(16, 65);
             pnlContent.Name = "pnlContent";
-            pnlContent.Size = new Size(1168, 697);
+            pnlContent.Size = new Size(1168, 637);
             pnlContent.TabIndex = 3;
+            pnlContent.Paint += pnlContent_Paint;
             // 
             // frmMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1200, 800);
+            ClientSize = new Size(1200, 740);
             Controls.Add(pnlContent);
             Controls.Add(statusStrip1);
             Controls.Add(toolStrip1);
@@ -236,6 +235,7 @@
             Padding = new Padding(16);
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Form1";
+            WindowState = FormWindowState.Maximized;
             Load += frmMain_Load;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
@@ -260,9 +260,8 @@
         private ToolStripMenuItem mnuPartners;
         private ToolStripMenuItem mnuCashFunds;
         private ToolStripMenuItem mnuTransactionCategory;
-        private ToolStripMenuItem mnuTransactions;
-        private ToolStripMenuItem mnuReceiptVoucher;
-        private ToolStripMenuItem mnuPaymentVoucher;
+        private ToolStripMenuItem mnuOperations;
+        private ToolStripMenuItem mnuTransaction;
         private ToolStripMenuItem mnuDebtManagement;
         private ToolStripMenuItem mnuInternalTransfer;
         private ToolStripMenuItem mnuReports;

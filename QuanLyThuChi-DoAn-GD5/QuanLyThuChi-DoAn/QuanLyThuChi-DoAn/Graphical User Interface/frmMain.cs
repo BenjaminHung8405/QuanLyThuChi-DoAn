@@ -109,6 +109,20 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
+        private void mnuTransaction_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Nạp UserControl Quản lý Giao dịch (Thu/Chi) vào khung chính
+                ShowUserControl(new ucTransaction());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Giao dịch: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void menuLogout_Click(object sender, EventArgs e)
         {
             // 1. Xác nhận đăng xuất
@@ -139,6 +153,11 @@ namespace QuanLyThuChi_DoAn
                 MessageBox.Show($"Lỗi trong quá trình đăng xuất: {ex.Message}", "Lỗi",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void pnlContent_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }
