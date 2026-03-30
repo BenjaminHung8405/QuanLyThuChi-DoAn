@@ -32,6 +32,11 @@ namespace QuanLyThuChi_DoAn
         [ForeignKey("DebtId")]
         public virtual Debt Debt { get; set; }
 
+        // Branch association - assigned from SessionManager when creating transactions
+        public int BranchId { get; set; }
+        [ForeignKey("BranchId")]
+        public virtual Branch Branch { get; set; }
+
         public DateTime TransDate { get; set; } = DateTime.Now;
 
         [Column(TypeName = "decimal(18, 0)")]

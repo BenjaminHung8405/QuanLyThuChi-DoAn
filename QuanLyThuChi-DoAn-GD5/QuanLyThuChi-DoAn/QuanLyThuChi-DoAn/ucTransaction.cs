@@ -286,71 +286,62 @@ namespace QuanLyThuChi_DoAn
         /// </summary>
         private void OnBtnSaveClicked()
         {
-            if (!btnSave.Enabled) return;
-
-            // Validate amount
-            if (!decimal.TryParse(txtAmount.Text.Trim(), out decimal amount) || amount <= 0)
-            {
-                MessageBox.Show("Vui lòng nhập số tiền hợp lệ (lớn hơn 0)!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtAmount.Focus();
-                return;
-            }
-
-            // Validate category
-            if (cboCategory.SelectedValue == null)
-            {
-                MessageBox.Show("Vui lòng chọn danh mục Thu/Chi!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            // Gọi hàm kiểm tra trước khi làm bất cứ việc gì khác
+            if (!ValidateInput()) return;
 
             try
             {
-                // TODO: Uncomment when TransactionService is available
-                /*
                 string typeValue = radIn.Checked ? "IN" : "OUT";
                 int categoryId = (int)cboCategory.SelectedValue;
-                int? partnerId = (int)cboPartner.SelectedValue == 0 ? (int?)null : (int)cboPartner.SelectedValue;
-                int tenantId = SessionManager.TenantId;
+                int? partnerId = (cboPartner.SelectedValue == null || (int)cboPartner.SelectedValue == 0) ? (int?)null : (int)cboPartner.SelectedValue;
 
                 if (_isAddMode)
                 {
                     var newTrans = new Transaction
                     {
-                        TenantId = tenantId,
-                        FundId = 1, // Default to Fund 1
+                        // TỰ ĐỘNG GÁN TỪ PHIÊN ĐĂNG NHẬP
+                        TenantId = SessionManager.TenantId,   // Ví dụ: 4
+                        BranchId = SessionManager.BranchId.Value,   // Ví dụ: 4 (Chi nhánh Long Xuyên)
+                        CreatedBy = SessionManager.UserId,    // Ví dụ: 2 (Admin)
+
+                        // DỮ LIỆU TỪ FORM
+                        FundId = 1, // Bạn có thể thêm ComboBox chọn Quỹ nếu cần
                         CategoryId = categoryId,
                         PartnerId = partnerId,
-                        TransDate = dtpTransactionDate.Value,      // New column name
-                        Amount = amount,
-                        Description = txtNote.Text.Trim(),         // New column name (was Note)
-                        TransType = typeValue,                      // New column name (was Type)
-                        RefNo = $"TR-{DateTime.Now:yyyyMMddHHmmss}", // Auto-generated reference number
-                        CreatedBy = SessionManager.UserId,          // Current user
-                        Status = "COMPLETED"                        // Default status
+                        TransDate = dtpTransactionDate.Value,
+                        Amount = decimal.Parse(txtAmount.Text.Trim()),
+                        Description = txtNote.Text.Trim(),
+                        TransType = typeValue,
+                        RefNo = $"TR-{DateTime.Now:yyyyMMddHHmmss}",
+                        Status = "COMPLETED",
+                        IsActive = true // Luôn bật IsActive khi tạo mới
                     };
+
                     _transactionService.CreateTransaction(newTrans);
+                    MessageBox.Show("Lập phiếu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else if (_selectedTransaction != null)
                 {
-                    _selectedTransaction.Amount = amount;
-                    _selectedTransaction.Description = txtNote.Text.Trim();
-                    _selectedTransaction.TransType = typeValue;
-                    _selectedTransaction.CategoryId = categoryId;
-                    _selectedTransaction.PartnerId = partnerId;
-                    _selectedTransaction.TransDate = dtpTransactionDate.Value;
+                    var existing = (Transaction)_selectedTransaction;
+                    // Cập nhật các trường cho phép sửa
+                    existing.Amount = decimal.Parse(txtAmount.Text.Trim());
+                    existing.Description = txtNote.Text.Trim();
+                    existing.CategoryId = categoryId;
+                    existing.PartnerId = partnerId;
+                    existing.TransDate = dtpTransactionDate.Value;
+                    existing.TransType = typeValue;
 
-                    _transactionService.UpdateTransaction(_selectedTransaction);
+                    _transactionService.UpdateTransaction(existing);
+                    MessageBox.Show("Cập nhật thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                */
 
                 ResetForm();
                 SetInputFieldsEnabled(false);
-                RefreshDataGrid();
-                MessageBox.Show("Lưu giao dịch thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                RefreshDataGrid(); // Gọi hàm này để Grid cập nhật ngay lập tức
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi lưu: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi hệ thống: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -419,6 +410,46 @@ namespace QuanLyThuChi_DoAn
             btnSave.Enabled = enabled;
             btnDelete.Enabled = _selectedTransaction != null && enabled;
             btnSave.Text = enabled ? (_isAddMode ? "Lập Phiếu" : "Cập nhật") : "Lưu";
+        }
+
+        /// <summary>
+        /// Validate user input before saving a transaction
+        /// </summary>
+        private bool ValidateInput()
+        {
+            // 1. Kiểm tra số tiền (Amount)
+            if (!decimal.TryParse(txtAmount.Text.Trim(), out decimal amount) || amount <= 0)
+            {
+                MessageBox.Show("Số tiền không hợp lệ. Vui lòng nhập số dương lớn hơn 0!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtAmount.Focus();
+                return false;
+            }
+
+            // 2. Kiểm tra Danh mục (Category)
+            if (cboCategory.SelectedValue == null || (int)cboCategory.SelectedValue <= 0)
+            {
+                MessageBox.Show("Vui lòng chọn danh mục Thu hoặc Chi!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cboCategory.Focus();
+                return false;
+            }
+
+            // 3. Kiểm tra Ngày tháng (TransDate)
+            // Không cho phép lưu giao dịch quá xa trong tương lai (ví dụ > 1 năm)
+            if (dtpTransactionDate.Value > DateTime.Now.AddYears(1))
+            {
+                MessageBox.Show("Ngày giao dịch không hợp lệ (vượt quá 1 năm tới)!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            // 4. Kiểm tra Chi nhánh (BranchId) - Rất quan trọng cho Task của bạn
+            // Giả sử SessionManager đã lưu BranchId khi user đăng nhập vào Chi nhánh
+            if (SessionManager.BranchId == null || SessionManager.BranchId <= 0)
+            {
+                MessageBox.Show("Không xác định được chi nhánh đang làm việc. Vui lòng đăng nhập lại!", "Lỗi hệ thống", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
