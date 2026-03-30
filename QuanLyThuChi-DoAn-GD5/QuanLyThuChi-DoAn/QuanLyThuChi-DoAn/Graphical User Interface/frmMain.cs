@@ -1,14 +1,23 @@
 using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.Services;
 using System.Drawing;
 using System.Windows.Forms;
+using QuanLyThuChi_DoAn.Data_Access_Layer;
 
 namespace QuanLyThuChi_DoAn
 {
     public partial class frmMain : Form
     {
+        private readonly AppDbContext _context;
+        private readonly TenantService _tenantService;
+        private readonly BranchService _branchService;
+
         public frmMain()
         {
             InitializeComponent();
+            _context = new AppDbContext();
+            _tenantService = new TenantService(_context);
+            _branchService = new BranchService(_context);
         }
 
         private void frmMain_Load(object sender, EventArgs e)
@@ -20,7 +29,11 @@ namespace QuanLyThuChi_DoAn
                 var lblUserStatus = statusStrip1.Items.Count > 0 ? statusStrip1.Items[0] as ToolStripStatusLabel : null;
                 if (lblUserStatus != null)
                 {
-                    lblUserStatus.Text = $"Người dùng: {SessionManager.FullName} | Chi nhánh: {SessionManager.BranchId ?? 0}";
+                    var branchDisplay = string.IsNullOrWhiteSpace(SessionManager.BranchName)
+                        ? (SessionManager.BranchId.HasValue ? SessionManager.BranchId.ToString() : "Tất cả")
+                        : SessionManager.BranchName;
+
+                    lblUserStatus.Text = $"Người dùng: {SessionManager.FullName} | Chi nhánh: {branchDisplay}";
                     lblUserStatus.ForeColor = Color.Green; // fallback cho ColorLib.Primary
                 }
             }
@@ -31,6 +44,9 @@ namespace QuanLyThuChi_DoAn
 
             // 2. Thực hiện phân quyền Menu
             ApplyAuthorization();
+
+            // 2.1 Setup combo box ngữ cảnh (Tenant / Branch)
+            SetupContextComboBoxes();
 
             // Mặc định hiện màn hình Dashboard (nếu có)
             // ShowUserControl(new ucDashboard());
@@ -57,7 +73,7 @@ namespace QuanLyThuChi_DoAn
             // Mặc định: Ẩn tất cả các menu quản lý cao cấp
             mnuManageUsers.Visible = false;
             mnuBranchConfig.Visible = false;
-            mnuCashFunds.Visible = false;
+            mnuCashFunds.Visible = true;
             mnuDebtSummary.Visible = true; // Báo cáo mặc định cho tất cả
 
             // Quyền STAFF (Hạn chế tối đa - chỉ xem báo cáo cá nhân)
@@ -65,7 +81,6 @@ namespace QuanLyThuChi_DoAn
             {
                 mnuManageUsers.Visible = false;
                 mnuBranchConfig.Visible = false;
-                mnuCashFunds.Visible = false;
                 mnuDebtSummary.Visible = false; // Chỉ xem báo cáo cá nhân
             }
 
@@ -152,6 +167,147 @@ namespace QuanLyThuChi_DoAn
             {
                 MessageBox.Show($"Lỗi trong quá trình đăng xuất: {ex.Message}", "Lỗi",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void mnuCashFunds_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                ShowUserControl(new ucCashFund());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Quỹ tiền: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SetupContextComboBoxes()
+        {
+            // Gỡ sự kiện để tránh lỗi vòng lặp khi gán DataSource
+            cbTenants.SelectedIndexChanged -= cbTenants_SelectedIndexChanged;
+            cbBranchs.SelectedIndexChanged -= cbBranchs_SelectedIndexChanged;
+
+            string roleName = SessionManager.RoleName;
+
+            if (roleName == "Staff")
+            {
+                cbTenants.Visible = false;
+                cbBranchs.Visible = false;
+            }
+            else if (roleName == "BranchManager")
+            {
+                cbTenants.Visible = false;
+                cbBranchs.Visible = true;
+                LoadBranchesIntoComboBox(SessionManager.TenantId);
+            }
+            else if (roleName == "SuperAdmin" || roleName == "Admin")
+            {
+                cbTenants.Visible = true;
+                cbBranchs.Visible = true;
+                LoadTenantsIntoComboBox();
+            }
+            else
+            {
+                // Fallback: mặc định dạng SuperAdmin cho an toàn nếu role không xác định
+                cbTenants.Visible = true;
+                cbBranchs.Visible = true;
+                LoadTenantsIntoComboBox();
+            }
+
+            cbTenants.SelectedIndexChanged += cbTenants_SelectedIndexChanged;
+            cbBranchs.SelectedIndexChanged += cbBranchs_SelectedIndexChanged;
+
+            // Mặc định chọn Tenant[0] và Branch[0] nếu chưa chọn
+            if (cbTenants.ComboBox.Items.Count > 0 && cbTenants.ComboBox.SelectedIndex < 0)
+            {
+                cbTenants.ComboBox.SelectedIndex = 0;
+                SessionManager.TenantId = (int)cbTenants.ComboBox.SelectedValue;
+            }
+
+            if (cbBranchs.ComboBox.Items.Count > 0 && cbBranchs.ComboBox.SelectedIndex < 0)
+            {
+                cbBranchs.ComboBox.SelectedIndex = 0;
+                SessionManager.BranchId = (int)cbBranchs.ComboBox.SelectedValue;
+            }
+        }
+
+        private void LoadTenantsIntoComboBox()
+        {
+            var tenants = _tenantService.GetAllTenants();
+
+            cbTenants.ComboBox.DataSource = tenants;
+            cbTenants.ComboBox.DisplayMember = "TenantName";
+            cbTenants.ComboBox.ValueMember = "TenantId";
+
+            if (tenants.Count > 0)
+            {
+                if (SessionManager.TenantId == 0)
+                {
+                    cbTenants.SelectedIndex = 0;
+                    SessionManager.TenantId = (int)cbTenants.ComboBox.SelectedValue;
+                }
+                else
+                {
+                    cbTenants.ComboBox.SelectedValue = SessionManager.TenantId;
+                }
+
+                LoadBranchesIntoComboBox(SessionManager.TenantId);
+            }
+        }
+
+        private void LoadBranchesIntoComboBox(int tenantId)
+        {
+            var branches = _branchService.GetBranchesByTenant(tenantId);
+
+            cbBranchs.ComboBox.DataSource = branches;
+            cbBranchs.ComboBox.DisplayMember = "BranchName";
+            cbBranchs.ComboBox.ValueMember = "BranchId";
+
+            if (branches.Count > 0)
+            {
+                cbBranchs.SelectedIndex = 0;
+                SessionManager.BranchId = (int)cbBranchs.ComboBox.SelectedValue;
+            }
+            else
+            {
+                cbBranchs.SelectedIndex = -1;
+            }
+        }
+
+        private void cbTenants_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cbTenants.ComboBox.SelectedValue != null && int.TryParse(cbTenants.ComboBox.SelectedValue.ToString(), out int newTenantId))
+            {
+                SessionManager.TenantId = newTenantId;
+                LoadBranchesIntoComboBox(newTenantId);
+                RefreshCurrentView();
+            }
+        }
+
+        private void cbBranchs_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cbBranchs.ComboBox.SelectedValue != null && int.TryParse(cbBranchs.ComboBox.SelectedValue.ToString(), out int newBranchId))
+            {
+                SessionManager.BranchId = newBranchId;
+                RefreshCurrentView();
+            }
+        }
+
+        private void RefreshCurrentView()
+        {
+            if (pnlContent.Controls.Count == 0) return;
+
+            var current = pnlContent.Controls[0];
+
+            if (current is ucTransaction ucTrans)
+            {
+                ucTrans.RefreshDataGrid();
+            }
+            else if (current is ucCashFund ucFund)
+            {
+                ucFund.LoadFunds();
             }
         }
 

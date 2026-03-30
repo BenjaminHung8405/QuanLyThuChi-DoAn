@@ -20,6 +20,12 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                               .OrderBy(b => b.BranchName).ToList();
         }
 
+        public List<Branch> GetBranchesByTenant(int tenantId)
+        {
+            return _branchRepo.Find(b => b.TenantId == tenantId && b.IsActive)
+                              .OrderBy(b => b.BranchName).ToList();
+        }
+
         /// <summary>
         /// Tạo chi nhánh mới
         /// </summary>

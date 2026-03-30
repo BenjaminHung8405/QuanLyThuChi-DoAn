@@ -47,10 +47,13 @@
             mnuReportByPeriod = new ToolStripMenuItem();
             mnuDebtSummary = new ToolStripMenuItem();
             toolStrip1 = new ToolStrip();
+            cbTenants = new ToolStripComboBox();
+            cbBranchs = new ToolStripComboBox();
             statusStrip1 = new StatusStrip();
             lblUserStatus = new ToolStripStatusLabel();
             pnlContent = new Panel();
             menuStrip1.SuspendLayout();
+            toolStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -119,6 +122,7 @@
             mnuCashFunds.Name = "mnuCashFunds";
             mnuCashFunds.Size = new Size(240, 22);
             mnuCashFunds.Text = "Quỹ tiền (Tiền mặt/Ngân hàng)";
+            mnuCashFunds.Click += mnuCashFunds_Click;
             // 
             // mnuTransactionCategory
             // 
@@ -184,6 +188,7 @@
             // 
             toolStrip1.BackColor = Color.White;
             toolStrip1.ImageScalingSize = new Size(24, 24);
+            toolStrip1.Items.AddRange(new ToolStripItem[] { cbTenants, cbBranchs });
             toolStrip1.Location = new Point(16, 40);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Padding = new Padding(0, 0, 2, 0);
@@ -191,6 +196,16 @@
             toolStrip1.Size = new Size(1168, 25);
             toolStrip1.TabIndex = 1;
             toolStrip1.Text = "toolStrip1";
+            // 
+            // cbTenants
+            // 
+            cbTenants.Name = "cbTenants";
+            cbTenants.Size = new Size(200, 25);
+            // 
+            // cbBranchs
+            // 
+            cbBranchs.Name = "cbBranchs";
+            cbBranchs.Size = new Size(121, 25);
             // 
             // statusStrip1
             // 
@@ -239,6 +254,8 @@
             Load += frmMain_Load;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
             statusStrip1.ResumeLayout(false);
             statusStrip1.PerformLayout();
             ResumeLayout(false);
@@ -269,5 +286,7 @@
         private ToolStripMenuItem mnuReportByPeriod;
         private ToolStripMenuItem mnuDebtSummary;
         private ToolStripStatusLabel lblUserStatus;
+        private ToolStripComboBox cbTenants;
+        private ToolStripComboBox cbBranchs;
     }
 }

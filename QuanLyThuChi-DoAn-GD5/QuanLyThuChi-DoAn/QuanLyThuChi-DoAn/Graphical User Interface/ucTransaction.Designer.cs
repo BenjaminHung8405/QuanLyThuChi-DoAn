@@ -38,9 +38,17 @@
             colNote = new DataGridViewTextBoxColumn();
             tableLayoutPanel1 = new TableLayoutPanel();
             pnlInput = new Panel();
+            pnlButtons = new Panel();
+            tableLayoutPanel3 = new TableLayoutPanel();
+            btnDelete = new FontAwesome.Sharp.IconButton();
+            btnSave = new FontAwesome.Sharp.IconButton();
+            btnCancel = new FontAwesome.Sharp.IconButton();
+            btnNew = new FontAwesome.Sharp.IconButton();
             gbTransactionDetail = new GroupBox();
             txtNote = new TextBox();
             lblNote = new Label();
+            cboFund = new ComboBox();
+            label2 = new Label();
             cboPartner = new ComboBox();
             lblPartner = new Label();
             cboCategory = new ComboBox();
@@ -66,24 +74,18 @@
             dtpFromDate = new DateTimePicker();
             dtpToDate = new DateTimePicker();
             pnlTotal = new Panel();
-            pnlButtons = new Panel();
-            tableLayoutPanel3 = new TableLayoutPanel();
-            btnDelete = new FontAwesome.Sharp.IconButton();
-            btnSave = new FontAwesome.Sharp.IconButton();
-            btnCancel = new FontAwesome.Sharp.IconButton();
-            btnNew = new FontAwesome.Sharp.IconButton();
             pnlGrid.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
             tableLayoutPanel1.SuspendLayout();
             pnlInput.SuspendLayout();
+            pnlButtons.SuspendLayout();
+            tableLayoutPanel3.SuspendLayout();
             gbTransactionDetail.SuspendLayout();
             pnlRadio.SuspendLayout();
             pnlHeader.SuspendLayout();
             tableLayoutPanel4.SuspendLayout();
             panel1.SuspendLayout();
             pnlTotal.SuspendLayout();
-            pnlButtons.SuspendLayout();
-            tableLayoutPanel3.SuspendLayout();
             SuspendLayout();
             // 
             // pnlGrid
@@ -194,10 +196,111 @@
             pnlInput.Size = new Size(402, 601);
             pnlInput.TabIndex = 1;
             // 
+            // pnlButtons
+            // 
+            pnlButtons.Controls.Add(tableLayoutPanel3);
+            pnlButtons.Dock = DockStyle.Bottom;
+            pnlButtons.Location = new Point(16, 486);
+            pnlButtons.Name = "pnlButtons";
+            pnlButtons.Size = new Size(370, 99);
+            pnlButtons.TabIndex = 15;
+            // 
+            // tableLayoutPanel3
+            // 
+            tableLayoutPanel3.ColumnCount = 2;
+            tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel3.Controls.Add(btnDelete, 1, 1);
+            tableLayoutPanel3.Controls.Add(btnSave, 0, 1);
+            tableLayoutPanel3.Controls.Add(btnCancel, 1, 0);
+            tableLayoutPanel3.Controls.Add(btnNew, 0, 0);
+            tableLayoutPanel3.Dock = DockStyle.Bottom;
+            tableLayoutPanel3.Location = new Point(0, -1);
+            tableLayoutPanel3.Name = "tableLayoutPanel3";
+            tableLayoutPanel3.RowCount = 2;
+            tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel3.Size = new Size(370, 100);
+            tableLayoutPanel3.TabIndex = 11;
+            // 
+            // btnDelete
+            // 
+            btnDelete.BackColor = Color.FromArgb(198, 40, 40);
+            btnDelete.Dock = DockStyle.Fill;
+            btnDelete.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnDelete.ForeColor = Color.White;
+            btnDelete.IconChar = FontAwesome.Sharp.IconChar.TrashAlt;
+            btnDelete.IconColor = Color.White;
+            btnDelete.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnDelete.IconSize = 32;
+            btnDelete.ImageAlign = ContentAlignment.MiddleLeft;
+            btnDelete.Location = new Point(188, 53);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Padding = new Padding(8, 0, 0, 0);
+            btnDelete.Size = new Size(179, 44);
+            btnDelete.TabIndex = 3;
+            btnDelete.Text = "Xóa";
+            btnDelete.UseVisualStyleBackColor = false;
+            // 
+            // btnSave
+            // 
+            btnSave.BackColor = Color.FromArgb(46, 125, 50);
+            btnSave.Dock = DockStyle.Fill;
+            btnSave.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnSave.ForeColor = Color.White;
+            btnSave.IconChar = FontAwesome.Sharp.IconChar.Save;
+            btnSave.IconColor = Color.White;
+            btnSave.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnSave.IconSize = 32;
+            btnSave.ImageAlign = ContentAlignment.MiddleLeft;
+            btnSave.Location = new Point(3, 53);
+            btnSave.Name = "btnSave";
+            btnSave.Padding = new Padding(8, 0, 0, 0);
+            btnSave.Size = new Size(179, 44);
+            btnSave.TabIndex = 2;
+            btnSave.Text = "Lưu";
+            btnSave.UseVisualStyleBackColor = false;
+            // 
+            // btnCancel
+            // 
+            btnCancel.Dock = DockStyle.Fill;
+            btnCancel.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnCancel.IconChar = FontAwesome.Sharp.IconChar.None;
+            btnCancel.IconColor = Color.Black;
+            btnCancel.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnCancel.IconSize = 32;
+            btnCancel.ImageAlign = ContentAlignment.MiddleLeft;
+            btnCancel.Location = new Point(188, 3);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Padding = new Padding(8, 0, 0, 0);
+            btnCancel.Size = new Size(179, 44);
+            btnCancel.TabIndex = 1;
+            btnCancel.Text = "Bỏ qua";
+            btnCancel.UseVisualStyleBackColor = true;
+            // 
+            // btnNew
+            // 
+            btnNew.Dock = DockStyle.Fill;
+            btnNew.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnNew.IconChar = FontAwesome.Sharp.IconChar.PlusSquare;
+            btnNew.IconColor = Color.Black;
+            btnNew.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnNew.IconSize = 32;
+            btnNew.ImageAlign = ContentAlignment.MiddleLeft;
+            btnNew.Location = new Point(3, 3);
+            btnNew.Name = "btnNew";
+            btnNew.Padding = new Padding(8, 0, 0, 0);
+            btnNew.Size = new Size(179, 44);
+            btnNew.TabIndex = 0;
+            btnNew.Text = "Thêm mới";
+            btnNew.UseVisualStyleBackColor = true;
+            // 
             // gbTransactionDetail
             // 
             gbTransactionDetail.Controls.Add(txtNote);
             gbTransactionDetail.Controls.Add(lblNote);
+            gbTransactionDetail.Controls.Add(cboFund);
+            gbTransactionDetail.Controls.Add(label2);
             gbTransactionDetail.Controls.Add(cboPartner);
             gbTransactionDetail.Controls.Add(lblPartner);
             gbTransactionDetail.Controls.Add(cboCategory);
@@ -223,23 +326,46 @@
             txtNote.BorderStyle = BorderStyle.FixedSingle;
             txtNote.Dock = DockStyle.Top;
             txtNote.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            txtNote.Location = new Point(16, 352);
+            txtNote.Location = new Point(16, 409);
             txtNote.Multiline = true;
             txtNote.Name = "txtNote";
             txtNote.Size = new Size(338, 60);
-            txtNote.TabIndex = 11;
+            txtNote.TabIndex = 15;
             // 
             // lblNote
             // 
             lblNote.AutoSize = true;
             lblNote.Dock = DockStyle.Top;
             lblNote.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblNote.Location = new Point(16, 323);
+            lblNote.Location = new Point(16, 380);
             lblNote.Name = "lblNote";
             lblNote.Padding = new Padding(0, 5, 0, 5);
             lblNote.Size = new Size(58, 29);
-            lblNote.TabIndex = 10;
+            lblNote.TabIndex = 14;
             lblNote.Text = "Ghi chú";
+            // 
+            // cboFund
+            // 
+            cboFund.Dock = DockStyle.Top;
+            cboFund.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboFund.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            cboFund.FormattingEnabled = true;
+            cboFund.Location = new Point(16, 352);
+            cboFund.Name = "cboFund";
+            cboFund.Size = new Size(338, 28);
+            cboFund.TabIndex = 13;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Dock = DockStyle.Top;
+            label2.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label2.Location = new Point(16, 323);
+            label2.Name = "label2";
+            label2.Padding = new Padding(0, 5, 0, 5);
+            label2.Size = new Size(129, 29);
+            label2.TabIndex = 12;
+            label2.Text = "Quỹ tiền/Tài khoản";
             // 
             // cboPartner
             // 
@@ -545,105 +671,6 @@
             pnlTotal.Size = new Size(1130, 31);
             pnlTotal.TabIndex = 4;
             // 
-            // pnlButtons
-            // 
-            pnlButtons.Controls.Add(tableLayoutPanel3);
-            pnlButtons.Dock = DockStyle.Bottom;
-            pnlButtons.Location = new Point(16, 486);
-            pnlButtons.Name = "pnlButtons";
-            pnlButtons.Size = new Size(370, 99);
-            pnlButtons.TabIndex = 15;
-            // 
-            // tableLayoutPanel3
-            // 
-            tableLayoutPanel3.ColumnCount = 2;
-            tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayoutPanel3.Controls.Add(btnDelete, 1, 1);
-            tableLayoutPanel3.Controls.Add(btnSave, 0, 1);
-            tableLayoutPanel3.Controls.Add(btnCancel, 1, 0);
-            tableLayoutPanel3.Controls.Add(btnNew, 0, 0);
-            tableLayoutPanel3.Dock = DockStyle.Bottom;
-            tableLayoutPanel3.Location = new Point(0, -1);
-            tableLayoutPanel3.Name = "tableLayoutPanel3";
-            tableLayoutPanel3.RowCount = 2;
-            tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableLayoutPanel3.Size = new Size(370, 100);
-            tableLayoutPanel3.TabIndex = 11;
-            // 
-            // btnDelete
-            // 
-            btnDelete.BackColor = Color.FromArgb(198, 40, 40);
-            btnDelete.Dock = DockStyle.Fill;
-            btnDelete.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnDelete.ForeColor = Color.White;
-            btnDelete.IconChar = FontAwesome.Sharp.IconChar.TrashAlt;
-            btnDelete.IconColor = Color.White;
-            btnDelete.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnDelete.IconSize = 32;
-            btnDelete.ImageAlign = ContentAlignment.MiddleLeft;
-            btnDelete.Location = new Point(188, 53);
-            btnDelete.Name = "btnDelete";
-            btnDelete.Padding = new Padding(8, 0, 0, 0);
-            btnDelete.Size = new Size(179, 44);
-            btnDelete.TabIndex = 3;
-            btnDelete.Text = "Xóa";
-            btnDelete.UseVisualStyleBackColor = false;
-            // 
-            // btnSave
-            // 
-            btnSave.BackColor = Color.FromArgb(46, 125, 50);
-            btnSave.Dock = DockStyle.Fill;
-            btnSave.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnSave.ForeColor = Color.White;
-            btnSave.IconChar = FontAwesome.Sharp.IconChar.Save;
-            btnSave.IconColor = Color.White;
-            btnSave.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnSave.IconSize = 32;
-            btnSave.ImageAlign = ContentAlignment.MiddleLeft;
-            btnSave.Location = new Point(3, 53);
-            btnSave.Name = "btnSave";
-            btnSave.Padding = new Padding(8, 0, 0, 0);
-            btnSave.Size = new Size(179, 44);
-            btnSave.TabIndex = 2;
-            btnSave.Text = "Lưu";
-            btnSave.UseVisualStyleBackColor = false;
-            // 
-            // btnCancel
-            // 
-            btnCancel.Dock = DockStyle.Fill;
-            btnCancel.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnCancel.IconChar = FontAwesome.Sharp.IconChar.None;
-            btnCancel.IconColor = Color.Black;
-            btnCancel.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnCancel.IconSize = 32;
-            btnCancel.ImageAlign = ContentAlignment.MiddleLeft;
-            btnCancel.Location = new Point(188, 3);
-            btnCancel.Name = "btnCancel";
-            btnCancel.Padding = new Padding(8, 0, 0, 0);
-            btnCancel.Size = new Size(179, 44);
-            btnCancel.TabIndex = 1;
-            btnCancel.Text = "Bỏ qua";
-            btnCancel.UseVisualStyleBackColor = true;
-            // 
-            // btnNew
-            // 
-            btnNew.Dock = DockStyle.Fill;
-            btnNew.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnNew.IconChar = FontAwesome.Sharp.IconChar.PlusSquare;
-            btnNew.IconColor = Color.Black;
-            btnNew.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnNew.IconSize = 32;
-            btnNew.ImageAlign = ContentAlignment.MiddleLeft;
-            btnNew.Location = new Point(3, 3);
-            btnNew.Name = "btnNew";
-            btnNew.Padding = new Padding(8, 0, 0, 0);
-            btnNew.Size = new Size(179, 44);
-            btnNew.TabIndex = 0;
-            btnNew.Text = "Thêm mới";
-            btnNew.UseVisualStyleBackColor = true;
-            // 
             // ucTransaction
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -659,6 +686,8 @@
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).EndInit();
             tableLayoutPanel1.ResumeLayout(false);
             pnlInput.ResumeLayout(false);
+            pnlButtons.ResumeLayout(false);
+            tableLayoutPanel3.ResumeLayout(false);
             gbTransactionDetail.ResumeLayout(false);
             gbTransactionDetail.PerformLayout();
             pnlRadio.ResumeLayout(false);
@@ -669,8 +698,6 @@
             panel1.PerformLayout();
             pnlTotal.ResumeLayout(false);
             pnlTotal.PerformLayout();
-            pnlButtons.ResumeLayout(false);
-            tableLayoutPanel3.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -699,8 +726,6 @@
         private Label lblTotalOut;
         private Label lblBalance;
         private GroupBox gbTransactionDetail;
-        private TextBox txtNote;
-        private Label lblNote;
         private ComboBox cboPartner;
         private Label lblPartner;
         private ComboBox cboCategory;
@@ -719,5 +744,9 @@
         private FontAwesome.Sharp.IconButton btnSave;
         private FontAwesome.Sharp.IconButton btnCancel;
         private FontAwesome.Sharp.IconButton btnNew;
+        private TextBox txtNote;
+        private Label lblNote;
+        private ComboBox cboFund;
+        private Label label2;
     }
 }

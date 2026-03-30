@@ -29,5 +29,8 @@ namespace QuanLyThuChi_DoAn
 
         [Column(TypeName = "decimal(18, 0)")]
         public decimal Balance { get; set; } = 0;
+
+        // Soft-delete flag: true = active, false = hidden/deleted
+        public bool IsActive { get; set; } = true;
     }
 }

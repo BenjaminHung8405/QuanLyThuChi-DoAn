@@ -15,6 +15,7 @@ namespace QuanLyThuChi_DoAn.BLL.Common
         // Thông tin tổ chức (Cực kỳ quan trọng cho Multi-tenant)
         public static int TenantId { get; set; }
         public static int? BranchId { get; set; } // Null nếu là SuperAdmin hệ thống
+        public static string BranchName { get; set; } // Tên chi nhánh để hiển thị
 
         // Thông tin phân quyền
         public static int RoleId { get; set; }

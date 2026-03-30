@@ -50,13 +50,42 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             return (totalIn, totalOut);
         }
 
-        // 3. Thêm mới giao dịch
+        // 3. Thêm mới giao dịch và tự động cập nhật số dư Quỹ
         public void CreateTransaction(Transaction transaction)
         {
             if (transaction.Amount <= 0)
                 throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
 
+            // Bước 1: Tìm quỹ tiền mà giao dịch này đang trỏ tới
+            var fund = _context.CashFunds.FirstOrDefault(f => f.FundId == transaction.FundId);
+            if (fund == null)
+            {
+                throw new Exception("Không tìm thấy Quỹ tiền hợp lệ! Vui lòng kiểm tra lại.");
+            }
+
+            // Bước 2: Cập nhật số dư dựa trên loại giao dịch
+            if (transaction.TransType == "IN")
+            {
+                fund.Balance += transaction.Amount;
+            }
+            else if (transaction.TransType == "OUT")
+            {
+                if (fund.Balance < transaction.Amount)
+                {
+                    throw new Exception($"Quỹ '{fund.FundName}' không đủ số dư để thực hiện khoản chi này!");
+                }
+
+                fund.Balance -= transaction.Amount;
+            }
+            else
+            {
+                throw new Exception("Loại giao dịch không hợp lệ. Vui lòng chọn IN hoặc OUT.");
+            }
+
+            // Bước 3: Đưa giao dịch mới vào DB
             _context.Transactions.Add(transaction);
+
+            // Bước 4: Lưu toàn bộ thay đổi (Transactions + CashFunds)
             _context.SaveChanges();
         }
 

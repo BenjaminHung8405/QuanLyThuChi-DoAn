@@ -15,6 +15,7 @@ namespace QuanLyThuChi_DoAn
     public partial class ucTransaction : UserControl
     {
         private readonly TransactionService _transactionService;
+        private readonly CashFundService _cashFundService;
         private bool _isAddMode = false;
         private object _selectedTransaction = null;
 
@@ -23,6 +24,7 @@ namespace QuanLyThuChi_DoAn
             InitializeComponent();
             var context = new AppDbContext();
             _transactionService = new TransactionService(context);
+            _cashFundService = new CashFundService(context);
         }
 
         private void ucTransaction_Load(object sender, EventArgs e)
@@ -46,6 +48,9 @@ namespace QuanLyThuChi_DoAn
                 // 4. Initialize form state
                 ResetForm();
                 SetInputFieldsEnabled(false);
+
+                // 4.1. Load dropdown master data including Funds 
+                LoadMasterData();
 
                 // 5. Refresh data
                 RefreshDataGrid();
@@ -178,7 +183,7 @@ namespace QuanLyThuChi_DoAn
         /// Refresh the transaction data grid
         /// Uses safe date ranges (2000-2099) instead of DateTime.MinValue/MaxValue to avoid SQL provider exceptions
         /// </summary>
-        private void RefreshDataGrid(bool applyDateFilter = false)
+        public void RefreshDataGrid(bool applyDateFilter = false)
         {
             try
             {
@@ -305,7 +310,7 @@ namespace QuanLyThuChi_DoAn
                         CreatedBy = SessionManager.UserId,    // Ví dụ: 2 (Admin)
 
                         // DỮ LIỆU TỪ FORM
-                        FundId = 1, // Bạn có thể thêm ComboBox chọn Quỹ nếu cần
+                        FundId = (int)cboFund.SelectedValue,
                         CategoryId = categoryId,
                         PartnerId = partnerId,
                         TransDate = dtpTransactionDate.Value,
@@ -433,6 +438,14 @@ namespace QuanLyThuChi_DoAn
                 return false;
             }
 
+            // Kiểm tra Quỹ tiền
+            if (cboFund.SelectedValue == null)
+            {
+                MessageBox.Show("Vui lòng chọn Quỹ tiền (Tiền mặt/Ngân hàng) cho giao dịch này!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cboFund.Focus();
+                return false;
+            }
+
             // 3. Kiểm tra Ngày tháng (TransDate)
             // Không cho phép lưu giao dịch quá xa trong tương lai (ví dụ > 1 năm)
             if (dtpTransactionDate.Value > DateTime.Now.AddYears(1))
@@ -465,6 +478,31 @@ namespace QuanLyThuChi_DoAn
             // lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
             // lblTotalOut.Text = $"Tổng Chi: {totalOut:N0} đ";
             // lblBalance.Text = $"Tồn Quỹ: {balance:N0} đ";
+        }
+
+        private void LoadMasterData()
+        {
+            // 1. Load categories
+            // (Giữ nguyên logic load category hiện có của bạn)
+
+            // 2. Load partners
+            // (Giữ nguyên logic load partner hiện có của bạn)
+
+            // 3. Load Cash Funds theo branch + role
+            var funds = _cashFundService.GetFundsByBranch(
+                SessionManager.TenantId,
+                SessionManager.BranchId ?? 0,
+                SessionManager.RoleId
+            );
+
+            cboFund.DataSource = funds;
+            cboFund.DisplayMember = "FundName";
+            cboFund.ValueMember = "FundId";
+
+            if (funds != null && funds.Count > 0)
+            {
+                cboFund.SelectedIndex = 0;
+            }
         }
 
         private void btnFilter_Click(object sender, EventArgs e)
