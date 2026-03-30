@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
@@ -34,6 +35,41 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             return query.OrderByDescending(t => t.TransDate).ToList(); // Mới nhất xếp trên cùng
+        }
+
+        /// <summary>
+        /// Lấy giao dịch theo branch/tenant đang chọn trong session
+        /// </summary>
+        public List<Transaction> GetTransactionsForCurrentSession(DateTime fromDate, DateTime toDate, string keyword = "")
+        {
+            if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+            {
+                return new List<Transaction>();
+            }
+
+            int currentTenantId = SessionManager.CurrentTenantId.Value;
+            int currentBranchId = SessionManager.CurrentBranchId.Value;
+
+            var query = _context.Transactions
+                .Include(t => t.Category)
+                .Include(t => t.Partner)
+                .Where(t => t.TenantId == currentTenantId)
+                .Where(t => t.BranchId == currentBranchId)
+                .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
+                .Where(t => t.Status != "DELETED")
+                .Where(t => t.IsActive == true);
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                string keywordNormalized = keyword.ToLower();
+                query = query.Where(t =>
+                    (t.Description != null && t.Description.ToLower().Contains(keywordNormalized)) ||
+                    (t.Category != null && t.Category.CategoryName.ToLower().Contains(keywordNormalized)) ||
+                    (t.Partner != null && t.Partner.PartnerName.ToLower().Contains(keywordNormalized))
+                );
+            }
+
+            return query.OrderByDescending(t => t.TransDate).ToList();
         }
 
         // 2. Thống kê tổng Thu / Chi

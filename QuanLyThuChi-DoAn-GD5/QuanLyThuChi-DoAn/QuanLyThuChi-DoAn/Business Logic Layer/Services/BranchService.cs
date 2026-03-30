@@ -20,9 +20,17 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                               .OrderBy(b => b.BranchName).ToList();
         }
 
+        // Lấy danh sách chi nhánh theo tenant id rõ ràng
         public List<Branch> GetBranchesByTenant(int tenantId)
         {
             return _branchRepo.Find(b => b.TenantId == tenantId && b.IsActive)
+                              .OrderBy(b => b.BranchName).ToList();
+        }
+
+        // Lấy tất cả chi nhánh (SuperAdmin)
+        public List<Branch> GetAllActiveBranches()
+        {
+            return _branchRepo.Find(b => b.IsActive)
                               .OrderBy(b => b.BranchName).ToList();
         }
 
@@ -37,7 +45,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new UnauthorizedAccessException("Bạn không có quyền tạo chi nhánh!");
             }
 
-            branch.TenantId = SessionManager.TenantId; // Ép buộc theo Tenant hiện tại
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            branch.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
             _branchRepo.Add(branch);
             _branchRepo.Save();
         }
@@ -61,7 +72,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa chi nhánh!");
             }
 
-            branch.TenantId = SessionManager.TenantId;
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            branch.TenantId = SessionManager.TenantId.Value;
             _branchRepo.Update(branch);
             _branchRepo.Save();
         }

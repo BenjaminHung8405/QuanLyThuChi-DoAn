@@ -20,6 +20,19 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         }
 
         /// <summary>
+        /// Lấy đối tác theo TenantId, có thể lọc theo loại
+        /// </summary>
+        public List<Partner> GetPartnersByTenant(int tenantId, string type = null)
+        {
+            var query = _partnerRepo.Find(p => p.TenantId == tenantId && p.IsActive);
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                query = query.Where(p => p.Type == type);
+            }
+            return query.OrderByDescending(p => p.PartnerId).ToList();
+        }
+
+        /// <summary>
         /// Lấy danh sách đối tác theo Tenant với hỗ trợ tìm kiếm theo từ khóa
         /// 🔒 Chỉ lấy đối tác đang hoạt động (IsActive = true)
         /// </summary>
@@ -44,7 +57,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         // Lọc đối tác theo loại (CUSTOMER/SUPPLIER) và Tenant (chỉ đối tác đang hoạt động)
         public List<Partner> GetPartnersByType(string type)
         {
-            return _partnerRepo.Find(p => p.TenantId == SessionManager.TenantId && p.Type == type && p.IsActive)
+            if (!SessionManager.TenantId.HasValue)
+                return new List<Partner>();
+
+            return _partnerRepo.Find(p => p.TenantId == SessionManager.TenantId.Value && p.Type == type && p.IsActive)
                                .ToList();
         }
 
@@ -69,12 +85,15 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             // ✅ Business Logic: Kiểm tra trùng lặp tên đối tác
-            if (IsExisted(partner.PartnerName, SessionManager.TenantId))
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            if (IsExisted(partner.PartnerName, SessionManager.TenantId.Value))
             {
                 throw new InvalidOperationException($"Đối tác tên '{partner.PartnerName}' đã tồn tại!");
             }
 
-            partner.TenantId = SessionManager.TenantId; // Ép buộc theo Tenant hiện tại
+            partner.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
             _partnerRepo.Add(partner);
             _partnerRepo.Save();
         }
@@ -90,7 +109,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa đối tác!");
             }
 
-            partner.TenantId = SessionManager.TenantId;
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            partner.TenantId = SessionManager.TenantId.Value;
             _partnerRepo.Update(partner);
             _partnerRepo.Save();
         }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
@@ -34,6 +36,84 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             return query.ToList();
+        }
+
+        public List<CashFund> GetFundsForCurrentSession(int roleId)
+        {
+            if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+            {
+                return new List<CashFund>();
+            }
+
+            int currentTenantId = SessionManager.CurrentTenantId.Value;
+            int currentBranchId = SessionManager.CurrentBranchId.Value;
+            return GetFundsByBranch(currentTenantId, currentBranchId, roleId);
+        }
+
+        public List<CashFund> GetFundsByTenant(int tenantId)
+        {
+            return _context.CashFunds
+                .Include(f => f.Branch)
+                .Where(f => f.TenantId == tenantId && f.IsActive)
+                .OrderBy(f => f.FundName)
+                .ToList();
+        }
+
+        public List<CashFund> GetFundsByBranchId(int tenantId, int branchId)
+        {
+            return _context.CashFunds
+                .Include(f => f.Branch)
+                .Where(f => f.TenantId == tenantId && f.BranchId == branchId && f.IsActive)
+                .OrderBy(f => f.FundName)
+                .ToList();
+        }
+
+        public List<CashFund> GetVisibleFunds(int roleId)
+        {
+            var query = _context.CashFunds
+                .Include(f => f.Branch)
+                .Where(f => f.IsActive);
+
+            if (roleId == 1)
+            {
+                // SuperAdmin: xem tất cả tenants
+                return query.OrderBy(f => f.FundName).ToList();
+            }
+
+            if (!SessionManager.CurrentTenantId.HasValue)
+            {
+                return new List<CashFund>();
+            }
+
+            int tenantId = SessionManager.CurrentTenantId.Value;
+
+            if (roleId == 2)
+            {
+                // TenantManager: xem tất cả quỹ trong tenant hiện tại
+                return query
+                    .Where(f => f.TenantId == tenantId)
+                    .OrderBy(f => f.FundName)
+                    .ToList();
+            }
+
+            if (roleId == 3)
+            {
+                // BranchManager/Staff: chỉ xem quỹ trong chi nhánh hiện tại
+                if (!SessionManager.CurrentBranchId.HasValue)
+                    return new List<CashFund>();
+
+                int branchId = SessionManager.CurrentBranchId.Value;
+                if (branchId <= 0)
+                    return new List<CashFund>();
+
+                return query
+                    .Where(f => f.TenantId == tenantId && f.BranchId == branchId)
+                    .OrderBy(f => f.FundName)
+                    .ToList();
+            }
+
+            // Trường hợp role khác
+            return new List<CashFund>();
         }
 
         public CashFund CreateFund(CashFund fund)
@@ -124,6 +204,50 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             // 4. Lưu thay đổi vào Database
             _context.SaveChanges();
+        }
+
+        public decimal CalculateActualBalance(int fundId)
+        {
+            var transactions = _context.Transactions
+                .Where(t => t.FundId == fundId &&
+                            t.Status == "COMPLETED" &&
+                            t.IsActive == true)
+                .ToList();
+
+            decimal totalIn = transactions.Where(t => t.TransType == "IN").Sum(t => t.Amount);
+            decimal totalOut = transactions.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
+
+            // Nếu sau này có InitialBalance thì thêm vào công thức:
+            // var fund = _context.CashFunds.Find(fundId); return (fund?.InitialBalance ?? 0) + totalIn - totalOut;
+            return totalIn - totalOut;
+        }
+
+        public FundAuditResult AuditFund(int fundId)
+        {
+            var fund = _context.CashFunds.FirstOrDefault(f => f.FundId == fundId && f.IsActive == true);
+            if (fund == null)
+            {
+                throw new KeyNotFoundException("Không tìm thấy quỹ cần kiểm soát.");
+            }
+
+            decimal totalIn = _context.Transactions
+                .Where(t => t.FundId == fundId && t.TransType == "IN" && t.IsActive == true)
+                .Sum(t => t.Amount);
+
+            decimal totalOut = _context.Transactions
+                .Where(t => t.FundId == fundId && t.TransType == "OUT" && t.IsActive == true)
+                .Sum(t => t.Amount);
+
+            decimal calculated = totalIn - totalOut;
+
+            return new FundAuditResult
+            {
+                FundId = fund.FundId,
+                FundName = fund.FundName,
+                CurrentBalance = fund.Balance,
+                CalculatedBalance = calculated,
+                Difference = fund.Balance - calculated
+            };
         }
 
         public List<FundAuditResult> AuditBranchFunds(int tenantId, int branchId)

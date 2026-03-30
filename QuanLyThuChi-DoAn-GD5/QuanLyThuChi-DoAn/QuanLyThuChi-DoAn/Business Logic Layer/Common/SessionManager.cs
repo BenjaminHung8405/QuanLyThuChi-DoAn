@@ -8,18 +8,44 @@ namespace QuanLyThuChi_DoAn.BLL.Common
     public static class SessionManager
     {
         // Thông tin định danh
-        public static int UserId { get; set; }
-        public static string Username { get; set; }
-        public static string FullName { get; set; }
+        public static int UserId { get; set; } = 0;
+        public static string Username { get; set; } = string.Empty;
+        public static string FullName { get; set; } = string.Empty;
 
         // Thông tin tổ chức (Cực kỳ quan trọng cho Multi-tenant)
-        public static int TenantId { get; set; }
-        public static int? BranchId { get; set; } // Null nếu là SuperAdmin hệ thống
-        public static string BranchName { get; set; } // Tên chi nhánh để hiển thị
+        // Cho phép NULL để phân biệt SuperAdmin (null) và Tenant Manager (có TenantId)
+        public static int? TenantId { get; set; } = null;
+        public static int? BranchId { get; set; } = null; // Null nếu là SuperAdmin hệ thống
+        public static string BranchName { get; set; } = string.Empty; // Tên chi nhánh để hiển thị
+
+        // Ánh xạ Current xịn hơn (tuân thủ naming mới)
+        public static int? CurrentTenantId
+        {
+            get => TenantId;
+            set => TenantId = value;
+        }
+
+        public static int? CurrentBranchId
+        {
+            get => BranchId;
+            set => BranchId = value;
+        }
 
         // Thông tin phân quyền
-        public static int RoleId { get; set; }
-        public static string RoleName { get; set; }
+        public static int RoleId { get; set; } = 0;
+        public static string RoleName { get; set; } = string.Empty;
+
+        public static int CurrentUserId
+        {
+            get => UserId;
+            set => UserId = value;
+        }
+
+        public static string Role
+        {
+            get => RoleName;
+            set => RoleName = value;
+        }
 
         /// <summary>
         /// Kiểm tra xem đã có người dùng đăng nhập hay chưa
@@ -34,10 +60,14 @@ namespace QuanLyThuChi_DoAn.BLL.Common
             UserId = 0;
             Username = string.Empty;
             FullName = string.Empty;
-            TenantId = 0;
+            TenantId = null;
             BranchId = null;
             RoleId = 0;
             RoleName = string.Empty;
         }
+
+        // Hỗ trợ legacy: lấy giá trị int với fallback 0
+        public static int CurrentTenantIdValue => TenantId ?? 0;
+        public static int CurrentBranchIdValue => BranchId ?? 0;
     }
 }

@@ -26,16 +26,7 @@ namespace QuanLyThuChi_DoAn
             // Nếu StatusStrip không có Label cụ thể trong Designer, thêm kiểm tra null
             try
             {
-                var lblUserStatus = statusStrip1.Items.Count > 0 ? statusStrip1.Items[0] as ToolStripStatusLabel : null;
-                if (lblUserStatus != null)
-                {
-                    var branchDisplay = string.IsNullOrWhiteSpace(SessionManager.BranchName)
-                        ? (SessionManager.BranchId.HasValue ? SessionManager.BranchId.ToString() : "Tất cả")
-                        : SessionManager.BranchName;
-
-                    lblUserStatus.Text = $"Người dùng: {SessionManager.FullName} | Chi nhánh: {branchDisplay}";
-                    lblUserStatus.ForeColor = Color.Green; // fallback cho ColorLib.Primary
-                }
+                UpdateUserStatusLabel();
             }
             catch
             {
@@ -200,7 +191,15 @@ namespace QuanLyThuChi_DoAn
             {
                 cbTenants.Visible = false;
                 cbBranchs.Visible = true;
-                LoadBranchesIntoComboBox(SessionManager.TenantId);
+                if (SessionManager.TenantId.HasValue)
+                {
+                    LoadBranchesIntoComboBox(SessionManager.TenantId.Value);
+                }
+                else
+                {
+                    cbBranchs.ComboBox.DataSource = null;
+                    cbBranchs.ComboBox.Items.Clear();
+                }
             }
             else if (roleName == "SuperAdmin" || roleName == "Admin")
             {
@@ -235,31 +234,80 @@ namespace QuanLyThuChi_DoAn
 
         private void LoadTenantsIntoComboBox()
         {
-            var tenants = _tenantService.GetAllTenants();
+            // Bắt đầu câu truy vấn cơ bản (chỉ lấy những Tenant còn hoạt động)
+            var query = _context.Tenants.Where(t => t.IsActive == true);
 
-            cbTenants.ComboBox.DataSource = tenants;
+            // KIỂM TRA QUYỀN TRUY CẬP (AUTHORIZATION)
+            if (SessionManager.CurrentTenantId.HasValue)
+            {
+                // TENANT MANAGER HOẶC NHÂN VIÊN (có TenantId cụ thể)
+                int myTenantId = SessionManager.CurrentTenantId.Value;
+
+                // Ép truy vấn chỉ lấy đúng 1 Tenant của họ
+                query = query.Where(t => t.TenantId == myTenantId);
+
+                // Khóa ComboBox, không cho thay đổi sang tenant khác
+                cbTenants.Enabled = false;
+            }
+            else
+            {
+                // SUPERADMIN (CurrentTenantId == null): cho phép chọn tenant
+                cbTenants.Enabled = true;
+            }
+
+            var tenantList = query.ToList();
+
+            // Ngắt sự kiện để tránh vòng lặp khi gán DataSource
+            cbTenants.SelectedIndexChanged -= cbTenants_SelectedIndexChanged;
+
+            cbTenants.ComboBox.DataSource = tenantList;
             cbTenants.ComboBox.DisplayMember = "TenantName";
             cbTenants.ComboBox.ValueMember = "TenantId";
 
-            if (tenants.Count > 0)
+            cbTenants.SelectedIndexChanged += cbTenants_SelectedIndexChanged;
+
+            // Tự động chọn dòng đầu tiên (nếu có)
+            if (tenantList.Count > 0)
             {
-                if (SessionManager.TenantId == 0)
+                cbTenants.SelectedIndex = 0;
+
+                // Cập nhật Session với Tenant hiện tại
+                SessionManager.TenantId = (int?)cbTenants.ComboBox.SelectedValue;
+                SessionManager.CurrentTenantId = SessionManager.TenantId;
+
+                // Gọi hàm load Branches tương ứng với Tenant vừa chọn
+                if (SessionManager.TenantId.HasValue)
                 {
-                    cbTenants.SelectedIndex = 0;
-                    SessionManager.TenantId = (int)cbTenants.ComboBox.SelectedValue;
+                    LoadBranchesIntoComboBox(SessionManager.TenantId.Value);
                 }
                 else
                 {
-                    cbTenants.ComboBox.SelectedValue = SessionManager.TenantId;
+                    // Nếu không có tenant, dọn sạch branch
+                    cbBranchs.ComboBox.DataSource = null;
+                    cbBranchs.ComboBox.Items.Clear();
+                    SessionManager.BranchId = null;
+                    SessionManager.BranchName = string.Empty;
                 }
-
-                LoadBranchesIntoComboBox(SessionManager.TenantId);
             }
+            else
+            {
+                // Nếu không có tenant, dọn sạch branch
+                cbBranchs.ComboBox.DataSource = null;
+                cbBranchs.ComboBox.Items.Clear();
+                SessionManager.TenantId = null;
+                SessionManager.BranchId = null;
+                SessionManager.BranchName = string.Empty;
+            }
+
+            UpdateUserStatusLabel();
         }
 
         private void LoadBranchesIntoComboBox(int tenantId)
         {
             var branches = _branchService.GetBranchesByTenant(tenantId);
+
+            cbBranchs.ComboBox.DataSource = null; // Đảm bảo xóa state cũ trước
+            cbBranchs.ComboBox.Items.Clear();
 
             cbBranchs.ComboBox.DataSource = branches;
             cbBranchs.ComboBox.DisplayMember = "BranchName";
@@ -269,19 +317,86 @@ namespace QuanLyThuChi_DoAn
             {
                 cbBranchs.SelectedIndex = 0;
                 SessionManager.BranchId = (int)cbBranchs.ComboBox.SelectedValue;
+                SetBranchNameFromComboBox();
             }
             else
             {
                 cbBranchs.SelectedIndex = -1;
+                SessionManager.BranchId = null;
+                SessionManager.BranchName = string.Empty;
             }
+
+            UpdateUserStatusLabel();
         }
 
-        private void cbTenants_SelectedIndexChanged(object sender, EventArgs e)
+        private async void cbTenants_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (cbTenants.ComboBox.SelectedValue != null && int.TryParse(cbTenants.ComboBox.SelectedValue.ToString(), out int newTenantId))
+            if (cbTenants.ComboBox.SelectedValue == null
+                || !int.TryParse(cbTenants.ComboBox.SelectedValue.ToString(), out int newTenantId))
             {
-                SessionManager.TenantId = newTenantId;
-                LoadBranchesIntoComboBox(newTenantId);
+                return;
+            }
+
+            // --- 1. Session + UI lock + loading ---
+            SessionManager.CurrentTenantId = newTenantId;
+
+            toolStripProgressBar1.Style = ProgressBarStyle.Marquee;
+            toolStripProgressBar1.Visible = true;
+
+            cbTenants.Enabled = false;
+            cbBranchs.Enabled = false;
+
+            // Nếu có thêm text/status label
+            // lblStatus.Text = "Đang tải chi nhánh...";
+
+            try
+            {
+                // --- 2. Async load branch list từ service/data layer ---
+                // (Giả sử bạn có async method: GetBranchesByTenantAsync)
+                var branches = await Task.Run(() => _branchService.GetBranchesByTenant(newTenantId));
+
+                // --- 3. Reload branch ComboBox safe ---
+                cbBranchs.SelectedIndexChanged -= cbBranchs_SelectedIndexChanged;
+
+                cbBranchs.ComboBox.DataSource = branches;
+                cbBranchs.ComboBox.DisplayMember = "BranchName";
+                cbBranchs.ComboBox.ValueMember = "BranchId";
+
+                if (branches.Any())
+                {
+                    cbBranchs.ComboBox.SelectedIndex = 0;
+                    int selectedBranchId = (int)cbBranchs.ComboBox.SelectedValue;
+                    SessionManager.CurrentBranchId = selectedBranchId;
+                    SessionManager.BranchId = selectedBranchId; // fallback existing code path
+                }
+                else
+                {
+                    cbBranchs.ComboBox.SelectedIndex = -1;
+                    SessionManager.CurrentBranchId = 0;
+                    SessionManager.BranchId = null;
+                }
+
+                // Về UI status text
+                // lblStatus.Text = branches.Any() ? "Tải chi nhánh xong" : "Không có chi nhánh";
+            }
+            catch (Exception ex)
+            {
+                // Ở block catch chỉ show lỗi, không throw tiếp
+                MessageBox.Show($"Lỗi load chi nhánh: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // --- 4. always restore UI state + event hook ---
+                cbBranchs.SelectedIndexChanged -= cbBranchs_SelectedIndexChanged;
+                cbBranchs.SelectedIndexChanged += cbBranchs_SelectedIndexChanged;
+
+                cbTenants.Enabled = true;
+                cbBranchs.Enabled = true;
+
+                toolStripProgressBar1.Style = ProgressBarStyle.Blocks;
+                toolStripProgressBar1.Visible = false;
+
+                // sau cùng, refresh data hiện tại theo branch mới
                 RefreshCurrentView();
             }
         }
@@ -291,7 +406,10 @@ namespace QuanLyThuChi_DoAn
             if (cbBranchs.ComboBox.SelectedValue != null && int.TryParse(cbBranchs.ComboBox.SelectedValue.ToString(), out int newBranchId))
             {
                 SessionManager.BranchId = newBranchId;
+                SessionManager.CurrentBranchId = newBranchId;
+                SetBranchNameFromComboBox();
                 RefreshCurrentView();
+                UpdateUserStatusLabel();
             }
         }
 
@@ -303,12 +421,62 @@ namespace QuanLyThuChi_DoAn
 
             if (current is ucTransaction ucTrans)
             {
-                ucTrans.RefreshDataGrid();
+                ucTrans.LoadData();
             }
             else if (current is ucCashFund ucFund)
             {
-                ucFund.LoadFunds();
+                ucFund.LoadData();
             }
+        }
+
+        private void SetBranchNameFromComboBox()
+        {
+            if (cbBranchs.ComboBox.SelectedItem != null)
+            {
+                var selectedBranch = cbBranchs.ComboBox.SelectedItem;
+                var nameProperty = selectedBranch.GetType().GetProperty("BranchName");
+
+                if (nameProperty != null)
+                {
+                    SessionManager.BranchName = nameProperty.GetValue(selectedBranch)?.ToString() ?? string.Empty;
+                }
+                else
+                {
+                    SessionManager.BranchName = cbBranchs.ComboBox.Text;
+                }
+            }
+            else
+            {
+                SessionManager.BranchName = string.Empty;
+            }
+        }
+
+        private void UpdateUserStatusLabel()
+        {
+            var lblUserStatus = statusStrip1.Items.Count > 0 ? statusStrip1.Items[0] as ToolStripStatusLabel : null;
+            if (lblUserStatus == null) return;
+
+            string branchDisplay;
+
+            if (!string.IsNullOrWhiteSpace(SessionManager.BranchName))
+            {
+                branchDisplay = SessionManager.BranchName;
+            }
+            else if (cbBranchs.ComboBox.SelectedItem != null)
+            {
+                branchDisplay = cbBranchs.ComboBox.Text;
+            }
+            else if (SessionManager.BranchId.HasValue)
+            {
+                branchDisplay = SessionManager.BranchId.Value.ToString();
+            }
+            else
+            {
+                branchDisplay = "Tất cả";
+            }
+
+            lblUserStatus.Text = $"Người dùng: {SessionManager.FullName} | Chi nhánh: {branchDisplay}";
+            lblUserStatus.ForeColor = Color.Green; // fallback cho ColorLib.Primary
         }
 
         private void pnlContent_Paint(object sender, PaintEventArgs e)

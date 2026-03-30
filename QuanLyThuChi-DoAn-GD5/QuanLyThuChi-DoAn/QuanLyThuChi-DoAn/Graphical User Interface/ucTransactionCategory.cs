@@ -53,7 +53,13 @@ namespace QuanLyThuChi_DoAn
 
                 // ✅ FIX: Get ALL categories WITHOUT keyword filter from Service
                 // (Service may not normalize same as UI, so we filter here with TextUtility)
-                List<TransactionCategory> categories = _categoryService.GetCategories(SessionManager.TenantId, "");
+                if (!SessionManager.TenantId.HasValue)
+                {
+                    dgvCategories.DataSource = new List<TransactionCategory>();
+                    return;
+                }
+
+                List<TransactionCategory> categories = _categoryService.GetCategories(SessionManager.TenantId.Value, "");
 
                 // ✅ Filter by keyword with proper normalization (Tiếng Việt)
                 if (!string.IsNullOrWhiteSpace(keyword))
@@ -168,11 +174,17 @@ namespace QuanLyThuChi_DoAn
                 // 2. XỬ LÝ LƯU HOẶC CẬP NHẬT
                 if (_isAddMode)
                 {
+                    if (!SessionManager.TenantId.HasValue)
+                    {
+                        MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     var newCategory = new TransactionCategory
                     {
                         CategoryName = txtCategoryName.Text.Trim(),
                         Type = typeValue, // Dùng biến đã chuẩn hóa
-                        TenantId = SessionManager.TenantId
+                        TenantId = SessionManager.TenantId.Value
                     };
 
                     _categoryService.CreateCategory(newCategory);
@@ -227,7 +239,12 @@ namespace QuanLyThuChi_DoAn
 
             try
             {
-                _categoryService.DeleteCategory(_selectedCategory.CategoryId, SessionManager.TenantId);
+                if (!SessionManager.TenantId.HasValue)
+                {
+                    MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                _categoryService.DeleteCategory(_selectedCategory.CategoryId, SessionManager.TenantId.Value);
                 MessageBox.Show("Xóa danh mục thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 ResetForm();
                 SetInputFieldsEnabled(false);

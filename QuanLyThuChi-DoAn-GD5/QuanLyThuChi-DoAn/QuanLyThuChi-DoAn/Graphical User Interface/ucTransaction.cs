@@ -16,6 +16,8 @@ namespace QuanLyThuChi_DoAn
     {
         private readonly TransactionService _transactionService;
         private readonly CashFundService _cashFundService;
+        private readonly CategoryService _categoryService;
+        private readonly PartnerService _partnerService;
         private bool _isAddMode = false;
         private object _selectedTransaction = null;
 
@@ -25,6 +27,8 @@ namespace QuanLyThuChi_DoAn
             var context = new AppDbContext();
             _transactionService = new TransactionService(context);
             _cashFundService = new CashFundService(context);
+            _categoryService = new CategoryService(context);
+            _partnerService = new PartnerService(context);
         }
 
         private void ucTransaction_Load(object sender, EventArgs e)
@@ -102,8 +106,13 @@ namespace QuanLyThuChi_DoAn
         /// </summary>
         private void OnTransactionTypeChanged()
         {
-            // TODO: Filter cboCategory based on radIn.Checked value
-            // Load categories where Type = (radIn.Checked ? "IN" : "OUT")
+            string type = radIn.Checked ? "IN" : "OUT";
+
+            // Lọc category theo loại giao dịch (IN/OUT)
+            var categories = _categoryService.GetCategoriesForCurrentSession(type);
+            cboCategory.DataSource = categories;
+            cboCategory.DisplayMember = "CategoryName";
+            cboCategory.ValueMember = "CategoryId";
             cboCategory.SelectedIndex = -1;
         }
 
@@ -195,8 +204,7 @@ namespace QuanLyThuChi_DoAn
                 var fromDate = applyDateFilter ? dtpFromDate.Value : new DateTime(2000, 1, 1); // ✅ FIXED: Use dtpFromDate for FROM
                 var toDate = applyDateFilter ? dtpToDate.Value : new DateTime(2099, 12, 31);   // ✅ FIXED: Use dtpToDate for TO
 
-                var transactions = _transactionService.GetTransactions(
-                    tenantId,
+                var transactions = _transactionService.GetTransactionsForCurrentSession(
                     fromDate,
                     toDate,
                     keyword
@@ -219,23 +227,36 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
+        public void LoadData()
+        {
+            RefreshDataGrid();
+        }
+
         /// <summary>
         /// Format grid cells (color, currency format, etc.)
         /// Updated for new column names: TransType, Description, Amount
         /// </summary>
         private void DgvTransactions_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (e.RowIndex < 0 || e.Value == null) return;
+            if (e.RowIndex < 0) return;
 
             string colName = dgvTransactions.Columns[e.ColumnIndex].Name;
 
             // Color code transaction type and map to Thu/Chi
             if (colName == "colTransType")
             {
-                string type = e.Value.ToString();
-                e.Value = type == "IN" ? "Thu" : "Chi";
-                e.CellStyle.ForeColor = type == "IN" ? Color.MediumSeaGreen : Color.Crimson;
+                var row = dgvTransactions.Rows[e.RowIndex];
+                var transaction = row.DataBoundItem as Transaction;
+                if (transaction == null) return;
+
+                string type = transaction.TransType?.Trim().ToUpperInvariant();
+                var isIn = type == "IN";
+
+                e.Value = isIn ? "Thu" : "Chi";
+                e.CellStyle.ForeColor = isIn ? Color.MediumSeaGreen : Color.Crimson;
                 e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                e.FormattingApplied = true;
+                return;
             }
             // Format currency
             else if (colName == "colAmount")
@@ -255,14 +276,40 @@ namespace QuanLyThuChi_DoAn
         {
             try
             {
-                _selectedTransaction = dgvTransactions.Rows[rowIndex].DataBoundItem;
+                var selected = dgvTransactions.Rows[rowIndex].DataBoundItem as Transaction;
+                if (selected == null) return;
 
-                // TODO: Populate form fields from selected transaction
-                // Get values using new column names:
-                // - TransDate (instead of TransactionDate)
-                // - TransType (instead of Type) - determines radIn/radOut
-                // - Description (instead of Note)
-                // - Amount, CategoryId, PartnerId, etc.
+                _selectedTransaction = selected;
+
+                // Populate form fields from selected transaction
+                dtpTransactionDate.Value = selected.TransDate;
+                txtAmount.Text = selected.Amount.ToString("N0");
+                txtNote.Text = selected.Description;
+
+                string tx = selected.TransType?.Trim().ToUpperInvariant();
+                radIn.Checked = tx == "IN";
+                radOut.Checked = tx == "OUT";
+
+                // Load categories theo proc nếu chưa được set
+                OnTransactionTypeChanged();
+                if (selected.CategoryId > 0)
+                {
+                    cboCategory.SelectedValue = selected.CategoryId;
+                }
+
+                if (selected.PartnerId.HasValue)
+                {
+                    cboPartner.SelectedValue = selected.PartnerId.Value;
+                }
+                else if (cboPartner.Items.Count > 0)
+                {
+                    cboPartner.SelectedIndex = 0;
+                }
+
+                if (selected.FundId > 0)
+                {
+                    cboFund.SelectedValue = selected.FundId;
+                }
 
                 SetInputFieldsEnabled(true);
                 _isAddMode = false;
@@ -296,6 +343,18 @@ namespace QuanLyThuChi_DoAn
 
             try
             {
+                if (!SessionManager.TenantId.HasValue)
+                {
+                    MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (!SessionManager.BranchId.HasValue)
+                {
+                    MessageBox.Show("Không có chi nhánh ngữ cảnh. Vui lòng chọn chi nhánh.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
                 string typeValue = radIn.Checked ? "IN" : "OUT";
                 int categoryId = (int)cboCategory.SelectedValue;
                 int? partnerId = (cboPartner.SelectedValue == null || (int)cboPartner.SelectedValue == 0) ? (int?)null : (int)cboPartner.SelectedValue;
@@ -305,7 +364,7 @@ namespace QuanLyThuChi_DoAn
                     var newTrans = new Transaction
                     {
                         // TỰ ĐỘNG GÁN TỪ PHIÊN ĐĂNG NHẬP
-                        TenantId = SessionManager.TenantId,   // Ví dụ: 4
+                        TenantId = SessionManager.TenantId.Value,   // Ví dụ: 4
                         BranchId = SessionManager.BranchId.Value,   // Ví dụ: 4 (Chi nhánh Long Xuyên)
                         CreatedBy = SessionManager.UserId,    // Ví dụ: 2 (Admin)
 
@@ -480,28 +539,44 @@ namespace QuanLyThuChi_DoAn
             // lblBalance.Text = $"Tồn Quỹ: {balance:N0} đ";
         }
 
-        private void LoadMasterData()
+        public void LoadMasterData()
         {
-            // 1. Load categories
-            // (Giữ nguyên logic load category hiện có của bạn)
-
-            // 2. Load partners
-            // (Giữ nguyên logic load partner hiện có của bạn)
-
-            // 3. Load Cash Funds theo branch + role
-            var funds = _cashFundService.GetFundsByBranch(
-                SessionManager.TenantId,
-                SessionManager.BranchId ?? 0,
-                SessionManager.RoleId
-            );
-
-            cboFund.DataSource = funds;
-            cboFund.DisplayMember = "FundName";
-            cboFund.ValueMember = "FundId";
-
-            if (funds != null && funds.Count > 0)
+            try
             {
-                cboFund.SelectedIndex = 0;
+                if (!SessionManager.TenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+                {
+                    // Không có ngữ cảnh tenant/branch đầy đủ
+                    return;
+                }
+
+                int currentTenantId = SessionManager.TenantId.Value;
+
+                // 1. Load Danh mục (Category) theo loại Thu/Chi hiện tại
+                OnTransactionTypeChanged();
+
+                // 2. Load Đối tác (Partner)
+                var partners = _partnerService.GetPartnersByTenant(currentTenantId);
+                cboPartner.DataSource = partners;
+                cboPartner.DisplayMember = "PartnerName";
+                cboPartner.ValueMember = "PartnerId";
+                cboPartner.SelectedIndex = -1; // giữ trạng thái chưa chọn
+
+                // 3. Load Cash Funds theo context branch hiện tại (chi nhánh đang chọn)
+                int currentBranchId = SessionManager.CurrentBranchId.Value;
+                var funds = _cashFundService.GetFundsByBranchId(SessionManager.CurrentTenantId.Value, currentBranchId);
+
+                cboFund.DataSource = funds;
+                cboFund.DisplayMember = "FundName";
+                cboFund.ValueMember = "FundId";
+
+                if (funds != null && funds.Count > 0)
+                {
+                    cboFund.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi load dữ liệu Master: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

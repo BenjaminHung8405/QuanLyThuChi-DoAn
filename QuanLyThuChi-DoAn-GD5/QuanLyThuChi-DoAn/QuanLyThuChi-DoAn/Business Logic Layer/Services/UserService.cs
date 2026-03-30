@@ -1,7 +1,9 @@
 ﻿using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.Data_Access_Layer.Repositories;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
 {
@@ -18,32 +20,126 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         /// <summary>
         /// Xác thực đăng nhập và nạp dữ liệu vào phiên làm việc
+        /// Sử dụng ADO.NET với IsDBNull checks để tránh lỗi "Data is Null"
         /// </summary>
         public bool Authenticate(string username, string password)
         {
-            // 1. Truy vấn người dùng từ DB (Include Role để lấy RoleName)
-            var user = _context.Users
-                               .Include(u => u.Role)
-                               .FirstOrDefault(u => u.Username == username && u.IsActive == true);
-
-            if (user == null) return false;
-
-            // 2. So khớp mật khẩu nhập vào với chuỗi Hash lưu trong DB
-            bool isValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
-
-            if (isValid)
+            try
             {
-                // 3. Nếu khớp, thiết lập thông tin vào SessionManager để sử dụng toàn app
-                SessionManager.UserId = user.UserId;
-                SessionManager.Username = user.Username;
-                SessionManager.FullName = user.FullName;
-                SessionManager.TenantId = user.TenantId;
-                SessionManager.BranchId = user.BranchId;
-                SessionManager.RoleId = user.RoleId;
-                SessionManager.RoleName = user.Role?.RoleName ?? "Unknown"; // 🔧 FIX: Set RoleName từ Role entity
-            }
+                // Validate input
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+                {
+                    return false;
+                }
 
-            return isValid;
+                // Get connection string from DbContext
+                string connectionString = _context.Database.GetConnectionString();
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    // SQL Query with JOIN to get Role and Branch information
+                    string query = @"
+                        SELECT TOP 1
+                            u.UserId,
+                            u.TenantId,
+                            u.BranchId,
+                            u.RoleId,
+                            u.Username,
+                            u.PasswordHash,
+                            u.FullName,
+                            u.IsActive,
+                            r.RoleName,
+                            b.BranchName
+                        FROM Users u
+                        INNER JOIN Roles r ON u.RoleId = r.RoleId
+                        LEFT JOIN Branches b ON u.BranchId = b.BranchId
+                        WHERE u.Username = @username AND u.IsActive = 1
+                    ";
+
+                    using (SqlCommand command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@username", username);
+
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            if (!reader.Read())
+                            {
+                                return false; // User not found or inactive
+                            }
+
+                            // 🛡️ Get column ordinals for efficient access
+                            int userIdOrdinal = reader.GetOrdinal("UserId");
+                            int tenantIdOrdinal = reader.GetOrdinal("TenantId");
+                            int branchIdOrdinal = reader.GetOrdinal("BranchId");
+                            int roleIdOrdinal = reader.GetOrdinal("RoleId");
+                            int usernameOrdinal = reader.GetOrdinal("Username");
+                            int passwordHashOrdinal = reader.GetOrdinal("PasswordHash");
+                            int fullNameOrdinal = reader.GetOrdinal("FullName");
+                            int roleNameOrdinal = reader.GetOrdinal("RoleName");
+                            int branchNameOrdinal = reader.GetOrdinal("BranchName");
+
+                            // 🛡️ Read values safely using IsDBNull checks
+                            int userId = reader.GetInt32(userIdOrdinal);
+                            int tenantId = reader.IsDBNull(tenantIdOrdinal) ? 0 : reader.GetInt32(tenantIdOrdinal);
+                            int? branchId = reader.IsDBNull(branchIdOrdinal) ? (int?)null : reader.GetInt32(branchIdOrdinal);
+                            int roleId = reader.GetInt32(roleIdOrdinal);
+                            string usernameTrim = reader.IsDBNull(usernameOrdinal) ? string.Empty : reader.GetString(usernameOrdinal);
+                            string passwordHash = reader.IsDBNull(passwordHashOrdinal) ? string.Empty : reader.GetString(passwordHashOrdinal);
+                            string fullName = reader.IsDBNull(fullNameOrdinal) ? string.Empty : reader.GetString(fullNameOrdinal);
+                            string roleName = reader.IsDBNull(roleNameOrdinal) ? "Unknown" : reader.GetString(roleNameOrdinal);
+                            string branchName = reader.IsDBNull(branchNameOrdinal) ? string.Empty : reader.GetString(branchNameOrdinal);
+
+                            // Validate password hash exists
+                            if (string.IsNullOrWhiteSpace(passwordHash))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[AUTH] User '{username}' has no password hash set.");
+                                return false;
+                            }
+
+                            // Verify password using BCrypt
+                            try
+                            {
+                                bool isValid = BCrypt.Net.BCrypt.Verify(password, passwordHash);
+
+                                if (isValid)
+                                {
+                                    // ✅ Authentication successful - populate SessionManager with safe values
+                                    SessionManager.UserId = userId;
+                                    SessionManager.Username = usernameTrim ?? string.Empty;
+                                    SessionManager.FullName = fullName ?? string.Empty;
+                                    SessionManager.TenantId = tenantId;
+                                    SessionManager.BranchId = branchId;
+                                    SessionManager.BranchName = branchName ?? string.Empty;
+                                    SessionManager.RoleId = roleId;
+                                    SessionManager.RoleName = roleName ?? "Unknown";
+
+                                    System.Diagnostics.Debug.WriteLine($"[AUTH] ✅ User '{username}' authenticated successfully. Role: {roleName}, Branch: {branchName ?? "None"}");
+                                }
+
+                                return isValid;
+                            }
+                            catch (ArgumentException argEx)
+                            {
+                                // BCrypt verification failed - corrupted hash
+                                System.Diagnostics.Debug.WriteLine($"[AUTH] ❌ BCrypt verification failed: {argEx.Message}");
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AUTH] ❌ SQL Error: {sqlEx.Number} - {sqlEx.Message}");
+                throw new InvalidOperationException($"Database error during authentication: {sqlEx.Message}", sqlEx);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AUTH] ❌ Authentication error: {ex.GetType().Name} - {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -65,8 +161,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             // Thực hiện băm mật khẩu trước khi lưu xuống Database
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
             newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(plainPassword);
-            newUser.TenantId = SessionManager.TenantId; // Ép buộc theo Tenant hiện tại
+            newUser.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
 
             _userRepo.Add(newUser);
             _userRepo.Save();
@@ -83,7 +182,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new UnauthorizedAccessException("Bạn chỉ có quyền sửa thông tin của chính mình!");
             }
 
-            user.TenantId = SessionManager.TenantId;
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            user.TenantId = SessionManager.TenantId.Value;
             _userRepo.Update(user);
             _userRepo.Save();
         }

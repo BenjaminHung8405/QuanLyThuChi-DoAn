@@ -15,8 +15,42 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         public List<TransactionCategory> GetCategories(string type) // "IN" hoặc "OUT"
         {
-            return _catRepo.Find(c => c.TenantId == SessionManager.TenantId && c.Type == type)
+            if (!SessionManager.TenantId.HasValue)
+            {
+                return new List<TransactionCategory>();
+            }
+
+            return _catRepo.Find(c => c.TenantId == SessionManager.TenantId.Value && c.Type == type)
                            .OrderBy(c => c.CategoryName).ToList();
+        }
+
+        /// <summary>
+        /// Lấy danh sách loại thu chi theo TenantId và loại (nếu có)
+        /// </summary>
+        public List<TransactionCategory> GetCategoriesByTenant(int tenantId, string type = null)
+        {
+            var query = _catRepo.Find(c => c.TenantId == tenantId && c.IsActive);
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                query = query.Where(c => c.Type == type);
+            }
+            return query.OrderBy(c => c.CategoryName).ToList();
+        }
+
+        public List<TransactionCategory> GetCategoriesForCurrentSession(string type = null)
+        {
+            if (!SessionManager.CurrentTenantId.HasValue)
+            {
+                return new List<TransactionCategory>();
+            }
+
+            int currentTenantId = SessionManager.CurrentTenantId.Value;
+            var query = _catRepo.Find(c => c.TenantId == currentTenantId && c.IsActive);
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                query = query.Where(c => c.Type == type);
+            }
+            return query.OrderBy(c => c.CategoryName).ToList();
         }
 
         /// <summary>
@@ -30,7 +64,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new UnauthorizedAccessException("Bạn không có quyền tạo loại thu chi!");
             }
 
-            category.TenantId = SessionManager.TenantId; // Ép buộc theo Tenant hiện tại
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            category.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
             _catRepo.Add(category);
             _catRepo.Save();
         }
@@ -46,7 +83,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa loại thu chi!");
             }
 
-            category.TenantId = SessionManager.TenantId;
+            if (!SessionManager.TenantId.HasValue)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            category.TenantId = SessionManager.TenantId.Value;
             _catRepo.Update(category);
             _catRepo.Save();
         }

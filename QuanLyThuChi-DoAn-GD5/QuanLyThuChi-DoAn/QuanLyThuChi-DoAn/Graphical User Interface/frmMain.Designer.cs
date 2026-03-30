@@ -52,6 +52,7 @@
             statusStrip1 = new StatusStrip();
             lblUserStatus = new ToolStripStatusLabel();
             pnlContent = new Panel();
+            toolStripProgressBar1 = new ToolStripProgressBar();
             menuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
@@ -113,21 +114,21 @@
             // mnuPartners
             // 
             mnuPartners.Name = "mnuPartners";
-            mnuPartners.Size = new Size(240, 22);
+            mnuPartners.Size = new Size(241, 22);
             mnuPartners.Text = "Đối tác (Khách hàng/NCC)";
             mnuPartners.Click += menuPartner_Click;
             // 
             // mnuCashFunds
             // 
             mnuCashFunds.Name = "mnuCashFunds";
-            mnuCashFunds.Size = new Size(240, 22);
+            mnuCashFunds.Size = new Size(241, 22);
             mnuCashFunds.Text = "Quỹ tiền (Tiền mặt/Ngân hàng)";
             mnuCashFunds.Click += mnuCashFunds_Click;
             // 
             // mnuTransactionCategory
             // 
             mnuTransactionCategory.Name = "mnuTransactionCategory";
-            mnuTransactionCategory.Size = new Size(240, 22);
+            mnuTransactionCategory.Size = new Size(241, 22);
             mnuTransactionCategory.Text = "Loại thu chi";
             mnuTransactionCategory.Click += mnuTransactionCategory_Click;
             // 
@@ -200,7 +201,7 @@
             // cbTenants
             // 
             cbTenants.Name = "cbTenants";
-            cbTenants.Size = new Size(200, 25);
+            cbTenants.Size = new Size(250, 25);
             // 
             // cbBranchs
             // 
@@ -210,7 +211,7 @@
             // statusStrip1
             // 
             statusStrip1.ImageScalingSize = new Size(24, 24);
-            statusStrip1.Items.AddRange(new ToolStripItem[] { lblUserStatus });
+            statusStrip1.Items.AddRange(new ToolStripItem[] { lblUserStatus, toolStripProgressBar1 });
             statusStrip1.Location = new Point(16, 702);
             statusStrip1.Name = "statusStrip1";
             statusStrip1.RenderMode = ToolStripRenderMode.Professional;
@@ -233,6 +234,11 @@
             pnlContent.Size = new Size(1168, 637);
             pnlContent.TabIndex = 3;
             pnlContent.Paint += pnlContent_Paint;
+            // 
+            // toolStripProgressBar1
+            // 
+            toolStripProgressBar1.Name = "toolStripProgressBar1";
+            toolStripProgressBar1.Size = new Size(100, 16);
             // 
             // frmMain
             // 
@@ -288,5 +294,6 @@
         private ToolStripStatusLabel lblUserStatus;
         private ToolStripComboBox cbTenants;
         private ToolStripComboBox cbBranchs;
+        private ToolStripProgressBar toolStripProgressBar1;
     }
 }

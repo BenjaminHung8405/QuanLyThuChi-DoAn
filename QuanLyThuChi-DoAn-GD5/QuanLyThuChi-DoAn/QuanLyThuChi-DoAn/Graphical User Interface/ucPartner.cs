@@ -50,7 +50,13 @@ namespace QuanLyThuChi_DoAn
 
                 // ✅ FIX: Get ALL partners WITHOUT keyword filter from Service
                 // (Service may not normalize same as UI, so we filter here with TextUtility)
-                List<Partner> partners = _partnerService.GetPartners(SessionManager.TenantId, "");
+                if (!SessionManager.TenantId.HasValue)
+                {
+                    dgvPartners.DataSource = new List<Partner>();
+                    return;
+                }
+
+                List<Partner> partners = _partnerService.GetPartners(SessionManager.TenantId.Value, "");
 
                 // ✅ Criterion 2: Filter by keyword with proper normalization (Tiếng Việt)
                 if (!string.IsNullOrWhiteSpace(keyword))
@@ -178,6 +184,12 @@ namespace QuanLyThuChi_DoAn
                 if (_isAddMode)
                 {
                     // ✅ Criterion 5: CRITICAL - Assign TenantId from SessionManager
+                    if (!SessionManager.TenantId.HasValue)
+                    {
+                        MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     var newPartner = new Partner
                     {
                         PartnerName = txtPartnerName.Text.Trim(),
@@ -185,7 +197,7 @@ namespace QuanLyThuChi_DoAn
                         Address = txtAddress.Text.Trim(),
                         Type = MapDisplayTypeToDbValue(cboType.SelectedItem?.ToString()),
                         InitialDebt = initialDebt,
-                        TenantId = SessionManager.TenantId // ✅ CRITICAL: Set tenant context
+                        TenantId = SessionManager.TenantId.Value
                     };
 
                     _partnerService.CreatePartner(newPartner);
@@ -194,12 +206,18 @@ namespace QuanLyThuChi_DoAn
                 else if (_selectedPartner != null)
                 {
                     // ✅ Edit mode (Auto-Edit on Select)
+                    if (!SessionManager.TenantId.HasValue)
+                    {
+                        MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     _selectedPartner.PartnerName = txtPartnerName.Text.Trim();
                     _selectedPartner.Phone = txtPhone.Text.Trim();
                     _selectedPartner.Address = txtAddress.Text.Trim();
                     _selectedPartner.Type = MapDisplayTypeToDbValue(cboType.SelectedItem?.ToString());
                     _selectedPartner.InitialDebt = initialDebt;
-                    _selectedPartner.TenantId = SessionManager.TenantId; // ✅ Ensure TenantId consistency
+                    _selectedPartner.TenantId = SessionManager.TenantId.Value;
 
                     _partnerService.UpdatePartner(_selectedPartner);
                     successMessage = "Cập nhật đối tác thành công!";

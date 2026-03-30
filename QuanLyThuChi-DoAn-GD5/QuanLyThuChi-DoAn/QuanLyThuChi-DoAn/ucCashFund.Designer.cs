@@ -30,17 +30,24 @@
         /// </summary>
         private void InitializeComponent()
         {
-            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
             topPanel = new Panel();
             tableLayoutPanel1 = new TableLayoutPanel();
             panel1 = new Panel();
             btnRefresh = new FontAwesome.Sharp.IconButton();
             lblTitle = new Label();
             panel2 = new Panel();
-            btnAudit = new FontAwesome.Sharp.IconButton();
+            btnSyncSelected = new FontAwesome.Sharp.IconButton();
             lblTotalBalance = new Label();
             lblTotalBalanceLabel = new Label();
             dgvCashFunds = new DataGridView();
+            colCheck = new DataGridViewCheckBoxColumn();
+            colFundId = new DataGridViewTextBoxColumn();
+            colFundName = new DataGridViewTextBoxColumn();
+            colBranchName = new DataGridViewTextBoxColumn();
+            colSysBalance = new DataGridViewTextBoxColumn();
+            colActualBalance = new DataGridViewTextBoxColumn();
+            colStatus = new DataGridViewTextBoxColumn();
             pnlInput = new Panel();
             pnlButtons = new Panel();
             tableLayoutPanel3 = new TableLayoutPanel();
@@ -53,9 +60,10 @@
             label3 = new Label();
             txtAccountNumber = new TextBox();
             label2 = new Label();
+            cboBranch = new ComboBox();
+            lblBranch = new Label();
             txtFundName = new TextBox();
             label1 = new Label();
-            btnSync = new FontAwesome.Sharp.IconButton();
             topPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             panel1.SuspendLayout();
@@ -132,8 +140,7 @@
             // 
             // panel2
             // 
-            panel2.Controls.Add(btnSync);
-            panel2.Controls.Add(btnAudit);
+            panel2.Controls.Add(btnSyncSelected);
             panel2.Controls.Add(lblTotalBalance);
             panel2.Controls.Add(lblTotalBalanceLabel);
             panel2.Dock = DockStyle.Fill;
@@ -142,25 +149,25 @@
             panel2.Size = new Size(1130, 44);
             panel2.TabIndex = 1;
             // 
-            // btnAudit
+            // btnSyncSelected
             // 
-            btnAudit.Cursor = Cursors.Hand;
-            btnAudit.Dock = DockStyle.Right;
-            btnAudit.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnAudit.IconChar = FontAwesome.Sharp.IconChar.Search;
-            btnAudit.IconColor = Color.FromArgb(46, 125, 50);
-            btnAudit.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnAudit.IconSize = 20;
-            btnAudit.ImageAlign = ContentAlignment.MiddleLeft;
-            btnAudit.Location = new Point(957, 0);
-            btnAudit.Margin = new Padding(2, 0, 4, 0);
-            btnAudit.Name = "btnAudit";
-            btnAudit.Padding = new Padding(8, 0, 0, 0);
-            btnAudit.Size = new Size(173, 44);
-            btnAudit.TabIndex = 10;
-            btnAudit.Text = "Kiểm tra Đối soát";
-            btnAudit.UseVisualStyleBackColor = true;
-            btnAudit.Click += btnAudit_Click;
+            btnSyncSelected.Cursor = Cursors.Hand;
+            btnSyncSelected.Dock = DockStyle.Right;
+            btnSyncSelected.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnSyncSelected.IconChar = FontAwesome.Sharp.IconChar.SyncAlt;
+            btnSyncSelected.IconColor = Color.FromArgb(46, 125, 50);
+            btnSyncSelected.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnSyncSelected.IconSize = 20;
+            btnSyncSelected.ImageAlign = ContentAlignment.MiddleLeft;
+            btnSyncSelected.Location = new Point(941, 0);
+            btnSyncSelected.Margin = new Padding(2, 0, 4, 0);
+            btnSyncSelected.Name = "btnSyncSelected";
+            btnSyncSelected.Padding = new Padding(8, 0, 0, 0);
+            btnSyncSelected.Size = new Size(189, 44);
+            btnSyncSelected.TabIndex = 11;
+            btnSyncSelected.Text = "Đồng bộ quỹ đã chọn";
+            btnSyncSelected.UseVisualStyleBackColor = true;
+            btnSyncSelected.Click += btnSyncSelected_Click;
             // 
             // lblTotalBalance
             // 
@@ -190,21 +197,63 @@
             // 
             dgvCashFunds.AllowUserToAddRows = false;
             dgvCashFunds.AllowUserToDeleteRows = false;
-            dataGridViewCellStyle2.BackColor = Color.FromArgb(240, 248, 255);
-            dgvCashFunds.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle1.BackColor = Color.FromArgb(240, 248, 255);
+            dgvCashFunds.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
             dgvCashFunds.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvCashFunds.BackgroundColor = Color.White;
+            dgvCashFunds.Columns.AddRange(new DataGridViewColumn[] { colCheck, colFundId, colFundName, colBranchName, colSysBalance, colActualBalance, colStatus });
             dgvCashFunds.Dock = DockStyle.Left;
             dgvCashFunds.Location = new Point(16, 116);
             dgvCashFunds.Margin = new Padding(0);
             dgvCashFunds.MultiSelect = false;
             dgvCashFunds.Name = "dgvCashFunds";
-            dgvCashFunds.ReadOnly = true;
             dgvCashFunds.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCashFunds.Size = new Size(779, 505);
             dgvCashFunds.TabIndex = 0;
             dgvCashFunds.CellClick += dgvCashFunds_CellClick;
             dgvCashFunds.CellFormatting += dgvCashFunds_CellFormatting;
+            // 
+            // colCheck
+            // 
+            colCheck.HeaderText = "Chọn";
+            colCheck.Name = "colCheck";
+            // 
+            // colFundId
+            // 
+            colFundId.HeaderText = "ID";
+            colFundId.Name = "colFundId";
+            colFundId.ReadOnly = true;
+            colFundId.Visible = false;
+            // 
+            // colFundName
+            // 
+            colFundName.HeaderText = "Tên Quỹ";
+            colFundName.Name = "colFundName";
+            colFundName.ReadOnly = true;
+            // 
+            // colBranchName
+            // 
+            colBranchName.HeaderText = "Chi nhánh";
+            colBranchName.Name = "colBranchName";
+            colBranchName.ReadOnly = true;
+            // 
+            // colSysBalance
+            // 
+            colSysBalance.HeaderText = "Dư trên sổ";
+            colSysBalance.Name = "colSysBalance";
+            colSysBalance.ReadOnly = true;
+            // 
+            // colActualBalance
+            // 
+            colActualBalance.HeaderText = "Dư thực tế";
+            colActualBalance.Name = "colActualBalance";
+            colActualBalance.ReadOnly = true;
+            // 
+            // colStatus
+            // 
+            colStatus.HeaderText = "Trạng thái";
+            colStatus.Name = "colStatus";
+            colStatus.ReadOnly = true;
             // 
             // pnlInput
             // 
@@ -328,6 +377,8 @@
             gbCashFundDetail.Controls.Add(label3);
             gbCashFundDetail.Controls.Add(txtAccountNumber);
             gbCashFundDetail.Controls.Add(label2);
+            gbCashFundDetail.Controls.Add(cboBranch);
+            gbCashFundDetail.Controls.Add(lblBranch);
             gbCashFundDetail.Controls.Add(txtFundName);
             gbCashFundDetail.Controls.Add(label1);
             gbCashFundDetail.Dock = DockStyle.Top;
@@ -344,7 +395,7 @@
             // 
             txtBalance.BorderStyle = BorderStyle.FixedSingle;
             txtBalance.Dock = DockStyle.Top;
-            txtBalance.Location = new Point(16, 199);
+            txtBalance.Location = new Point(16, 257);
             txtBalance.Name = "txtBalance";
             txtBalance.Size = new Size(293, 29);
             txtBalance.TabIndex = 6;
@@ -353,7 +404,7 @@
             // 
             label3.AutoSize = true;
             label3.Dock = DockStyle.Top;
-            label3.Location = new Point(16, 162);
+            label3.Location = new Point(16, 220);
             label3.Name = "label3";
             label3.Padding = new Padding(0, 8, 0, 8);
             label3.Size = new Size(53, 37);
@@ -364,7 +415,7 @@
             // 
             txtAccountNumber.BorderStyle = BorderStyle.FixedSingle;
             txtAccountNumber.Dock = DockStyle.Top;
-            txtAccountNumber.Location = new Point(16, 133);
+            txtAccountNumber.Location = new Point(16, 191);
             txtAccountNumber.Name = "txtAccountNumber";
             txtAccountNumber.Size = new Size(293, 29);
             txtAccountNumber.TabIndex = 4;
@@ -373,12 +424,32 @@
             // 
             label2.AutoSize = true;
             label2.Dock = DockStyle.Top;
-            label2.Location = new Point(16, 96);
+            label2.Location = new Point(16, 154);
             label2.Name = "label2";
             label2.Padding = new Padding(0, 8, 0, 8);
             label2.Size = new Size(99, 37);
             label2.TabIndex = 3;
             label2.Text = "Số tài khoản";
+            // 
+            // cboBranch
+            // 
+            cboBranch.Dock = DockStyle.Top;
+            cboBranch.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboBranch.Location = new Point(16, 125);
+            cboBranch.Name = "cboBranch";
+            cboBranch.Size = new Size(293, 29);
+            cboBranch.TabIndex = 3;
+            // 
+            // lblBranch
+            // 
+            lblBranch.AutoSize = true;
+            lblBranch.Dock = DockStyle.Top;
+            lblBranch.Location = new Point(16, 96);
+            lblBranch.Name = "lblBranch";
+            lblBranch.Padding = new Padding(0, 0, 0, 8);
+            lblBranch.Size = new Size(81, 29);
+            lblBranch.TabIndex = 2;
+            lblBranch.Text = "Chi nhánh";
             // 
             // txtFundName
             // 
@@ -399,25 +470,6 @@
             label1.Size = new Size(66, 29);
             label1.TabIndex = 1;
             label1.Text = "Tên quỹ";
-            // 
-            // btnSync
-            // 
-            btnSync.Cursor = Cursors.Hand;
-            btnSync.Dock = DockStyle.Right;
-            btnSync.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnSync.IconChar = FontAwesome.Sharp.IconChar.SyncAlt;
-            btnSync.IconColor = Color.FromArgb(46, 125, 50);
-            btnSync.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnSync.IconSize = 20;
-            btnSync.ImageAlign = ContentAlignment.MiddleLeft;
-            btnSync.Location = new Point(784, 0);
-            btnSync.Margin = new Padding(2, 0, 4, 0);
-            btnSync.Name = "btnSync";
-            btnSync.Padding = new Padding(8, 0, 0, 0);
-            btnSync.Size = new Size(173, 44);
-            btnSync.TabIndex = 11;
-            btnSync.Text = "Đồng bộ giao dịch";
-            btnSync.UseVisualStyleBackColor = true;
             // 
             // ucCashFund
             // 
@@ -467,13 +519,17 @@
         private Label label3;
         private TextBox txtAccountNumber;
         private Label label2;
+        private ComboBox cboBranch;
+        private Label lblBranch;
         private TextBox txtFundName;
         private Label label1;
+        private DataGridViewCheckBoxColumn colCheck;
         private DataGridViewTextBoxColumn colFundId;
         private DataGridViewTextBoxColumn colFundName;
-        private DataGridViewTextBoxColumn colAccountNumber;
-        private DataGridViewTextBoxColumn colBalance;
-        private FontAwesome.Sharp.IconButton btnAudit;
-        private FontAwesome.Sharp.IconButton btnSync;
+        private DataGridViewTextBoxColumn colBranchName;
+        private DataGridViewTextBoxColumn colSysBalance;
+        private DataGridViewTextBoxColumn colActualBalance;
+        private DataGridViewTextBoxColumn colStatus;
+        private FontAwesome.Sharp.IconButton btnSyncSelected;
     }
 }

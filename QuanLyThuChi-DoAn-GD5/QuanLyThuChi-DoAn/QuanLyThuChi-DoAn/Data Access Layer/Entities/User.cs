@@ -12,7 +12,7 @@ namespace QuanLyThuChi_DoAn
         [Key]
         public int UserId { get; set; }
 
-        public int TenantId { get; set; }
+        public int? TenantId { get; set; }
         [ForeignKey("TenantId")]
         public virtual Tenant Tenant { get; set; }
 
