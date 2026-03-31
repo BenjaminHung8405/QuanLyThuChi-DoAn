@@ -72,6 +72,27 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             return query.OrderByDescending(t => t.TransDate).ToList();
         }
 
+        /// <summary>
+        /// Lấy câu truy vấn Transaction cho session hiện tại với phân quyền tenant/branch
+        /// </summary>
+        public IQueryable<Transaction> GetTransactionsQueryForCurrentSession()
+        {
+            if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+            {
+                return Enumerable.Empty<Transaction>().AsQueryable();
+            }
+
+            int currentTenantId = SessionManager.CurrentTenantId.Value;
+            int currentBranchId = SessionManager.CurrentBranchId.Value;
+
+            return _context.Transactions
+                .Include(t => t.Category)
+                .Include(t => t.Partner)
+                .Where(t => t.IsActive == true && t.Status == "COMPLETED")
+                .Where(t => t.TenantId == currentTenantId)
+                .Where(t => t.BranchId == currentBranchId);
+        }
+
         // 2. Thống kê tổng Thu / Chi
         public (decimal TotalIn, decimal TotalOut) GetSummary(int tenantId, DateTime fromDate, DateTime toDate)
         {

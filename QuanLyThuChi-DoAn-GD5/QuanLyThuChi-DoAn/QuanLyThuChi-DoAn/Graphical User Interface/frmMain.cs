@@ -413,6 +413,12 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
+        public void SetLoadingState(bool isLoading)
+        {
+            toolStripProgressBar1.Style = isLoading ? ProgressBarStyle.Marquee : ProgressBarStyle.Blocks;
+            toolStripProgressBar1.Visible = isLoading;
+        }
+
         private void RefreshCurrentView()
         {
             if (pnlContent.Controls.Count == 0) return;

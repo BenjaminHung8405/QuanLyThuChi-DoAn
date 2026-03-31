@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.BLL.Services;
@@ -56,6 +57,9 @@ namespace QuanLyThuChi_DoAn
                 // 4.1. Load dropdown master data including Funds 
                 LoadMasterData();
 
+                // 4.2. Load filter dropdowns (category + partner) with "Tất cả" item
+                LoadFilterControls();
+
                 // 5. Refresh data
                 RefreshDataGrid();
             }
@@ -75,10 +79,11 @@ namespace QuanLyThuChi_DoAn
             radOut.CheckedChanged += (s, e) => OnTransactionTypeChanged();
 
             // Filter and refresh buttons
-            btnFilter.Click += (s, e) => RefreshDataGrid(applyDateFilter: true);
             btnRefresh.Click += (s, e) =>
             {
                 ResetForm();
+                if (cboFilterCategory.Items.Count > 0) cboFilterCategory.SelectedIndex = 0;
+                if (cboFilterPartner.Items.Count > 0) cboFilterPartner.SelectedIndex = 0;
                 SetInputFieldsEnabled(false);
                 RefreshDataGrid(applyDateFilter: false);
             };
@@ -192,7 +197,7 @@ namespace QuanLyThuChi_DoAn
         /// Refresh the transaction data grid
         /// Uses safe date ranges (2000-2099) instead of DateTime.MinValue/MaxValue to avoid SQL provider exceptions
         /// </summary>
-        public void RefreshDataGrid(bool applyDateFilter = false)
+        public void RefreshDataGrid(bool applyDateFilter = false, int selectedCategoryId = 0, int selectedPartnerId = 0)
         {
             try
             {
@@ -209,6 +214,30 @@ namespace QuanLyThuChi_DoAn
                     toDate,
                     keyword
                 );
+
+                // Áp dụng filter danh mục/đối tác
+                int filterCategoryId = selectedCategoryId;
+                int filterPartnerId = selectedPartnerId;
+
+                if (filterCategoryId == 0 && cboFilterCategory.SelectedValue != null && int.TryParse(cboFilterCategory.SelectedValue.ToString(), out var selectedCatId))
+                {
+                    filterCategoryId = selectedCatId;
+                }
+
+                if (filterPartnerId == 0 && cboFilterPartner.SelectedValue != null && int.TryParse(cboFilterPartner.SelectedValue.ToString(), out var selectedPartnerId2))
+                {
+                    filterPartnerId = selectedPartnerId2;
+                }
+
+                if (filterCategoryId > 0)
+                {
+                    transactions = transactions.Where(t => t.CategoryId == filterCategoryId).ToList();
+                }
+
+                if (filterPartnerId > 0)
+                {
+                    transactions = transactions.Where(t => t.PartnerId == filterPartnerId).ToList();
+                }
 
                 dgvTransactions.DataSource = null;
                 dgvTransactions.DataSource = transactions;
@@ -230,6 +259,52 @@ namespace QuanLyThuChi_DoAn
         public void LoadData()
         {
             RefreshDataGrid();
+        }
+
+        public void LoadData(int categoryId = 0, int partnerId = 0)
+        {
+            // 1. Base query
+            var query = _transactionService.GetTransactionsQueryForCurrentSession();
+
+            // 2. Filter date-range
+            var fromDate = dtpFromDate.Value.Date;
+            var toDate = dtpToDate.Value.Date;
+            query = query.Where(t => t.TransDate.Date >= fromDate && t.TransDate.Date <= toDate);
+
+            // 3. Filter UI
+            if (categoryId > 0)
+            {
+                query = query.Where(t => t.CategoryId == categoryId);
+            }
+
+            if (partnerId > 0)
+            {
+                query = query.Where(t => t.PartnerId == partnerId);
+            }
+
+            // 4. Execute
+            var result = query.OrderByDescending(t => t.TransDate).ToList();
+
+            this.Invoke(new Action(() =>
+            {
+                if (result.Count == 0)
+                {
+                    dgvTransactions.DataSource = null;
+                    MessageBox.Show("Không tìm thấy giao dịch phù hợp với điều kiện lọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    dgvTransactions.DataSource = result;
+                }
+
+                var totalIn = result.Where(t => t.TransType == "IN").Sum(t => t.Amount);
+                var totalOut = result.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
+                var balance = totalIn - totalOut;
+
+                lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
+                lblTotalOut.Text = $"Tổng Chi: {totalOut:N0} đ";
+                lblBalance.Text = $"Tồn Quỹ: {balance:N0} đ";
+            }));
         }
 
         /// <summary>
@@ -580,9 +655,83 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
-        private void btnFilter_Click(object sender, EventArgs e)
+        private void LoadFilterControls()
         {
+            try
+            {
+                if (!SessionManager.TenantId.HasValue)
+                {
+                    return;
+                }
 
+                int currentTenantId = SessionManager.TenantId.Value;
+
+                // Category filter (include "Tất cả")
+                var categories = _categoryService.GetCategoriesForCurrentSession();
+                categories.Insert(0, new TransactionCategory
+                {
+                    CategoryId = 0,
+                    CategoryName = "--- Tất cả danh mục ---"
+                });
+
+                cboFilterCategory.DataSource = categories;
+                cboFilterCategory.DisplayMember = "CategoryName";
+                cboFilterCategory.ValueMember = "CategoryId";
+                cboFilterCategory.SelectedIndex = 0;
+
+                // Partner filter (include "Tất cả")
+                var partners = _partnerService.GetPartnersByTenant(currentTenantId);
+                partners.Insert(0, new Partner
+                {
+                    PartnerId = 0,
+                    PartnerName = "--- Tất cả đối tác ---"
+                });
+
+                cboFilterPartner.DataSource = partners;
+                cboFilterPartner.DisplayMember = "PartnerName";
+                cboFilterPartner.ValueMember = "PartnerId";
+                cboFilterPartner.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi load dữ liệu lọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void btnFilter_Click(object sender, EventArgs e)
+        {
+            int selectedCategoryId = 0;
+            int selectedPartnerId = 0;
+
+            if (cboFilterCategory.SelectedValue != null && int.TryParse(cboFilterCategory.SelectedValue.ToString(), out var catId))
+            {
+                selectedCategoryId = catId;
+            }
+
+            if (cboFilterPartner.SelectedValue != null && int.TryParse(cboFilterPartner.SelectedValue.ToString(), out var partnerId))
+            {
+                selectedPartnerId = partnerId;
+            }
+
+            var mainForm = this.FindForm() as frmMain;
+            if (mainForm != null)
+            {
+                mainForm.SetLoadingState(true);
+            }
+
+            btnFilter.Enabled = false;
+            try
+            {
+                await Task.Run(() => LoadData(selectedCategoryId, selectedPartnerId));
+            }
+            finally
+            {
+                if (mainForm != null)
+                {
+                    mainForm.SetLoadingState(false);
+                }
+                btnFilter.Enabled = true;
+            }
         }
     }
 }

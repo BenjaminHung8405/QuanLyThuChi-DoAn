@@ -74,6 +74,10 @@
             dtpFromDate = new DateTimePicker();
             dtpToDate = new DateTimePicker();
             pnlTotal = new Panel();
+            cboFilterPartner = new ComboBox();
+            label3 = new Label();
+            label4 = new Label();
+            cboFilterCategory = new ComboBox();
             pnlGrid.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
             tableLayoutPanel1.SuspendLayout();
@@ -662,6 +666,10 @@
             // 
             // pnlTotal
             // 
+            pnlTotal.Controls.Add(label4);
+            pnlTotal.Controls.Add(cboFilterCategory);
+            pnlTotal.Controls.Add(label3);
+            pnlTotal.Controls.Add(cboFilterPartner);
             pnlTotal.Controls.Add(lblBalance);
             pnlTotal.Controls.Add(lblTotalOut);
             pnlTotal.Controls.Add(lblTotalIn);
@@ -670,6 +678,52 @@
             pnlTotal.Name = "pnlTotal";
             pnlTotal.Size = new Size(1130, 31);
             pnlTotal.TabIndex = 4;
+            // 
+            // cboFilterPartner
+            // 
+            cboFilterPartner.Dock = DockStyle.Right;
+            cboFilterPartner.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboFilterPartner.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            cboFilterPartner.FormattingEnabled = true;
+            cboFilterPartner.Location = new Point(902, 0);
+            cboFilterPartner.Name = "cboFilterPartner";
+            cboFilterPartner.Size = new Size(228, 28);
+            cboFilterPartner.TabIndex = 10;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Dock = DockStyle.Right;
+            label3.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label3.Location = new Point(845, 0);
+            label3.Name = "label3";
+            label3.Padding = new Padding(0, 5, 0, 5);
+            label3.Size = new Size(57, 29);
+            label3.TabIndex = 11;
+            label3.Text = "Đối tác:";
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Dock = DockStyle.Right;
+            label4.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label4.Location = new Point(541, 0);
+            label4.Name = "label4";
+            label4.Padding = new Padding(0, 5, 0, 5);
+            label4.Size = new Size(76, 29);
+            label4.TabIndex = 13;
+            label4.Text = "Danh mục:";
+            // 
+            // cboFilterCategory
+            // 
+            cboFilterCategory.Dock = DockStyle.Right;
+            cboFilterCategory.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboFilterCategory.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            cboFilterCategory.FormattingEnabled = true;
+            cboFilterCategory.Location = new Point(617, 0);
+            cboFilterCategory.Name = "cboFilterCategory";
+            cboFilterCategory.Size = new Size(228, 28);
+            cboFilterCategory.TabIndex = 12;
             // 
             // ucTransaction
             // 
@@ -748,5 +802,9 @@
         private Label lblNote;
         private ComboBox cboFund;
         private Label label2;
+        private Label label4;
+        private ComboBox cboFilterCategory;
+        private Label label3;
+        private ComboBox cboFilterPartner;
     }
 }
