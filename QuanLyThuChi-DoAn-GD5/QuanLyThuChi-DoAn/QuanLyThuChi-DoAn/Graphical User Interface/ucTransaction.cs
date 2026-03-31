@@ -62,6 +62,9 @@ namespace QuanLyThuChi_DoAn
 
                 // 5. Refresh data
                 RefreshDataGrid();
+
+                // 6. Apply action-based permissions
+                ApplyPermissionRules();
             }
             catch (Exception ex)
             {
@@ -248,7 +251,19 @@ namespace QuanLyThuChi_DoAn
 
                 lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
                 lblTotalOut.Text = $"Tổng Chi: {totalOut:N0} đ";
-                lblBalance.Text = $"Tồn Quỹ: {balance:N0} đ";
+
+                IEnumerable<CashFund> cashFunds;
+                if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentBranchId.HasValue)
+                {
+                    cashFunds = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId);
+                }
+                else
+                {
+                    cashFunds = _cashFundService.GetVisibleFunds(SessionManager.RoleId);
+                }
+
+                var realBalance = cashFunds.Sum(f => f.Balance);
+                lblBalance.Text = $"Số dư quỹ hiện tại: {realBalance:N0} đ";
             }
             catch (Exception ex)
             {
@@ -258,6 +273,12 @@ namespace QuanLyThuChi_DoAn
 
         public void LoadData()
         {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(LoadData));
+                return;
+            }
+
             RefreshDataGrid();
         }
 
@@ -303,7 +324,21 @@ namespace QuanLyThuChi_DoAn
 
                 lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
                 lblTotalOut.Text = $"Tổng Chi: {totalOut:N0} đ";
-                lblBalance.Text = $"Tồn Quỹ: {balance:N0} đ";
+
+                // Cập nhật số dư theo branch đang chọn ở frmMain
+                IEnumerable<CashFund> cashFunds;
+                if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentBranchId.HasValue)
+                {
+                    cashFunds = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId);
+                }
+                else
+                {
+                    // SuperAdmin hoặc không có branch, hiển thị dựa trên quyền
+                    cashFunds = _cashFundService.GetVisibleFunds(SessionManager.RoleId);
+                }
+
+                var realBalance = cashFunds.Sum(f => f.Balance);
+                lblBalance.Text = $"Số dư quỹ hiện tại: {realBalance:N0} đ";
             }));
         }
 
@@ -386,8 +421,18 @@ namespace QuanLyThuChi_DoAn
                     cboFund.SelectedValue = selected.FundId;
                 }
 
-                SetInputFieldsEnabled(true);
                 _isAddMode = false;
+                SetInputFieldsEnabled(true);
+
+                if (SessionManager.RoleName == "Staff")
+                {
+                    bool isOwner = selected.CreatedBy == SessionManager.UserId;
+                    bool within24h = selected.TransDate >= DateTime.Now.AddHours(-24);
+                    btnSave.Enabled = isOwner && within24h;
+                    btnDelete.Enabled = false;
+                }
+
+                ApplyPermissionRules();
             }
             catch (Exception ex)
             {
@@ -415,6 +460,12 @@ namespace QuanLyThuChi_DoAn
         {
             // Gọi hàm kiểm tra trước khi làm bất cứ việc gì khác
             if (!ValidateInput()) return;
+
+            if (SessionManager.RoleName == "Staff" && !_isAddMode)
+            {
+                MessageBox.Show("Bạn không có quyền sửa phiếu sau 24h hoặc của người khác.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             try
             {
@@ -501,13 +552,29 @@ namespace QuanLyThuChi_DoAn
         {
             if (_selectedTransaction == null) return;
 
+            if (SessionManager.RoleName == "Staff")
+            {
+                MessageBox.Show("Bạn không có quyền xóa giao dịch.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (MessageBox.Show("Bạn có chắc muốn xóa giao dịch này?", "Xác nhận",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 try
                 {
-                    // TODO: Call _transactionService.DeleteTransaction(_selectedTransaction.TransId);
-                    // Note: TransId is the new column name (was TransactionId)
+                    var tx = (Transaction)_selectedTransaction;
+                    if (SessionManager.RoleName == "Admin")
+                    {
+                        // Xóa vĩnh viễn
+                        _transactionService.DeleteTransaction(tx.TransId, tx.TenantId);
+                    }
+                    else
+                    {
+                        // Soft delete
+                        _transactionService.DeleteTransaction(tx.TransId, tx.TenantId);
+                    }
+
                     ResetForm();
                     SetInputFieldsEnabled(false);
                     RefreshDataGrid();
@@ -531,6 +598,8 @@ namespace QuanLyThuChi_DoAn
             if (cboPartner.Items.Count > 0) cboPartner.SelectedIndex = 0;
             if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = -1;
             _selectedTransaction = null;
+
+            ApplyPermissionRules();
         }
 
         /// <summary>
@@ -546,9 +615,29 @@ namespace QuanLyThuChi_DoAn
             cboPartner.Enabled = enabled;
             txtNote.Enabled = enabled;
 
-            btnSave.Enabled = enabled;
-            btnDelete.Enabled = _selectedTransaction != null && enabled;
+            bool canEdit = enabled;
+            if (SessionManager.RoleName == "Staff")
+            {
+                // Nhân viên chỉ cho thêm mới, không sửa nếu không thoả điều kiện
+                if (!_isAddMode)
+                {
+                    canEdit = false;
+                }
+            }
+
+            btnSave.Enabled = canEdit;
+            btnDelete.Enabled = _selectedTransaction != null && enabled && SessionManager.RoleName != "Staff";
             btnSave.Text = enabled ? (_isAddMode ? "Lập Phiếu" : "Cập nhật") : "Lưu";
+
+            // Admin có quyền xóa vĩnh viễn mới hiển thị btnDelete (gắn chức năng riêng khi cần)
+            if (SessionManager.RoleName != "Admin")
+            {
+                btnDelete.Text = "Xóa";
+            }
+            else
+            {
+                btnDelete.Text = "Xóa vĩnh viễn";
+            }
         }
 
         /// <summary>
@@ -652,6 +741,31 @@ namespace QuanLyThuChi_DoAn
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi load dữ liệu Master: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ApplyPermissionRules()
+        {
+            string role = SessionManager.RoleName;
+
+            if (role == "Staff")
+            {
+                // Staff chỉ được thêm mới
+                btnDelete.Enabled = false;
+                if (!_isAddMode)
+                {
+                    btnSave.Enabled = false;
+                    SetInputFieldsEnabled(false);
+                }
+            }
+            else if (role == "Admin")
+            {
+                btnDelete.Visible = true;
+            }
+            else
+            {
+                // BranchManager, SuperAdmin...
+                btnDelete.Visible = true;
             }
         }
 

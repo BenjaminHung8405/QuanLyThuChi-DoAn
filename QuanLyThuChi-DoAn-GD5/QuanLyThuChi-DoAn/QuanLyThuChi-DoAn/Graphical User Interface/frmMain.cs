@@ -129,6 +129,26 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
+        private void mnuInternalTransfer_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using var transferForm = new frmFundTransfer();
+                transferForm.StartPosition = FormStartPosition.CenterParent;
+
+                var dialogResult = transferForm.ShowDialog(this);
+                if (dialogResult == DialogResult.OK)
+                {
+                    // Nếu chuyển quỹ thành công, làm mới giao diện hiện tại (transactions và quỹ)
+                    RefreshCurrentView();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Chuyển quỹ nội bộ: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void menuLogout_Click(object sender, EventArgs e)
         {
             // 1. Xác nhận đăng xuất
@@ -351,6 +371,8 @@ namespace QuanLyThuChi_DoAn
 
             try
             {
+                SetLoadingState(true);
+
                 // --- 2. Async load branch list từ service/data layer ---
                 // (Giả sử bạn có async method: GetBranchesByTenantAsync)
                 var branches = await Task.Run(() => _branchService.GetBranchesByTenant(newTenantId));
@@ -393,8 +415,7 @@ namespace QuanLyThuChi_DoAn
                 cbTenants.Enabled = true;
                 cbBranchs.Enabled = true;
 
-                toolStripProgressBar1.Style = ProgressBarStyle.Blocks;
-                toolStripProgressBar1.Visible = false;
+                SetLoadingState(false);
 
                 // sau cùng, refresh data hiện tại theo branch mới
                 RefreshCurrentView();
@@ -417,21 +438,43 @@ namespace QuanLyThuChi_DoAn
         {
             toolStripProgressBar1.Style = isLoading ? ProgressBarStyle.Marquee : ProgressBarStyle.Blocks;
             toolStripProgressBar1.Visible = isLoading;
+            panelLoadingOverlay.Visible = isLoading;
+            if (isLoading)
+            {
+                this.Cursor = Cursors.WaitCursor;
+            }
+            else
+            {
+                this.Cursor = Cursors.Default;
+            }
         }
 
-        private void RefreshCurrentView()
+        private async void RefreshCurrentView()
         {
             if (pnlContent.Controls.Count == 0) return;
 
             var current = pnlContent.Controls[0];
 
-            if (current is ucTransaction ucTrans)
+            try
             {
-                ucTrans.LoadData();
+                SetLoadingState(true);
+
+                if (current is ucTransaction ucTrans)
+                {
+                    ucTrans.LoadData();
+                }
+                else if (current is ucCashFund ucFund)
+                {
+                    ucFund.LoadData();
+                }
+                else
+                {
+                    // Extend: other UserControls with LoadData() can be added here
+                }
             }
-            else if (current is ucCashFund ucFund)
+            finally
             {
-                ucFund.LoadData();
+                SetLoadingState(false);
             }
         }
 

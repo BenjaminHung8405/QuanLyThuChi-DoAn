@@ -158,6 +158,7 @@
             mnuInternalTransfer.Name = "mnuInternalTransfer";
             mnuInternalTransfer.Size = new Size(175, 22);
             mnuInternalTransfer.Text = "Chuyển tiền nội bộ";
+            mnuInternalTransfer.Click += mnuInternalTransfer_Click;
             // 
             // mnuReports
             // 
@@ -235,6 +236,25 @@
             pnlContent.TabIndex = 3;
             pnlContent.Paint += pnlContent_Paint;
             // 
+            // panelLoadingOverlay
+            // 
+            panelLoadingOverlay = new Panel();
+            panelLoadingOverlay.BackColor = Color.FromArgb(120, Color.LightGray);
+            panelLoadingOverlay.Dock = DockStyle.Fill;
+            panelLoadingOverlay.Visible = false;
+            panelLoadingOverlay.BringToFront();
+
+            var loadingLabel = new Label();
+            loadingLabel.Text = "Đang tải dữ liệu...";
+            loadingLabel.ForeColor = Color.Black;
+            loadingLabel.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            loadingLabel.AutoSize = true;
+            loadingLabel.Anchor = AnchorStyles.None;
+            loadingLabel.Location = new Point((pnlContent.Width - loadingLabel.Width) / 2, (pnlContent.Height - loadingLabel.Height) / 2);
+            panelLoadingOverlay.Controls.Add(loadingLabel);
+
+            pnlContent.Controls.Add(panelLoadingOverlay);
+            // 
             // toolStripProgressBar1
             // 
             toolStripProgressBar1.Name = "toolStripProgressBar1";
@@ -295,5 +315,6 @@
         private ToolStripComboBox cbTenants;
         private ToolStripComboBox cbBranchs;
         private ToolStripProgressBar toolStripProgressBar1;
+        private Panel panelLoadingOverlay;
     }
 }
