@@ -42,3 +42,19 @@ Permissions:
 - "When I ask you to write a new feature, generate code in the following order: 1. Entity (if applicable) -> 2. Service in BLL -> 3. Interface in GUI."
 - "Always prioritize using LINQ to query data through AppDbContext."
 - "If writing code related to currency amounts, format with thousands separators (E.g.: 1.000.000) and do not include decimals."
+
+# 📝 DOCUMENTATION & PROGRESS TRACKING
+
+Every time you generate or update code for a new feature or a Sprint, you MUST also provide a summary for the README.md file (or a documentation block) with the following sections in Vietnamese:
+
+1. **Mục tiêu**: [Briefly state the goal of this code/feature].
+2. **Task List**: [List the specific technical tasks performed in this step].
+3. **Thu hoạch cho Báo cáo**: [Key takeaways, new logic applied, or knowledge gained].
+4. **Mô tả**: [Technical description of the implementation, including DB changes or logic flow].
+5. **Nhận xét**: [Observations on code quality, UI consistency, or business logic accuracy].
+6. **Khó khăn & Giải pháp**: [Identify specific bugs or logic hurdles encountered during the generation and how they were solved].
+
+# 🚀 FINAL OUTPUT FORMATTING
+
+- Provide the code first (Entity -> BLL -> GUI).
+- Immediately follow with the "Documentation Summary" block above to ensure the user can update their project log.
