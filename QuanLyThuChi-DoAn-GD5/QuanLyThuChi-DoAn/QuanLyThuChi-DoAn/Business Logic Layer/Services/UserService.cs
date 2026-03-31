@@ -109,9 +109,21 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                                     SessionManager.UserId = userId;
                                     SessionManager.Username = usernameTrim ?? string.Empty;
                                     SessionManager.FullName = fullName ?? string.Empty;
-                                    SessionManager.TenantId = tenantId;
-                                    SessionManager.BranchId = branchId;
-                                    SessionManager.BranchName = branchName ?? string.Empty;
+
+                                    // SuperAdmin không thuộc tenant nào trong ngữ cảnh (null), còn user khác phải xác định tenant rõ.
+                                    if (roleName == "SuperAdmin")
+                                    {
+                                        SessionManager.TenantId = null;
+                                        SessionManager.BranchId = null;
+                                        SessionManager.BranchName = string.Empty;
+                                    }
+                                    else
+                                    {
+                                        SessionManager.TenantId = tenantId == 0 ? (int?)null : tenantId;
+                                        SessionManager.BranchId = branchId;
+                                        SessionManager.BranchName = branchName ?? string.Empty;
+                                    }
+
                                     SessionManager.RoleId = roleId;
                                     SessionManager.RoleName = roleName ?? "Unknown";
 

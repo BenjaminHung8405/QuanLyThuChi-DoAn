@@ -258,7 +258,7 @@ namespace QuanLyThuChi_DoAn
             var query = _context.Tenants.Where(t => t.IsActive == true);
 
             // KIỂM TRA QUYỀN TRUY CẬP (AUTHORIZATION)
-            if (SessionManager.CurrentTenantId.HasValue)
+            if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentTenantId.Value > 0)
             {
                 // TENANT MANAGER HOẶC NHÂN VIÊN (có TenantId cụ thể)
                 int myTenantId = SessionManager.CurrentTenantId.Value;
