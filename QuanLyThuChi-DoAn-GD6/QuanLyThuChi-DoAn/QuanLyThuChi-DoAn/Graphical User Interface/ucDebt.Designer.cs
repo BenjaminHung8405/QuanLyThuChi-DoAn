@@ -48,6 +48,7 @@
             colPaid = new DataGridViewTextBoxColumn();
             colRemaining = new DataGridViewTextBoxColumn();
             colStatus = new DataGridViewTextBoxColumn();
+            colRawDebtType = new DataGridViewTextBoxColumn();
             pnlTop.SuspendLayout();
             flowFilters.SuspendLayout();
             pnlStats.SuspendLayout();
@@ -189,13 +190,13 @@
             // tableLayout
             // 
             tableLayout.ColumnCount = 1;
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tableLayout.Controls.Add(pnlGrid, 0, 0);
             tableLayout.Dock = DockStyle.Fill;
             tableLayout.Location = new Point(16, 116);
             tableLayout.Name = "tableLayout";
             tableLayout.RowCount = 1;
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             tableLayout.Size = new Size(1136, 505);
             tableLayout.TabIndex = 0;
             // 
@@ -213,18 +214,22 @@
             // 
             dgvDebts.AllowUserToAddRows = false;
             dgvDebts.AllowUserToDeleteRows = false;
+            dgvDebts.AutoGenerateColumns = false;
             dgvDebts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvDebts.BackgroundColor = Color.White;
             dgvDebts.BorderStyle = BorderStyle.None;
-            dgvDebts.Columns.AddRange(new DataGridViewColumn[] { colDebtId, colPartner, colType, colTotal, colPaid, colRemaining, colStatus });
+            dgvDebts.Columns.AddRange(new DataGridViewColumn[] { colDebtId, colPartner, colType, colTotal, colPaid, colRemaining, colStatus, colRawDebtType });
             dgvDebts.Dock = DockStyle.Fill;
             dgvDebts.Location = new Point(12, 12);
             dgvDebts.Name = "dgvDebts";
+            dgvDebts.MultiSelect = false;
             dgvDebts.ReadOnly = true;
             dgvDebts.RowHeadersVisible = false;
             dgvDebts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvDebts.Size = new Size(1106, 475);
             dgvDebts.TabIndex = 0;
+            dgvDebts.CellContentClick += dgvDebts_CellContentClick;
+            dgvDebts.SelectionChanged += dgvDebts_SelectionChanged;
             // 
             // colDebtId
             // 
@@ -276,6 +281,14 @@
             colStatus.Name = "colStatus";
             colStatus.ReadOnly = true;
             // 
+            // colRawDebtType
+            // 
+            colRawDebtType.DataPropertyName = "RawDebtType";
+            colRawDebtType.HeaderText = "RawDebtType";
+            colRawDebtType.Name = "colRawDebtType";
+            colRawDebtType.ReadOnly = true;
+            colRawDebtType.Visible = false;
+            // 
             // ucDebt
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -319,5 +332,6 @@
         private DataGridViewTextBoxColumn colPaid;
         private DataGridViewTextBoxColumn colRemaining;
         private DataGridViewTextBoxColumn colStatus;
+        private DataGridViewTextBoxColumn colRawDebtType;
     }
 }

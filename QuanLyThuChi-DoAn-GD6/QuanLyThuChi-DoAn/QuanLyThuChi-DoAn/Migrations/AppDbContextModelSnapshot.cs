@@ -215,6 +215,9 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("InitialDebt")
                         .HasColumnType("decimal(18, 0)");
 
@@ -240,6 +243,8 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("PartnerId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("TenantId");
 
@@ -473,6 +478,9 @@ namespace QuanLyThuChi_DoAn.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoryId"));
 
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -490,6 +498,8 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .HasColumnType("nvarchar(10)");
 
                     b.HasKey("CategoryId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("TenantId");
 
@@ -523,7 +533,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<int>("TenantId")
+                    b.Property<int?>("TenantId")
                         .HasColumnType("int");
 
                     b.Property<string>("Username")
@@ -601,11 +611,19 @@ namespace QuanLyThuChi_DoAn.Migrations
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.Partner", b =>
                 {
+                    b.HasOne("QuanLyThuChi_DoAn.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("QuanLyThuChi_DoAn.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Tenant");
                 });
@@ -714,11 +732,19 @@ namespace QuanLyThuChi_DoAn.Migrations
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.TransactionCategory", b =>
                 {
+                    b.HasOne("QuanLyThuChi_DoAn.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("QuanLyThuChi_DoAn.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Tenant");
                 });
@@ -737,9 +763,7 @@ namespace QuanLyThuChi_DoAn.Migrations
 
                     b.HasOne("QuanLyThuChi_DoAn.Tenant", "Tenant")
                         .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("TenantId");
 
                     b.Navigation("Branch");
 

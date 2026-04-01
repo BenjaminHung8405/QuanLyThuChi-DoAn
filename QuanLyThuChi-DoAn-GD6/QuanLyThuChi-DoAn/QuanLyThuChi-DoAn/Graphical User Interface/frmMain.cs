@@ -67,43 +67,14 @@ namespace QuanLyThuChi_DoAn
         /// </summary>
         private void ApplyAuthorization()
         {
-            string role = SessionManager.RoleName;
+            System.Diagnostics.Debug.WriteLine($"Current Role: {SessionManager.RoleName} ({SessionManager.RoleId})");
 
-            // 🔍 Debug: In ra role hiện tại để kiểm tra
-            System.Diagnostics.Debug.WriteLine($"Current Role: {role}");
-
-            // Mặc định: Ẩn tất cả các menu quản lý cao cấp
-            mnuManageUsers.Visible = false;
-            mnuBranchConfig.Visible = false;
+            mnuManageUsers.Visible = SessionManager.CanManageUsers;
+            mnuBranchConfig.Visible = SessionManager.CanManageBranches;
             mnuCashFunds.Visible = true;
-            mnuDebtSummary.Visible = true; // Báo cáo mặc định cho tất cả
-
-            // Quyền STAFF (Hạn chế tối đa - chỉ xem báo cáo cá nhân)
-            if (role == "Staff")
-            {
-                mnuManageUsers.Visible = false;
-                mnuBranchConfig.Visible = false;
-                mnuDebtSummary.Visible = false; // Chỉ xem báo cáo cá nhân
-            }
-
-            // Quyền MANAGER (Quản lý chi nhánh)
-            else if (role == "BranchManager" || role == "Manager")
-            {
-                mnuManageUsers.Visible = true;   // Quản lý nhân viên trong chi nhánh
-                mnuBranchConfig.Visible = true;  // Cấu hình chi nhánh của mình
-                mnuCashFunds.Visible = true;
-                mnuDebtSummary.Visible = true;
-            }
-
-            // Quyền SUPERADMIN (Toàn quyền)
-            else if (role == "SuperAdmin")
-            {
-                // Hiển thị tất cả menu items
-                mnuManageUsers.Visible = true;
-                mnuBranchConfig.Visible = true;
-                mnuCashFunds.Visible = true;
-                mnuDebtSummary.Visible = true;
-            }
+            mnuDebtSummary.Visible = SessionManager.CanViewSummaryReports;
+            mnuInternalTransfer.Visible = SessionManager.CanTransferInterBranch;
+            mnuDebtManagement.Visible = SessionManager.CanApproveDebt;
         }
 
         // Sự kiện khi bấm vào menu Đối tác
@@ -223,64 +194,63 @@ namespace QuanLyThuChi_DoAn
             _isInitializing = true;
             try
             {
-                // Gỡ sự kiện để tránh lỗi vòng lặp khi gán DataSource
                 cbTenants.SelectedIndexChanged -= cbTenants_SelectedIndexChanged;
                 cbBranchs.SelectedIndexChanged -= cbBranchs_SelectedIndexChanged;
 
-                // Use RoleId as the authoritative source for UI permissions where possible.
-                int roleId = SessionManager.RoleId;
-
-                // Staff: không cho thao tác Tenant/Branch
-                if (SessionManager.RoleName == "Staff" || roleId == 4)
+                if (SessionManager.IsStaff)
                 {
                     cbTenants.Visible = false;
                     cbBranchs.Visible = false;
                 }
-                // BranchManager: chỉ chọn Branch trong tenant hiện tại
-                else if (SessionManager.RoleName == "BranchManager" || roleId == 3)
+                else if (SessionManager.IsBranchManager)
                 {
                     cbTenants.Visible = false;
                     cbBranchs.Visible = true;
-                    if (SessionManager.TenantId.HasValue)
+
+                    if (SessionManager.CurrentTenantId.HasValue)
                     {
-                        LoadBranchesIntoComboBox(SessionManager.TenantId.Value);
+                        LoadBranchesIntoComboBox(SessionManager.CurrentTenantId.Value);
+
+                        if (SessionManager.FixedBranchId.HasValue)
+                        {
+                            cbBranchs.ComboBox.SelectedValue = SessionManager.FixedBranchId.Value;
+                            SessionManager.CurrentBranchId = SessionManager.FixedBranchId.Value;
+                            SessionManager.BranchId = SessionManager.FixedBranchId.Value;
+                            SetBranchNameFromComboBox();
+                        }
                     }
                     else
                     {
                         cbBranchs.ComboBox.DataSource = null;
                         cbBranchs.ComboBox.Items.Clear();
                     }
+
+                    cbBranchs.Enabled = false;
                 }
-                // SuperAdmin (RoleId == 1) hoặc Admin (legacy name)
-                else if (roleId == 1 || SessionManager.RoleName == "SuperAdmin" || SessionManager.RoleName == "Admin")
+                else if (SessionManager.IsTenantAdmin)
                 {
-                    cbTenants.Visible = true;
+                    cbTenants.Visible = false;
                     cbBranchs.Visible = true;
-                    await LoadTenantsIntoComboBox();
+
+                    if (!SessionManager.CurrentTenantId.HasValue)
+                    {
+                        throw new InvalidOperationException("Tài khoản TenantAdmin chưa có Tenant hợp lệ.");
+                    }
+
+                    LoadBranchesIntoComboBox(SessionManager.CurrentTenantId.Value);
+                    cbBranchs.Enabled = true;
                 }
                 else
                 {
-                    // Tenant-level roles (e.g., TenantManager) should see tenant but not be allowed to change it.
                     cbTenants.Visible = true;
                     cbBranchs.Visible = true;
                     await LoadTenantsIntoComboBox();
+                    cbTenants.Enabled = SessionManager.CanChangeTenantContext;
+                    cbBranchs.Enabled = SessionManager.CanChangeBranchContext;
                 }
 
                 cbTenants.SelectedIndexChanged += cbTenants_SelectedIndexChanged;
                 cbBranchs.SelectedIndexChanged += cbBranchs_SelectedIndexChanged;
-
-                // Mặc định chọn Tenant[0] và Branch[0] nếu chưa chọn
-                if (cbTenants.ComboBox.Items.Count > 0 && cbTenants.ComboBox.SelectedIndex < 0)
-                {
-                    cbTenants.ComboBox.SelectedIndex = 0;
-                    SessionManager.TenantId = (int)cbTenants.ComboBox.SelectedValue;
-                }
-
-                if (cbBranchs.ComboBox.Items.Count > 0 && cbBranchs.ComboBox.SelectedIndex < 0)
-                {
-                    cbBranchs.ComboBox.SelectedIndex = 0;
-                    SessionManager.BranchId = (int)cbBranchs.ComboBox.SelectedValue;
-                }
             }
             finally
             {
@@ -353,8 +323,25 @@ namespace QuanLyThuChi_DoAn
 
             if (branches.Count > 0)
             {
-                cbBranchs.SelectedIndex = 0;
-                SessionManager.BranchId = (int)cbBranchs.ComboBox.SelectedValue;
+                if (SessionManager.FixedBranchId.HasValue)
+                {
+                    cbBranchs.ComboBox.SelectedValue = SessionManager.FixedBranchId.Value;
+                }
+                else if (SessionManager.CurrentBranchId.HasValue)
+                {
+                    cbBranchs.ComboBox.SelectedValue = SessionManager.CurrentBranchId.Value;
+                }
+                else
+                {
+                    cbBranchs.SelectedIndex = 0;
+                }
+
+                if (cbBranchs.ComboBox.SelectedValue is int selectedBranchId)
+                {
+                    SessionManager.BranchId = selectedBranchId;
+                    SessionManager.CurrentBranchId = selectedBranchId;
+                }
+
                 SetBranchNameFromComboBox();
             }
             else
@@ -452,8 +439,8 @@ namespace QuanLyThuChi_DoAn
                 cbBranchs.SelectedIndexChanged += cbBranchs_SelectedIndexChanged;
 
                 // Re-enable controls according to role-based rules
-                cbTenants.Enabled = SessionManager.IsSuperAdmin;
-                cbBranchs.Enabled = true;
+                cbTenants.Enabled = SessionManager.CanChangeTenantContext;
+                cbBranchs.Enabled = SessionManager.CanChangeBranchContext && !SessionManager.FixedBranchId.HasValue;
 
                 SetLoadingState(false);
 
@@ -502,6 +489,40 @@ namespace QuanLyThuChi_DoAn
             {
                 this.Cursor = Cursors.Default;
             }
+        }
+
+        // Start a determinate progress for long-running UI population tasks
+        public void StartProgress(int maximum)
+        {
+            if (maximum <= 0) maximum = 1;
+            toolStripProgressBar1.Style = ProgressBarStyle.Blocks;
+            toolStripProgressBar1.Maximum = maximum;
+            toolStripProgressBar1.Step = 1;
+            toolStripProgressBar1.Value = 0;
+            toolStripProgressBar1.Visible = true;
+            panelLoadingOverlay.Visible = true;
+            this.Cursor = Cursors.WaitCursor;
+        }
+
+        // Increment the determinate progress by step (default 1)
+        public void IncrementProgress(int step = 1)
+        {
+            try
+            {
+                if (!toolStripProgressBar1.Visible) return;
+                int newVal = Math.Min(toolStripProgressBar1.Maximum, toolStripProgressBar1.Value + step);
+                toolStripProgressBar1.Value = newVal;
+            }
+            catch { }
+        }
+
+        // Stop and reset determinate progress
+        public void StopProgress()
+        {
+            toolStripProgressBar1.Visible = false;
+            panelLoadingOverlay.Visible = false;
+            try { toolStripProgressBar1.Value = 0; } catch { }
+            this.Cursor = Cursors.Default;
         }
 
         private async void RefreshCurrentView()

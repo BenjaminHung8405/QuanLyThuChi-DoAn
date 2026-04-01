@@ -130,21 +130,53 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                                         SessionManager.TenantId = null;
                                         SessionManager.BranchId = null;
                                         SessionManager.BranchName = string.Empty;
+                                        SessionManager.FixedTenantId = null;
+                                        SessionManager.FixedBranchId = null;
+                                        SessionManager.CurrentTenantId = null;
+                                        SessionManager.CurrentBranchId = null;
                                     }
                                     else
                                     {
-                                        SessionManager.TenantId = tenantId == 0 ? (int?)null : tenantId;
-                                        SessionManager.BranchId = branchId;
-                                        SessionManager.BranchName = branchName ?? string.Empty;
+                                        if (tenantId <= 0)
+                                        {
+                                            throw new InvalidOperationException("Tài khoản chưa được gán Tenant hợp lệ.");
+                                        }
+
+                                        SessionManager.TenantId = tenantId;
+
+                                        if (SessionManager.IsTenantAdmin)
+                                        {
+                                            SessionManager.BranchId = null;
+                                            SessionManager.BranchName = "Tất cả chi nhánh";
+                                            SessionManager.FixedTenantId = tenantId;
+                                            SessionManager.FixedBranchId = null;
+                                            SessionManager.CurrentTenantId = tenantId;
+                                            SessionManager.CurrentBranchId = null;
+                                        }
+                                        else if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+                                        {
+                                            if (!branchId.HasValue || branchId.Value <= 0)
+                                            {
+                                                throw new InvalidOperationException("Tài khoản chưa được gán Chi nhánh hợp lệ.");
+                                            }
+
+                                            SessionManager.BranchId = branchId.Value;
+                                            SessionManager.BranchName = branchName ?? string.Empty;
+                                            SessionManager.FixedTenantId = tenantId;
+                                            SessionManager.FixedBranchId = branchId.Value;
+                                            SessionManager.CurrentTenantId = tenantId;
+                                            SessionManager.CurrentBranchId = branchId.Value;
+                                        }
+                                        else
+                                        {
+                                            SessionManager.BranchId = branchId;
+                                            SessionManager.BranchName = branchName ?? string.Empty;
+                                            SessionManager.FixedTenantId = tenantId;
+                                            SessionManager.FixedBranchId = branchId;
+                                            SessionManager.CurrentTenantId = tenantId;
+                                            SessionManager.CurrentBranchId = branchId;
+                                        }
                                     }
-
-                                    // Set Fixed context so UI loads correct tenant/branch and cannot be tampered client-side
-                                    SessionManager.FixedTenantId = SessionManager.TenantId;
-                                    SessionManager.FixedBranchId = SessionManager.BranchId;
-
-                                    // Ensure current selection values are populated
-                                    SessionManager.CurrentTenantId = SessionManager.TenantId;
-                                    SessionManager.CurrentBranchId = SessionManager.BranchId;
 
                                     System.Diagnostics.Debug.WriteLine($"[AUTH] ✅ User '{username}' authenticated successfully. Role: {SessionManager.RoleName}, Branch: {branchName ?? "None"}");
                                 }

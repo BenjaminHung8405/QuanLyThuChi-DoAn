@@ -24,14 +24,42 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         // Lấy danh sách khoản nợ theo lọc đơn giản
         public List<Debt> GetDebts(string type = null, string status = null, int? partnerId = null)
         {
-            if (!SessionManager.CurrentTenantId.HasValue)
-                return new List<Debt>();
-
-            int tenantId = SessionManager.CurrentTenantId.Value;
-
             var query = _context.Debts
+                .AsNoTracking()
                 .Include(d => d.Partner)
-                .Where(d => d.TenantId == tenantId);
+                .AsQueryable();
+
+            if (SessionManager.IsSuperAdmin)
+            {
+                if (SessionManager.CurrentTenantId.HasValue)
+                {
+                    int selectedTenantId = SessionManager.CurrentTenantId.Value;
+                    query = query.Where(d => d.TenantId == selectedTenantId);
+                }
+
+                if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                {
+                    int selectedBranchId = SessionManager.CurrentBranchId.Value;
+                    query = query.Where(d => d.BranchId == selectedBranchId);
+                }
+            }
+            else
+            {
+                if (!SessionManager.CurrentTenantId.HasValue)
+                    return new List<Debt>();
+
+                int tenantId = SessionManager.CurrentTenantId.Value;
+                query = query.Where(d => d.TenantId == tenantId);
+
+                if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+                {
+                    if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                        return new List<Debt>();
+
+                    int currentBranchId = SessionManager.CurrentBranchId.Value;
+                    query = query.Where(d => d.BranchId == currentBranchId);
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(type))
                 query = query.Where(d => d.DebtType == type);
@@ -48,12 +76,41 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         // Lấy khoản nợ theo ID (bao gồm Partner)
         public Debt GetDebtById(long debtId)
         {
+            var query = _context.Debts.AsNoTracking().Include(d => d.Partner).Where(d => d.DebtId == debtId);
+
+            if (SessionManager.IsSuperAdmin)
+            {
+                if (SessionManager.CurrentTenantId.HasValue)
+                {
+                    int selectedTenantId = SessionManager.CurrentTenantId.Value;
+                    query = query.Where(d => d.TenantId == selectedTenantId);
+                }
+
+                if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                {
+                    int selectedBranchId = SessionManager.CurrentBranchId.Value;
+                    query = query.Where(d => d.BranchId == selectedBranchId);
+                }
+
+                return query.FirstOrDefault();
+            }
+
             if (!SessionManager.CurrentTenantId.HasValue)
                 return null;
 
             int tenantId = SessionManager.CurrentTenantId.Value;
-            return _context.Debts.Include(d => d.Partner)
-                        .FirstOrDefault(d => d.DebtId == debtId && d.TenantId == tenantId);
+            query = query.Where(d => d.TenantId == tenantId);
+
+            if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+            {
+                if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    return null;
+
+                int currentBranchId = SessionManager.CurrentBranchId.Value;
+                query = query.Where(d => d.BranchId == currentBranchId);
+            }
+
+            return query.FirstOrDefault();
         }
 
         /// <summary>
@@ -62,25 +119,57 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public bool PayDebt(long debtId, int fundId, decimal amount, string note)
         {
-            if (!SessionManager.CurrentTenantId.HasValue)
-                throw new InvalidOperationException("Không có Tenant trong ngữ cảnh.");
-
-            int tenantId = SessionManager.CurrentTenantId.Value;
+            if (!SessionManager.CanApproveDebt)
+                throw new UnauthorizedAccessException("Bạn không có quyền duyệt thanh toán công nợ.");
 
             using (var tx = _context.Database.BeginTransaction())
             {
                 try
                 {
-                    var debt = _context.Debts.FirstOrDefault(d => d.DebtId == debtId && d.TenantId == tenantId);
+                    Debt debt;
+                    if (SessionManager.IsSuperAdmin)
+                    {
+                        debt = _context.Debts.FirstOrDefault(d => d.DebtId == debtId);
+                    }
+                    else
+                    {
+                        if (!SessionManager.CurrentTenantId.HasValue)
+                            throw new InvalidOperationException("Không có Tenant trong ngữ cảnh.");
+
+                        int currentTenantId = SessionManager.CurrentTenantId.Value;
+                        var debtQuery = _context.Debts.Where(d => d.DebtId == debtId && d.TenantId == currentTenantId);
+
+                        if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+                        {
+                            if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                                throw new InvalidOperationException("Không có Chi nhánh trong ngữ cảnh.");
+
+                            int currentBranchId = SessionManager.CurrentBranchId.Value;
+                            debtQuery = debtQuery.Where(d => d.BranchId == currentBranchId);
+                        }
+
+                        debt = debtQuery.FirstOrDefault();
+                    }
+
                     if (debt == null)
                         throw new KeyNotFoundException("Không tìm thấy khoản nợ.");
+
+                    int tenantId = debt.TenantId;
 
                     decimal remaining = debt.TotalAmount - debt.PaidAmount;
                     if (amount <= 0) throw new ArgumentException("Số tiền phải lớn hơn 0.");
                     if (amount > remaining) throw new InvalidOperationException("Không thể trả quá số nợ hiện có!");
 
-                    var fund = _context.CashFunds.FirstOrDefault(f => f.FundId == fundId && f.TenantId == tenantId && f.IsActive);
-                    if (fund == null) throw new KeyNotFoundException("Quỹ thanh toán không hợp lệ.");
+                    var fundQuery = _context.CashFunds.Where(f => f.FundId == fundId && f.TenantId == tenantId && f.IsActive);
+
+                    if ((SessionManager.IsBranchManager || SessionManager.IsStaff) && SessionManager.CurrentBranchId.HasValue)
+                    {
+                        int currentBranchId = SessionManager.CurrentBranchId.Value;
+                        fundQuery = fundQuery.Where(f => f.BranchId == currentBranchId);
+                    }
+
+                    var fund = fundQuery.FirstOrDefault();
+                    if (fund == null) throw new KeyNotFoundException("Quỹ thanh toán không hợp lệ hoặc không hoạt động.");
 
                     // Determine transaction direction
                     string transType = string.Equals(debt.DebtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase) ? "IN" : "OUT";
@@ -89,10 +178,36 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     if (transType == "OUT" && fund.Balance < amount)
                         throw new InvalidOperationException("Quỹ không đủ số dư để thực hiện thanh toán.");
 
+                    // Get or determine branch
+                    int branchId = SessionManager.CurrentBranchId ?? 0;
+                    if (branchId <= 0)
+                    {
+                        branchId = debt.BranchId;
+                    }
+
+                    if (branchId <= 0)
+                    {
+                        var branch = _context.Branches.FirstOrDefault(b => b.TenantId == tenantId && b.IsActive);
+                        if (branch == null)
+                            throw new InvalidOperationException("Không tìm thấy chi nhánh hoạt động. Vui lòng cấu hình chi nhánh trước.");
+                        branchId = branch.BranchId;
+                    }
+
+                    if ((SessionManager.IsBranchManager || SessionManager.IsStaff) && SessionManager.CurrentBranchId.HasValue && branchId != SessionManager.CurrentBranchId.Value)
+                        throw new UnauthorizedAccessException("Bạn chỉ có quyền thao tác công nợ trong chi nhánh hiện tại.");
+
                     // Choose a default category for this transType
-                    var category = _context.TransactionCategories.FirstOrDefault(c => c.TenantId == tenantId && c.Type == transType && c.IsActive);
+                    var category = _context.TransactionCategories
+                        .Where(c => c.TenantId == tenantId && c.BranchId == branchId && c.Type == transType && c.IsActive)
+                        .OrderBy(c => c.CategoryId)
+                        .FirstOrDefault();
                     if (category == null)
                         throw new InvalidOperationException("Không tìm thấy danh mục giao dịch phù hợp. Vui lòng tạo Category trước.");
+
+                    // Verify the branch belongs to this tenant
+                    var selectedBranch = _context.Branches.FirstOrDefault(b => b.BranchId == branchId && b.TenantId == tenantId);
+                    if (selectedBranch == null)
+                        throw new InvalidOperationException("Chi nhánh không hợp lệ cho Tenant hiện tại.");
 
                     // Create Transaction
                     var transaction = new Transaction
@@ -102,13 +217,13 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                         CategoryId = category.CategoryId,
                         PartnerId = debt.PartnerId,
                         DebtId = debt.DebtId,
-                        BranchId = SessionManager.CurrentBranchIdValue,
+                        BranchId = branchId,
                         TransDate = DateTime.Now,
                         Amount = amount,
                         Description = note,
                         TransType = transType,
-                        RefNo = null,
-                        CreatedBy = SessionManager.CurrentUserId,
+                        RefNo = string.Empty, // Not null - use empty string instead
+                        CreatedBy = SessionManager.CurrentUserId > 0 ? SessionManager.CurrentUserId : 1, // Default to system user if not set
                         Status = "COMPLETED",
                         IsActive = true
                     };
@@ -120,7 +235,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                         fund.Balance -= amount;
 
                     debt.PaidAmount += amount;
-                    if (debt.PaidAmount > debt.TotalAmount) debt.PaidAmount = debt.TotalAmount;
+                    if (debt.PaidAmount >= debt.TotalAmount)
+                        debt.Status = "PAID";
+                    else if (debt.PaidAmount > 0)
+                        debt.Status = "PARTIALLY_PAID";
 
                     _context.Transactions.Add(transaction);
                     _context.SaveChanges();

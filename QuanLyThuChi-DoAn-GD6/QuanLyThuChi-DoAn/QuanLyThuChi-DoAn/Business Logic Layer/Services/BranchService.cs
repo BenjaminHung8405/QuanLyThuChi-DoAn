@@ -39,16 +39,23 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void CreateBranch(Branch branch)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin mới được tạo chi nhánh
-            if (SessionManager.RoleName != "SuperAdmin")
+            if (!SessionManager.CanManageBranches)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền tạo chi nhánh!");
             }
 
-            if (!SessionManager.TenantId.HasValue)
-                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+            if (SessionManager.IsTenantAdmin)
+            {
+                if (!SessionManager.CurrentTenantId.HasValue)
+                    throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
 
-            branch.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
+                branch.TenantId = SessionManager.CurrentTenantId.Value;
+            }
+            else if (branch.TenantId <= 0)
+            {
+                throw new InvalidOperationException("SuperAdmin cần chỉ định Tenant hợp lệ khi tạo chi nhánh.");
+            }
+
             _branchRepo.Add(branch);
             _branchRepo.Save();
         }
@@ -58,24 +65,19 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void UpdateBranch(Branch branch)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin hoặc BranchManager của chi nhánh tương ứng mới được sửa
-            if (SessionManager.RoleName == "SuperAdmin")
-            {
-                // SuperAdmin có quyền sửa bất kỳ chi nhánh nào
-            }
-            else if (SessionManager.RoleName == "BranchManager" && branch.BranchId != SessionManager.BranchId)
-            {
-                throw new UnauthorizedAccessException("Bạn chỉ có quyền cấu hình chi nhánh của mình!");
-            }
-            else
+            if (!SessionManager.CanManageBranches)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa chi nhánh!");
             }
 
-            if (!SessionManager.TenantId.HasValue)
-                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+            if (SessionManager.IsTenantAdmin)
+            {
+                if (!SessionManager.CurrentTenantId.HasValue)
+                    throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
 
-            branch.TenantId = SessionManager.TenantId.Value;
+                branch.TenantId = SessionManager.CurrentTenantId.Value;
+            }
+
             _branchRepo.Update(branch);
             _branchRepo.Save();
         }
@@ -85,8 +87,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void DeleteBranch(int branchId)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin mới được xóa chi nhánh
-            if (SessionManager.RoleName != "SuperAdmin")
+            if (!SessionManager.CanManageBranches)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền xóa chi nhánh!");
             }

@@ -1,6 +1,9 @@
 ﻿using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.Data_Access_Layer.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
 {
@@ -13,14 +16,76 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             _catRepo = new BaseRepository<TransactionCategory>(context);
         }
 
-        public List<TransactionCategory> GetCategories(string type) // "IN" hoặc "OUT"
+        private static int ResolveTenantScope(int requestedTenantId = 0)
         {
-            if (!SessionManager.TenantId.HasValue)
+            if (SessionManager.IsSuperAdmin)
             {
-                return new List<TransactionCategory>();
+                if (requestedTenantId > 0)
+                    return requestedTenantId;
+
+                if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentTenantId.Value > 0)
+                    return SessionManager.CurrentTenantId.Value;
+
+                throw new InvalidOperationException("SuperAdmin cần chọn Tenant để thao tác dữ liệu.");
             }
 
-            return _catRepo.Find(c => c.TenantId == SessionManager.TenantId.Value && c.Type == type)
+            if (!SessionManager.CurrentTenantId.HasValue || SessionManager.CurrentTenantId.Value <= 0)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            return SessionManager.CurrentTenantId.Value;
+        }
+
+        private static void EnsureCanManageCategoryMasterData()
+        {
+            if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+                throw new UnauthorizedAccessException("Bạn không có quyền cấu hình danh mục Thu/Chi.");
+        }
+
+        private static int? ResolveBranchScopeForRead()
+        {
+            if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+            {
+                if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    throw new InvalidOperationException("Không có chi nhánh ngữ cảnh. Vui lòng đăng nhập lại.");
+
+                return SessionManager.CurrentBranchId.Value;
+            }
+
+            if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                return SessionManager.CurrentBranchId.Value;
+
+            return null;
+        }
+
+        private static int ResolveBranchScopeForWrite(int requestedBranchId = 0)
+        {
+            if (requestedBranchId > 0)
+            {
+                if ((SessionManager.IsBranchManager || SessionManager.IsStaff)
+                    && SessionManager.CurrentBranchId.HasValue
+                    && SessionManager.CurrentBranchId.Value > 0
+                    && requestedBranchId != SessionManager.CurrentBranchId.Value)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền thao tác dữ liệu ngoài chi nhánh hiện tại.");
+                }
+
+                return requestedBranchId;
+            }
+
+            if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                return SessionManager.CurrentBranchId.Value;
+
+            throw new InvalidOperationException("Vui lòng chọn chi nhánh trước khi thao tác dữ liệu.");
+        }
+
+        public List<TransactionCategory> GetCategories(string type) // "IN" hoặc "OUT"
+        {
+            int scopedTenantId = ResolveTenantScope();
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            return _catRepo.Find(c => c.TenantId == scopedTenantId
+                                   && c.IsActive
+                                   && c.Type == type
+                                   && (!scopedBranchId.HasValue || c.BranchId == scopedBranchId.Value))
                            .OrderBy(c => c.CategoryName).ToList();
         }
 
@@ -29,7 +94,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public List<TransactionCategory> GetCategoriesByTenant(int tenantId, string type = null)
         {
-            var query = _catRepo.Find(c => c.TenantId == tenantId && c.IsActive);
+            int scopedTenantId = ResolveTenantScope(tenantId);
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            var query = _catRepo.Find(c => c.TenantId == scopedTenantId
+                                        && c.IsActive
+                                        && (!scopedBranchId.HasValue || c.BranchId == scopedBranchId.Value));
             if (!string.IsNullOrWhiteSpace(type))
             {
                 query = query.Where(c => c.Type == type);
@@ -39,13 +108,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         public List<TransactionCategory> GetCategoriesForCurrentSession(string type = null)
         {
-            if (!SessionManager.CurrentTenantId.HasValue)
-            {
-                return new List<TransactionCategory>();
-            }
-
-            int currentTenantId = SessionManager.CurrentTenantId.Value;
-            var query = _catRepo.Find(c => c.TenantId == currentTenantId && c.IsActive);
+            int scopedTenantId = ResolveTenantScope();
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            var query = _catRepo.Find(c => c.TenantId == scopedTenantId
+                                        && c.IsActive
+                                        && (!scopedBranchId.HasValue || c.BranchId == scopedBranchId.Value));
             if (!string.IsNullOrWhiteSpace(type))
             {
                 query = query.Where(c => c.Type == type);
@@ -58,16 +125,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void CreateCategory(TransactionCategory category)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin hoặc BranchManager mới được tạo danh mục
-            if (SessionManager.RoleName != "SuperAdmin" && SessionManager.RoleName != "BranchManager")
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền tạo loại thu chi!");
-            }
+            EnsureCanManageCategoryMasterData();
 
-            if (!SessionManager.TenantId.HasValue)
-                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+            if (category == null)
+                throw new ArgumentNullException(nameof(category));
 
-            category.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
+            category.TenantId = ResolveTenantScope(category.TenantId);
+            category.BranchId = ResolveBranchScopeForWrite(category.BranchId);
+            category.IsActive = true;
             _catRepo.Add(category);
             _catRepo.Save();
         }
@@ -77,17 +142,25 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void UpdateCategory(TransactionCategory category)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin hoặc BranchManager mới được sửa
-            if (SessionManager.RoleName != "SuperAdmin" && SessionManager.RoleName != "BranchManager")
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền sửa loại thu chi!");
-            }
+            EnsureCanManageCategoryMasterData();
 
-            if (!SessionManager.TenantId.HasValue)
-                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+            if (category == null)
+                throw new ArgumentNullException(nameof(category));
 
-            category.TenantId = SessionManager.TenantId.Value;
-            _catRepo.Update(category);
+            int scopedTenantId = ResolveTenantScope(category.TenantId);
+            int scopedBranchId = ResolveBranchScopeForWrite(category.BranchId);
+            int? readBranchScope = ResolveBranchScopeForRead();
+            var existing = _catRepo.GetById(category.CategoryId);
+            if (existing == null || existing.TenantId != scopedTenantId || (readBranchScope.HasValue && existing.BranchId != readBranchScope.Value))
+                throw new KeyNotFoundException("Không tìm thấy danh mục trong phạm vi tenant hiện tại.");
+
+            existing.CategoryName = category.CategoryName;
+            existing.Type = category.Type;
+            existing.IsActive = category.IsActive;
+            existing.TenantId = scopedTenantId;
+            existing.BranchId = scopedBranchId;
+
+            _catRepo.Update(existing);
             _catRepo.Save();
         }
 
@@ -96,13 +169,16 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void DeleteCategory(int categoryId)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin mới được xóa danh mục
-            if (SessionManager.RoleName != "SuperAdmin")
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền xóa loại thu chi!");
-            }
+            EnsureCanManageCategoryMasterData();
 
-            _catRepo.Delete(categoryId);
+            int scopedTenantId = ResolveTenantScope();
+            int? readBranchScope = ResolveBranchScopeForRead();
+            var existing = _catRepo.GetById(categoryId);
+            if (existing == null || existing.TenantId != scopedTenantId || (readBranchScope.HasValue && existing.BranchId != readBranchScope.Value))
+                throw new KeyNotFoundException("Không tìm thấy danh mục trong phạm vi tenant hiện tại.");
+
+            existing.IsActive = false;
+            _catRepo.Update(existing);
             _catRepo.Save();
         }
     }

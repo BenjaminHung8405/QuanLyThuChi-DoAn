@@ -75,6 +75,17 @@ namespace QuanLyThuChi_DoAn.BLL.Common
         }
 
         public static bool IsSuperAdmin => RoleId == (int)UserRole.SuperAdmin;
+        public static bool IsTenantAdmin => RoleId == (int)UserRole.TenantAdmin || string.Equals(RoleName, "TenantAdmin", StringComparison.OrdinalIgnoreCase) || string.Equals(RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
+        public static bool IsBranchManager => RoleId == (int)UserRole.BranchManager || string.Equals(RoleName, "BranchManager", StringComparison.OrdinalIgnoreCase) || string.Equals(RoleName, "Manager", StringComparison.OrdinalIgnoreCase);
+        public static bool IsStaff => RoleId == (int)UserRole.Staff || string.Equals(RoleName, "Staff", StringComparison.OrdinalIgnoreCase);
+
+        public static bool CanChangeTenantContext => IsSuperAdmin;
+        public static bool CanChangeBranchContext => IsSuperAdmin || IsTenantAdmin;
+        public static bool CanApproveDebt => IsSuperAdmin || IsTenantAdmin || IsBranchManager;
+        public static bool CanManageUsers => IsSuperAdmin || IsTenantAdmin || IsBranchManager;
+        public static bool CanManageBranches => IsSuperAdmin || IsTenantAdmin;
+        public static bool CanViewSummaryReports => IsSuperAdmin || IsTenantAdmin;
+        public static bool CanTransferInterBranch => IsSuperAdmin || IsTenantAdmin;
 
         public static int CurrentUserId
         {

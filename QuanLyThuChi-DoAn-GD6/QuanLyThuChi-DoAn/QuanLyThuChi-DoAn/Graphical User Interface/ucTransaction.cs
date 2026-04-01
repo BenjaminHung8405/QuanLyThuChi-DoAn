@@ -204,7 +204,6 @@ namespace QuanLyThuChi_DoAn
         {
             try
             {
-                int tenantId = 4;
                 var keyword = txtSearch.Text.Trim();
 
                 // Use safe date ranges (2000-2099) instead of DateTime.MinValue/MaxValue
@@ -469,7 +468,7 @@ namespace QuanLyThuChi_DoAn
 
             try
             {
-                if (!SessionManager.TenantId.HasValue)
+                if (!SessionManager.CurrentTenantId.HasValue)
                 {
                     MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
@@ -490,7 +489,7 @@ namespace QuanLyThuChi_DoAn
                     var newTrans = new Transaction
                     {
                         // TỰ ĐỘNG GÁN TỪ PHIÊN ĐĂNG NHẬP
-                        TenantId = SessionManager.TenantId.Value,   // Ví dụ: 4
+                        TenantId = SessionManager.CurrentTenantId.Value,
                         BranchId = SessionManager.BranchId.Value,   // Ví dụ: 4 (Chi nhánh Long Xuyên)
                         CreatedBy = SessionManager.UserId,    // Ví dụ: 2 (Admin)
 
@@ -707,13 +706,13 @@ namespace QuanLyThuChi_DoAn
         {
             try
             {
-                if (!SessionManager.TenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+                if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
                 {
                     // Không có ngữ cảnh tenant/branch đầy đủ
                     return;
                 }
 
-                int currentTenantId = SessionManager.TenantId.Value;
+                int currentTenantId = SessionManager.CurrentTenantId.Value;
 
                 // 1. Load Danh mục (Category) theo loại Thu/Chi hiện tại
                 OnTransactionTypeChanged();
@@ -773,12 +772,12 @@ namespace QuanLyThuChi_DoAn
         {
             try
             {
-                if (!SessionManager.TenantId.HasValue)
+                if (!SessionManager.CurrentTenantId.HasValue)
                 {
                     return;
                 }
 
-                int currentTenantId = SessionManager.TenantId.Value;
+                int currentTenantId = SessionManager.CurrentTenantId.Value;
 
                 // Category filter (include "Tất cả")
                 var categories = _categoryService.GetCategoriesForCurrentSession();

@@ -16,6 +16,10 @@ namespace QuanLyThuChi_DoAn
         [ForeignKey("TenantId")]
         public virtual Tenant Tenant { get; set; }
 
+        public int BranchId { get; set; }
+        [ForeignKey("BranchId")]
+        public virtual Branch Branch { get; set; }
+
         [Required]
         [StringLength(100)]
         public string CategoryName { get; set; }

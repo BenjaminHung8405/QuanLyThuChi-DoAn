@@ -1,6 +1,9 @@
 ﻿using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.Data_Access_Layer.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
 {
@@ -13,10 +16,78 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             _partnerRepo = new BaseRepository<Partner>(context);
         }
 
+        private static int ResolveTenantScope(int requestedTenantId = 0)
+        {
+            if (SessionManager.IsSuperAdmin)
+            {
+                if (requestedTenantId > 0)
+                    return requestedTenantId;
+
+                if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentTenantId.Value > 0)
+                    return SessionManager.CurrentTenantId.Value;
+
+                throw new InvalidOperationException("SuperAdmin cần chọn Tenant để thao tác dữ liệu.");
+            }
+
+            if (!SessionManager.CurrentTenantId.HasValue || SessionManager.CurrentTenantId.Value <= 0)
+                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+
+            return SessionManager.CurrentTenantId.Value;
+        }
+
+        private static void EnsureCanManagePartnerMasterData()
+        {
+            if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+                throw new UnauthorizedAccessException("Bạn không có quyền cấu hình danh mục đối tác.");
+        }
+
+        private static int? ResolveBranchScopeForRead()
+        {
+            if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+            {
+                if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    throw new InvalidOperationException("Không có chi nhánh ngữ cảnh. Vui lòng đăng nhập lại.");
+
+                return SessionManager.CurrentBranchId.Value;
+            }
+
+            if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                return SessionManager.CurrentBranchId.Value;
+
+            return null;
+        }
+
+        private static int ResolveBranchScopeForWrite(int requestedBranchId = 0)
+        {
+            if (requestedBranchId > 0)
+            {
+                if ((SessionManager.IsBranchManager || SessionManager.IsStaff)
+                    && SessionManager.CurrentBranchId.HasValue
+                    && SessionManager.CurrentBranchId.Value > 0
+                    && requestedBranchId != SessionManager.CurrentBranchId.Value)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền thao tác dữ liệu ngoài chi nhánh hiện tại.");
+                }
+
+                return requestedBranchId;
+            }
+
+            if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                return SessionManager.CurrentBranchId.Value;
+
+            throw new InvalidOperationException("Vui lòng chọn chi nhánh trước khi thao tác dữ liệu.");
+        }
+
         // Lấy tất cả đối tác theo Tenant (chỉ đối tác đang hoạt động)
         public List<Partner> GetByTenant(int tenantId)
         {
-            return _partnerRepo.Find(p => p.TenantId == tenantId && p.IsActive).ToList();
+            int scopedTenantId = ResolveTenantScope(tenantId);
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            return _partnerRepo.Find(p => p.TenantId == scopedTenantId
+                                        && p.IsActive
+                                        && (!scopedBranchId.HasValue || p.BranchId == scopedBranchId.Value))
+                               .OrderByDescending(p => p.PartnerId)
+                               .ToList();
         }
 
         /// <summary>
@@ -24,7 +95,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public List<Partner> GetPartnersByTenant(int tenantId, string type = null)
         {
-            var query = _partnerRepo.Find(p => p.TenantId == tenantId && p.IsActive);
+            int scopedTenantId = ResolveTenantScope(tenantId);
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            var query = _partnerRepo.Find(p => p.TenantId == scopedTenantId
+                                            && p.IsActive
+                                            && (!scopedBranchId.HasValue || p.BranchId == scopedBranchId.Value));
             if (!string.IsNullOrWhiteSpace(type))
             {
                 query = query.Where(p => p.Type == type);
@@ -41,7 +116,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// <returns>Danh sách đối tác sắp xếp theo ID giảm dần</returns>
         public List<Partner> GetPartners(int tenantId, string keyword = "")
         {
-            var query = _partnerRepo.Find(p => p.TenantId == tenantId && p.IsActive);
+            int scopedTenantId = ResolveTenantScope(tenantId);
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            var query = _partnerRepo.Find(p => p.TenantId == scopedTenantId
+                                            && p.IsActive
+                                            && (!scopedBranchId.HasValue || p.BranchId == scopedBranchId.Value));
 
             // Nếu người dùng có gõ tìm kiếm
             if (!string.IsNullOrEmpty(keyword))
@@ -57,19 +136,27 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         // Lọc đối tác theo loại (CUSTOMER/SUPPLIER) và Tenant (chỉ đối tác đang hoạt động)
         public List<Partner> GetPartnersByType(string type)
         {
-            if (!SessionManager.TenantId.HasValue)
-                return new List<Partner>();
-
-            return _partnerRepo.Find(p => p.TenantId == SessionManager.TenantId.Value && p.Type == type && p.IsActive)
+            int scopedTenantId = ResolveTenantScope();
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            return _partnerRepo.Find(p => p.TenantId == scopedTenantId
+                                       && p.Type == type
+                                       && p.IsActive
+                                       && (!scopedBranchId.HasValue || p.BranchId == scopedBranchId.Value))
                                .ToList();
         }
 
         /// <summary>
         /// Kiểm tra trùng lặp tên đối tác trong cùng 1 công ty
         /// </summary>
-        public bool IsExisted(string name, int tenantId)
+        public bool IsExisted(string name, int tenantId, int branchId)
         {
-            return _partnerRepo.Find(p => p.PartnerName == name && p.TenantId == tenantId).Any();
+            int scopedTenantId = ResolveTenantScope(tenantId);
+            int scopedBranchId = ResolveBranchScopeForWrite(branchId);
+            string normalizedName = (name ?? string.Empty).Trim();
+            return _partnerRepo.Find(p => p.PartnerName == normalizedName
+                                       && p.TenantId == scopedTenantId
+                                       && p.BranchId == scopedBranchId
+                                       && p.IsActive).Any();
         }
 
         /// <summary>
@@ -77,23 +164,21 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void CreatePartner(Partner partner)
         {
-            // 🔐 Deep Security: Kiểm tra quyền tạo đối tác
-            // Chỉ SuperAdmin hoặc BranchManager mới có quyền
-            if (SessionManager.RoleName != "SuperAdmin" && SessionManager.RoleName != "BranchManager")
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền tạo đối tác!");
-            }
+            EnsureCanManagePartnerMasterData();
 
-            // ✅ Business Logic: Kiểm tra trùng lặp tên đối tác
-            if (!SessionManager.TenantId.HasValue)
-                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+            if (partner == null)
+                throw new ArgumentNullException(nameof(partner));
 
-            if (IsExisted(partner.PartnerName, SessionManager.TenantId.Value))
+            int scopedTenantId = ResolveTenantScope(partner.TenantId);
+            int scopedBranchId = ResolveBranchScopeForWrite(partner.BranchId);
+            if (IsExisted(partner.PartnerName, scopedTenantId, scopedBranchId))
             {
                 throw new InvalidOperationException($"Đối tác tên '{partner.PartnerName}' đã tồn tại!");
             }
 
-            partner.TenantId = SessionManager.TenantId.Value; // Ép buộc theo Tenant hiện tại
+            partner.TenantId = scopedTenantId;
+            partner.BranchId = scopedBranchId;
+            partner.IsActive = true;
             _partnerRepo.Add(partner);
             _partnerRepo.Save();
         }
@@ -103,17 +188,28 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void UpdatePartner(Partner partner)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin hoặc BranchManager mới được sửa
-            if (SessionManager.RoleName != "SuperAdmin" && SessionManager.RoleName != "BranchManager")
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền sửa đối tác!");
-            }
+            EnsureCanManagePartnerMasterData();
 
-            if (!SessionManager.TenantId.HasValue)
-                throw new InvalidOperationException("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.");
+            if (partner == null)
+                throw new ArgumentNullException(nameof(partner));
 
-            partner.TenantId = SessionManager.TenantId.Value;
-            _partnerRepo.Update(partner);
+            int scopedTenantId = ResolveTenantScope(partner.TenantId);
+            int scopedBranchId = ResolveBranchScopeForWrite(partner.BranchId);
+            int? readBranchScope = ResolveBranchScopeForRead();
+            var existing = _partnerRepo.GetById(partner.PartnerId);
+            if (existing == null || existing.TenantId != scopedTenantId || (readBranchScope.HasValue && existing.BranchId != readBranchScope.Value))
+                throw new KeyNotFoundException("Không tìm thấy đối tác trong phạm vi tenant hiện tại.");
+
+            existing.PartnerName = partner.PartnerName;
+            existing.Phone = partner.Phone;
+            existing.Address = partner.Address;
+            existing.Type = partner.Type;
+            existing.InitialDebt = partner.InitialDebt;
+            existing.IsActive = partner.IsActive;
+            existing.TenantId = scopedTenantId;
+            existing.BranchId = scopedBranchId;
+
+            _partnerRepo.Update(existing);
             _partnerRepo.Save();
         }
 
@@ -123,14 +219,13 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public void DeletePartner(int id)
         {
-            // 🔐 Deep Security: Chỉ SuperAdmin mới được xóa đối tác
-            if (SessionManager.RoleName != "SuperAdmin")
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền xóa đối tác!");
-            }
+            EnsureCanManagePartnerMasterData();
+
+            int scopedTenantId = ResolveTenantScope();
+            int? readBranchScope = ResolveBranchScopeForRead();
 
             var partner = _partnerRepo.GetById(id);
-            if (partner == null)
+            if (partner == null || partner.TenantId != scopedTenantId || (readBranchScope.HasValue && partner.BranchId != readBranchScope.Value))
             {
                 throw new InvalidOperationException("Không tìm thấy đối tác cần xóa!");
             }

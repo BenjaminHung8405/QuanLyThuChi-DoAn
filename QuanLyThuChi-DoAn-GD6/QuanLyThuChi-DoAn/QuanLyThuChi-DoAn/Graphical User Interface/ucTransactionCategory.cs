@@ -59,7 +59,8 @@ namespace QuanLyThuChi_DoAn
                     return;
                 }
 
-                List<TransactionCategory> categories = _categoryService.GetCategories(SessionManager.TenantId.Value, "");
+                int currentTenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value;
+                List<TransactionCategory> categories = _categoryService.GetCategories(currentTenantId, "");
 
                 // ✅ Filter by keyword with proper normalization (Tiếng Việt)
                 if (!string.IsNullOrWhiteSpace(keyword))
@@ -180,11 +181,18 @@ namespace QuanLyThuChi_DoAn
                         return;
                     }
 
+                    if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    {
+                        MessageBox.Show("Vui lòng chọn chi nhánh trước khi thêm danh mục.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     var newCategory = new TransactionCategory
                     {
                         CategoryName = txtCategoryName.Text.Trim(),
                         Type = typeValue, // Dùng biến đã chuẩn hóa
-                        TenantId = SessionManager.TenantId.Value
+                        TenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value,
+                        BranchId = SessionManager.CurrentBranchId.Value
                     };
 
                     _categoryService.CreateCategory(newCategory);
@@ -192,8 +200,16 @@ namespace QuanLyThuChi_DoAn
                 }
                 else if (_selectedCategory != null)
                 {
+                    if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    {
+                        MessageBox.Show("Vui lòng chọn chi nhánh trước khi cập nhật danh mục.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     _selectedCategory.CategoryName = txtCategoryName.Text.Trim();
                     _selectedCategory.Type = typeValue; // Dùng biến đã chuẩn hóa
+                    _selectedCategory.TenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId ?? 0;
+                    _selectedCategory.BranchId = SessionManager.CurrentBranchId.Value;
 
                     _categoryService.UpdateCategory(_selectedCategory);
                     successMessage = "Cập nhật danh mục thành công!";
@@ -244,7 +260,8 @@ namespace QuanLyThuChi_DoAn
                     MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                _categoryService.DeleteCategory(_selectedCategory.CategoryId, SessionManager.TenantId.Value);
+                int currentTenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value;
+                _categoryService.DeleteCategory(_selectedCategory.CategoryId, currentTenantId);
                 MessageBox.Show("Xóa danh mục thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 ResetForm();
                 SetInputFieldsEnabled(false);

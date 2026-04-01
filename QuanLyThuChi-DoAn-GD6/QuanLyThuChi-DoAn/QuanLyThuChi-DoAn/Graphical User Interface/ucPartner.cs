@@ -56,7 +56,8 @@ namespace QuanLyThuChi_DoAn
                     return;
                 }
 
-                List<Partner> partners = _partnerService.GetPartners(SessionManager.TenantId.Value, "");
+                int currentTenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value;
+                List<Partner> partners = _partnerService.GetPartners(currentTenantId, "");
 
                 // ✅ Criterion 2: Filter by keyword with proper normalization (Tiếng Việt)
                 if (!string.IsNullOrWhiteSpace(keyword))
@@ -190,6 +191,12 @@ namespace QuanLyThuChi_DoAn
                         return;
                     }
 
+                    if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    {
+                        MessageBox.Show("Vui lòng chọn chi nhánh trước khi thêm đối tác.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     var newPartner = new Partner
                     {
                         PartnerName = txtPartnerName.Text.Trim(),
@@ -197,7 +204,8 @@ namespace QuanLyThuChi_DoAn
                         Address = txtAddress.Text.Trim(),
                         Type = MapDisplayTypeToDbValue(cboType.SelectedItem?.ToString()),
                         InitialDebt = initialDebt,
-                        TenantId = SessionManager.TenantId.Value
+                        TenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value,
+                        BranchId = SessionManager.CurrentBranchId.Value
                     };
 
                     _partnerService.CreatePartner(newPartner);
@@ -212,12 +220,19 @@ namespace QuanLyThuChi_DoAn
                         return;
                     }
 
+                    if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    {
+                        MessageBox.Show("Vui lòng chọn chi nhánh trước khi cập nhật đối tác.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     _selectedPartner.PartnerName = txtPartnerName.Text.Trim();
                     _selectedPartner.Phone = txtPhone.Text.Trim();
                     _selectedPartner.Address = txtAddress.Text.Trim();
                     _selectedPartner.Type = MapDisplayTypeToDbValue(cboType.SelectedItem?.ToString());
                     _selectedPartner.InitialDebt = initialDebt;
-                    _selectedPartner.TenantId = SessionManager.TenantId.Value;
+                    _selectedPartner.TenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value;
+                    _selectedPartner.BranchId = SessionManager.CurrentBranchId.Value;
 
                     _partnerService.UpdatePartner(_selectedPartner);
                     successMessage = "Cập nhật đối tác thành công!";

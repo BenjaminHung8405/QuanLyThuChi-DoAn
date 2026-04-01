@@ -21,21 +21,17 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             var query = _context.CashFunds
                 .Where(f => f.TenantId == tenantId && f.BranchId == branchId && f.IsActive);
 
-            if (roleId == 3)
+            if (roleId == (int)UserRole.SuperAdmin || roleId == (int)UserRole.TenantAdmin)
             {
-                query = query.Where(f => f.FundName != null && f.FundName.Contains("Tiền mặt"));
-            }
-            else if (roleId == 2)
-            {
-                // Admin: lấy tất cả quỹ đang hoạt động
-            }
-            else
-            {
-                // Các vai trò khác không được truy cập danh sách quỹ theo yêu cầu RBAC cụ thể
-                query = query.Where(f => false);
+                return query.ToList();
             }
 
-            return query.ToList();
+            if (roleId == (int)UserRole.BranchManager || roleId == (int)UserRole.Staff)
+            {
+                return query.ToList();
+            }
+
+            return new List<CashFund>();
         }
 
         public List<CashFund> GetFundsForCurrentSession(int roleId)
@@ -74,7 +70,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .Include(f => f.Branch)
                 .Where(f => f.IsActive);
 
-            if (roleId == 1)
+            if (roleId == (int)UserRole.SuperAdmin)
             {
                 // SuperAdmin: xem tất cả tenants
                 return query.OrderBy(f => f.FundName).ToList();
@@ -87,7 +83,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             int tenantId = SessionManager.CurrentTenantId.Value;
 
-            if (roleId == 2)
+            if (roleId == (int)UserRole.TenantAdmin)
             {
                 // TenantManager: xem tất cả quỹ trong tenant hiện tại
                 return query
@@ -96,7 +92,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     .ToList();
             }
 
-            if (roleId == 3)
+            if (roleId == (int)UserRole.BranchManager || roleId == (int)UserRole.Staff)
             {
                 // BranchManager/Staff: chỉ xem quỹ trong chi nhánh hiện tại
                 if (!SessionManager.CurrentBranchId.HasValue)

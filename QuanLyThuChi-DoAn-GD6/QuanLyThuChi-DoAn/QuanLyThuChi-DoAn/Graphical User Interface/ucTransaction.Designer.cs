@@ -63,7 +63,6 @@
             lblType = new Label();
             lblTotalIn = new Label();
             lblTotalOut = new Label();
-            lblBalance = new Label();
             pnlHeader = new Panel();
             tableLayoutPanel4 = new TableLayoutPanel();
             panel1 = new Panel();
@@ -78,6 +77,7 @@
             cboFilterCategory = new ComboBox();
             label3 = new Label();
             cboFilterPartner = new ComboBox();
+            lblBalance = new Label();
             pnlGrid.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
             tableLayoutPanel1.SuspendLayout();
@@ -99,7 +99,7 @@
             pnlGrid.Location = new Point(3, 3);
             pnlGrid.Name = "pnlGrid";
             pnlGrid.Padding = new Padding(16);
-            pnlGrid.Size = new Size(754, 601);
+            pnlGrid.Size = new Size(754, 565);
             pnlGrid.TabIndex = 0;
             // 
             // dgvTransactions
@@ -117,7 +117,7 @@
             dgvTransactions.ReadOnly = true;
             dgvTransactions.RowHeadersVisible = false;
             dgvTransactions.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvTransactions.Size = new Size(722, 569);
+            dgvTransactions.Size = new Size(722, 533);
             dgvTransactions.TabIndex = 0;
             // 
             // colDate
@@ -181,11 +181,11 @@
             tableLayoutPanel1.Controls.Add(pnlGrid, 0, 0);
             tableLayoutPanel1.Controls.Add(pnlInput, 1, 0);
             tableLayoutPanel1.Dock = DockStyle.Fill;
-            tableLayoutPanel1.Location = new Point(0, 90);
+            tableLayoutPanel1.Location = new Point(0, 126);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel1.Size = new Size(1168, 607);
+            tableLayoutPanel1.Size = new Size(1168, 571);
             tableLayoutPanel1.TabIndex = 6;
             // 
             // pnlInput
@@ -197,16 +197,16 @@
             pnlInput.Location = new Point(763, 3);
             pnlInput.Name = "pnlInput";
             pnlInput.Padding = new Padding(16);
-            pnlInput.Size = new Size(402, 601);
+            pnlInput.Size = new Size(402, 565);
             pnlInput.TabIndex = 1;
             // 
             // pnlButtons
             // 
             pnlButtons.Controls.Add(tableLayoutPanel3);
             pnlButtons.Dock = DockStyle.Bottom;
-            pnlButtons.Location = new Point(16, 486);
+            pnlButtons.Location = new Point(16, 463);
             pnlButtons.Name = "pnlButtons";
-            pnlButtons.Size = new Size(370, 99);
+            pnlButtons.Size = new Size(353, 99);
             pnlButtons.TabIndex = 15;
             // 
             // tableLayoutPanel3
@@ -224,7 +224,7 @@
             tableLayoutPanel3.RowCount = 2;
             tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableLayoutPanel3.Size = new Size(370, 100);
+            tableLayoutPanel3.Size = new Size(353, 100);
             tableLayoutPanel3.TabIndex = 11;
             // 
             // btnDelete
@@ -238,10 +238,10 @@
             btnDelete.IconFont = FontAwesome.Sharp.IconFont.Auto;
             btnDelete.IconSize = 32;
             btnDelete.ImageAlign = ContentAlignment.MiddleLeft;
-            btnDelete.Location = new Point(188, 53);
+            btnDelete.Location = new Point(179, 53);
             btnDelete.Name = "btnDelete";
             btnDelete.Padding = new Padding(8, 0, 0, 0);
-            btnDelete.Size = new Size(179, 44);
+            btnDelete.Size = new Size(171, 44);
             btnDelete.TabIndex = 3;
             btnDelete.Text = "Xóa";
             btnDelete.UseVisualStyleBackColor = false;
@@ -260,7 +260,7 @@
             btnSave.Location = new Point(3, 53);
             btnSave.Name = "btnSave";
             btnSave.Padding = new Padding(8, 0, 0, 0);
-            btnSave.Size = new Size(179, 44);
+            btnSave.Size = new Size(170, 44);
             btnSave.TabIndex = 2;
             btnSave.Text = "Lưu";
             btnSave.UseVisualStyleBackColor = false;
@@ -274,10 +274,10 @@
             btnCancel.IconFont = FontAwesome.Sharp.IconFont.Auto;
             btnCancel.IconSize = 32;
             btnCancel.ImageAlign = ContentAlignment.MiddleLeft;
-            btnCancel.Location = new Point(188, 3);
+            btnCancel.Location = new Point(179, 3);
             btnCancel.Name = "btnCancel";
             btnCancel.Padding = new Padding(8, 0, 0, 0);
-            btnCancel.Size = new Size(179, 44);
+            btnCancel.Size = new Size(171, 44);
             btnCancel.TabIndex = 1;
             btnCancel.Text = "Bỏ qua";
             btnCancel.UseVisualStyleBackColor = true;
@@ -294,7 +294,7 @@
             btnNew.Location = new Point(3, 3);
             btnNew.Name = "btnNew";
             btnNew.Padding = new Padding(8, 0, 0, 0);
-            btnNew.Size = new Size(179, 44);
+            btnNew.Size = new Size(170, 44);
             btnNew.TabIndex = 0;
             btnNew.Text = "Thêm mới";
             btnNew.UseVisualStyleBackColor = true;
@@ -320,7 +320,7 @@
             gbTransactionDetail.Location = new Point(16, 16);
             gbTransactionDetail.Name = "gbTransactionDetail";
             gbTransactionDetail.Padding = new Padding(16);
-            gbTransactionDetail.Size = new Size(370, 463);
+            gbTransactionDetail.Size = new Size(353, 463);
             gbTransactionDetail.TabIndex = 2;
             gbTransactionDetail.TabStop = false;
             gbTransactionDetail.Text = "Thông tin Giao dịch";
@@ -333,7 +333,7 @@
             txtNote.Location = new Point(16, 409);
             txtNote.Multiline = true;
             txtNote.Name = "txtNote";
-            txtNote.Size = new Size(338, 60);
+            txtNote.Size = new Size(321, 60);
             txtNote.TabIndex = 15;
             // 
             // lblNote
@@ -356,7 +356,7 @@
             cboFund.FormattingEnabled = true;
             cboFund.Location = new Point(16, 352);
             cboFund.Name = "cboFund";
-            cboFund.Size = new Size(338, 28);
+            cboFund.Size = new Size(321, 28);
             cboFund.TabIndex = 13;
             // 
             // label2
@@ -379,7 +379,7 @@
             cboPartner.FormattingEnabled = true;
             cboPartner.Location = new Point(16, 295);
             cboPartner.Name = "cboPartner";
-            cboPartner.Size = new Size(338, 28);
+            cboPartner.Size = new Size(321, 28);
             cboPartner.TabIndex = 9;
             // 
             // lblPartner
@@ -402,7 +402,7 @@
             cboCategory.FormattingEnabled = true;
             cboCategory.Location = new Point(16, 238);
             cboCategory.Name = "cboCategory";
-            cboCategory.Size = new Size(338, 28);
+            cboCategory.Size = new Size(321, 28);
             cboCategory.TabIndex = 7;
             // 
             // lblCategory
@@ -425,7 +425,7 @@
             dtpTransactionDate.Format = DateTimePickerFormat.Custom;
             dtpTransactionDate.Location = new Point(16, 182);
             dtpTransactionDate.Name = "dtpTransactionDate";
-            dtpTransactionDate.Size = new Size(338, 27);
+            dtpTransactionDate.Size = new Size(321, 27);
             dtpTransactionDate.TabIndex = 5;
             // 
             // lblDate
@@ -447,7 +447,7 @@
             txtAmount.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
             txtAmount.Location = new Point(16, 126);
             txtAmount.Name = "txtAmount";
-            txtAmount.Size = new Size(338, 27);
+            txtAmount.Size = new Size(321, 27);
             txtAmount.TabIndex = 3;
             txtAmount.TextAlign = HorizontalAlignment.Right;
             // 
@@ -470,7 +470,7 @@
             pnlRadio.Dock = DockStyle.Top;
             pnlRadio.Location = new Point(16, 62);
             pnlRadio.Name = "pnlRadio";
-            pnlRadio.Size = new Size(338, 35);
+            pnlRadio.Size = new Size(321, 35);
             pnlRadio.TabIndex = 1;
             // 
             // radOut
@@ -534,19 +534,6 @@
             lblTotalOut.TabIndex = 1;
             lblTotalOut.Text = "Tổng Chi: 0 đ";
             // 
-            // lblBalance
-            // 
-            lblBalance.AutoSize = true;
-            lblBalance.Dock = DockStyle.Left;
-            lblBalance.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblBalance.ForeColor = Color.FromArgb(25, 103, 210);
-            lblBalance.Location = new Point(252, 0);
-            lblBalance.Name = "lblBalance";
-            lblBalance.Padding = new Padding(30, 0, 0, 0);
-            lblBalance.Size = new Size(239, 21);
-            lblBalance.TabIndex = 2;
-            lblBalance.Text = "Số dư quỹ hiện tại: ... VNĐ";
-            // 
             // pnlHeader
             // 
             pnlHeader.Controls.Add(tableLayoutPanel4);
@@ -554,22 +541,24 @@
             pnlHeader.Location = new Point(0, 0);
             pnlHeader.Name = "pnlHeader";
             pnlHeader.Padding = new Padding(16, 8, 16, 8);
-            pnlHeader.Size = new Size(1168, 90);
+            pnlHeader.Size = new Size(1168, 126);
             pnlHeader.TabIndex = 5;
             // 
             // tableLayoutPanel4
             // 
             tableLayoutPanel4.ColumnCount = 1;
-            tableLayoutPanel4.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel4.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableLayoutPanel4.Controls.Add(lblBalance, 0, 2);
             tableLayoutPanel4.Controls.Add(panel1, 0, 0);
             tableLayoutPanel4.Controls.Add(pnlTotal, 0, 1);
             tableLayoutPanel4.Dock = DockStyle.Fill;
             tableLayoutPanel4.Location = new Point(16, 8);
             tableLayoutPanel4.Name = "tableLayoutPanel4";
-            tableLayoutPanel4.RowCount = 2;
-            tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableLayoutPanel4.Size = new Size(1136, 74);
+            tableLayoutPanel4.RowCount = 3;
+            tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
+            tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
+            tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
+            tableLayoutPanel4.Size = new Size(1136, 110);
             tableLayoutPanel4.TabIndex = 2;
             // 
             // panel1
@@ -584,7 +573,7 @@
             panel1.Location = new Point(3, 3);
             panel1.Name = "panel1";
             panel1.Padding = new Padding(0, 2, 8, 2);
-            panel1.Size = new Size(1130, 31);
+            panel1.Size = new Size(1130, 30);
             panel1.TabIndex = 3;
             // 
             // label1
@@ -610,7 +599,7 @@
             btnRefresh.Location = new Point(556, 2);
             btnRefresh.Margin = new Padding(2, 0, 4, 0);
             btnRefresh.Name = "btnRefresh";
-            btnRefresh.Size = new Size(38, 27);
+            btnRefresh.Size = new Size(38, 26);
             btnRefresh.TabIndex = 3;
             btnRefresh.UseVisualStyleBackColor = true;
             // 
@@ -625,7 +614,7 @@
             btnFilter.Location = new Point(594, 2);
             btnFilter.Margin = new Padding(2, 0, 2, 0);
             btnFilter.Name = "btnFilter";
-            btnFilter.Size = new Size(38, 27);
+            btnFilter.Size = new Size(38, 26);
             btnFilter.TabIndex = 4;
             btnFilter.UseVisualStyleBackColor = true;
             btnFilter.Click += btnFilter_Click;
@@ -670,13 +659,12 @@
             pnlTotal.Controls.Add(cboFilterCategory);
             pnlTotal.Controls.Add(label3);
             pnlTotal.Controls.Add(cboFilterPartner);
-            pnlTotal.Controls.Add(lblBalance);
             pnlTotal.Controls.Add(lblTotalOut);
             pnlTotal.Controls.Add(lblTotalIn);
             pnlTotal.Dock = DockStyle.Fill;
-            pnlTotal.Location = new Point(3, 40);
+            pnlTotal.Location = new Point(3, 39);
             pnlTotal.Name = "pnlTotal";
-            pnlTotal.Size = new Size(1130, 31);
+            pnlTotal.Size = new Size(1130, 30);
             pnlTotal.TabIndex = 4;
             // 
             // label4
@@ -725,6 +713,19 @@
             cboFilterPartner.Size = new Size(228, 28);
             cboFilterPartner.TabIndex = 10;
             // 
+            // lblBalance
+            // 
+            lblBalance.AutoSize = true;
+            lblBalance.Dock = DockStyle.Left;
+            lblBalance.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblBalance.ForeColor = Color.FromArgb(25, 103, 210);
+            lblBalance.Location = new Point(3, 72);
+            lblBalance.Name = "lblBalance";
+            lblBalance.Padding = new Padding(30, 0, 0, 0);
+            lblBalance.Size = new Size(239, 38);
+            lblBalance.TabIndex = 5;
+            lblBalance.Text = "Số dư quỹ hiện tại: ... VNĐ";
+            // 
             // ucTransaction
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -748,6 +749,7 @@
             pnlRadio.PerformLayout();
             pnlHeader.ResumeLayout(false);
             tableLayoutPanel4.ResumeLayout(false);
+            tableLayoutPanel4.PerformLayout();
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             pnlTotal.ResumeLayout(false);
@@ -778,7 +780,6 @@
         private Panel pnlTotal;
         private Label lblTotalIn;
         private Label lblTotalOut;
-        private Label lblBalance;
         private GroupBox gbTransactionDetail;
         private ComboBox cboPartner;
         private Label lblPartner;
@@ -806,5 +807,6 @@
         private ComboBox cboFilterCategory;
         private Label label3;
         private ComboBox cboFilterPartner;
+        private Label lblBalance;
     }
 }

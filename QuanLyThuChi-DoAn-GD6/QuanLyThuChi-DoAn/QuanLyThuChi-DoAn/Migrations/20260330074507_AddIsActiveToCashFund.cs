@@ -10,20 +10,23 @@ namespace QuanLyThuChi_DoAn.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsActive",
-                table: "CashFunds",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
+            migrationBuilder.Sql(@"
+IF COL_LENGTH('CashFunds', 'IsActive') IS NULL
+BEGIN
+    ALTER TABLE [CashFunds] ADD [IsActive] bit NOT NULL CONSTRAINT [DF_CashFunds_IsActive] DEFAULT 0;
+END
+");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "IsActive",
-                table: "CashFunds");
+            migrationBuilder.Sql(@"
+IF COL_LENGTH('CashFunds', 'IsActive') IS NOT NULL
+BEGIN
+    ALTER TABLE [CashFunds] DROP COLUMN [IsActive];
+END
+");
         }
     }
 }
