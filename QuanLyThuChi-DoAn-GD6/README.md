@@ -1,85 +1,52 @@
-## Mục tiêu
-- Thiết kế giao diện `ucDebt` đồng bộ với `ucTransaction` và cung cấp chức năng lọc, tìm kiếm, hiển thị danh sách khoản nợ, và khởi tạo quá trình thanh toán.
+# 4.6 Giai đoạn 6: Phân hệ Sổ Công nợ và Cô lập dữ liệu cấp Chi nhánh (Branch‑Scope)
 
-## Task List
-- Tạo UI: thanh công cụ lọc (tìm kiếm, loại nợ, trạng thái) và nút `Thêm nợ`, `Thanh toán`.
-- Cấu hình `DataGridView` (`dgvDebts`) với các cột cố định: Đối tác, Loại nợ, Tổng nợ, Đã trả, Còn nợ, Hạn trả, Trạng thái.
-- Thực hiện `LoadDebtDataAsync()` để gọi `DebtService.GetDebts(...)` trên background thread và hiển thị `toolStripProgressBar1` tại `frmMain` trong khi load.
-- Tính toán trường `Remaining` (Tổng nợ - Đã trả) trên client trước khi bind dữ liệu.
-- Xử lý sự kiện `btnPayDebt` để mở `frmDebtPayment(debtId)` và reload grid khi thanh toán thành công.
+## 4.6.1 Minh chứng giai đoạn
 
-## Thu hoạch cho Báo cáo
-- Áp dụng pattern load bất đồng bộ và hiển thị tiến trình (progress) để tránh UI freeze.
-- Đảm bảo null-safety cho quan hệ `Partner` khi bind dữ liệu.
-- Định dạng tiền tệ `#,##0` và ngày `dd/MM/yyyy` cho hiển thị thân thiện.
+- **Giao diện:** ảnh chụp màn hình ucDebt hiển thị danh sách công nợ với các cột tính toán động (Còn nợ), định dạng tiền tệ chuẩn Việt Nam (#,##0), định dạng ngày (`dd/MM/yyyy`) và bộ lọc dữ liệu đa chiều. Ảnh chụp cửa sổ frmDebtPayment khi thực hiện thanh toán.
+- **Mã nguồn & CSDL:** các migration đã được "cứng hóa" (ví dụ `Migrations/branch_scope_upgrade.sql`) theo kiểu Idempotent Scripts (kiểm tra tồn tại bằng `IF COL_LENGTH` / `IF EXISTS`) để tránh Schema Drift.
 
-## Mô tả
+## 4.6.2 Mô tả
 
-## Nhận xét
+- **Mục tiêu:** Hoàn thiện phân hệ Quản lý Công nợ và nâng cấp kiến trúc dữ liệu để cô lập dữ liệu ở mức Chi nhánh (Branch‑scope) cho các bảng danh mục.
 
-## Khó khăn & Giải pháp
+- **Giao diện & trải nghiệm (UI/UX):**
+	- `ucDebt` thiết kế responsive với `pnlTop` (bộ lọc) và `dgvDebts` (lưới dữ liệu).
+	- Tải dữ liệu bất đồng bộ thông qua `LoadDebtDataAsync()` chạy trên luồng nền; hiển thị tiến trình trên `toolStripProgressBar1` của `frmMain` để tránh treo UI.
+	- Trường "Còn nợ" được tính trên client trước khi bind: $Remaining = TotalDebt - PaidAmount$ (tức $Còn\;nợ = Tổng\;nợ - Đã\;trả$) và hiển thị theo `#,##0`.
 
----
-Các file đã chỉnh sửa: `Graphical User Interface/ucDebt.cs`, `Graphical User Interface/ucDebt.Designer.cs`.
-## Cập nhật giao diện ucDebt
+- **Nâng cấp Kiến trúc Dữ liệu (DAL):**
+	- Thêm trường `BranchId` và FK cho các bảng danh mục quan trọng (Partner, TransactionCategory).
+	- Chuẩn hóa kiểu tiền tệ thành `decimal(18,0)` cho VND.
 
-- Thêm `pnlTop` chứa `FlowLayoutPanel` cho bộ lọc và hai `Label` thống kê ở bên phải.
-- Thêm `DataGridView dgvDebts` với cột: `Đối tác`, `Loại nợ`, `Tổng nợ`, `Đã trả`, `Còn nợ`, `Trạng thái`.
-### Thu hoạch cho Báo cáo
-- Giao diện sử dụng panel/flow layout giúp co giãn tốt khi phóng to/thu nhỏ.
-- `ucDebt.Designer.cs` được cập nhật để tạo layout: `pnlTop` (dock top) và bảng `dgvDebts` (dock fill). Các cột tiền được cấu hình format `#,##0`.
+- **Cập nhật Logic Nghiệp vụ (BLL):**
+	- Tái cấu trúc service (PartnerService, CategoryService, TransactionService, TransactionCategoryService) để mọi thao tác đọc/ghi tuân thủ `SessionManager.CurrentBranchId` (ResolveBranchScopeForRead/Write).
+	- Các thao tác phát sinh giao dịch/thu/chi khi thanh toán nợ phải thực hiện trong `IDbContextTransaction` để đảm bảo tính nguyên tử (atomic).
 
-- Giữ phần xử lý dữ liệu và wiring event cho bước tiếp theo (BLL / frmDebtPayment).
+- **Luồng Thanh toán Nợ:**
+	- `btnPayDebt` mở `frmDebtPayment(debtId)`; khi thanh toán thành công cập nhật `Debts.PaidAmount` và sinh Transaction/Receipt trong cùng một transaction DB.
 
-- Không sửa logic nghiệp vụ ở bước này; chỉ implement UI để đảm bảo đồng bộ kiểu dáng.
+## 4.6.3 Nhận xét
 
-## Sprint: Branch-scope & Migration (2026-04-01)
+- **Bảo mật dữ liệu:** Cô lập dữ liệu theo chi nhánh ngăn chặn rò rỉ và chồng chéo dữ liệu giữa các chi nhánh trong môi trường multi‑tenant.
+- **Hiệu năng:** Tải dữ liệu bất đồng bộ kết hợp tính toán "Còn nợ" trên client giúp giảm tải cho SQL Server và giữ được trải nghiệm mượt mà khi dữ liệu lớn.
+- **Quản trị DB chuyên nghiệp:** Các migration idempotent và các kiểm tra tồn tại trước khi thay đổi schema cho phép triển khai an toàn trên môi trường có drift.
 
-### **Mục tiêu**
-- Cứng hóa branch-scope ở mức schema cho `Partner` và `TransactionCategory` (thêm `BranchId` + FK).
-- Đảm bảo mọi thao tác ghi/đọc master data bắt buộc resolve branch từ `SessionManager.CurrentBranchId` (không tin input từ UI).
+## 4.6.4 Khó khăn & Giải pháp
 
-### **Task List**
-- Thêm `BranchId` và FK `Branch` cho `Partner` và `TransactionCategory`.
-- Cập nhật BLL services (`PartnerService`, `CategoryService`, `TransactionCategoryService`, `TransactionService`) để resolve scope read/write.
-- Cập nhật UI (`ucPartner`, `ucTransactionCategory`) để bắt buộc chọn chi nhánh khi tạo/cập nhật và gán `BranchId`.
-- Tạo migration có backfill dữ liệu cũ (lấy từ `Debts`/`Transactions`), rồi đặt NOT NULL + FK.
-- Xử lý drift migration cũ (nếu cột đã tồn tại) bằng cách harden migration với checks (`IF COL_LENGTH` / `IF EXISTS`).
-- Apply migrations lên DB local và regenerate idempotent script `Migrations/branch_scope_upgrade.sql`.
+1. **Schema Drift (cột/constraint đã tồn tại):**
+	 - Vấn đề: Thêm `BranchId` trên bảng đã có dữ liệu dễ gây lỗi "column already exists" hoặc vi phạm ràng buộc.
+	 - Giải pháp: Viết migration hardened bằng kiểm tra tồn tại (`IF COL_LENGTH`, `IF EXISTS`) và thực hiện backfill dữ liệu an toàn từ `Debts`/`Transactions`; chỉ sau khi backfill mới đặt NOT NULL + FK.
 
-### **Thu hoạch cho Báo cáo**
-- Branch isolation giờ được cưỡng chế từ DB → BLL → UI, giảm rủi ro rò dữ liệu giữa các chi nhánh.
-- Cách resolve scope tập trung trong `SessionManager` giúp giữ nhất quán RBAC giữa GUI và service.
-- Khi DB đã có drift (cột tồn tại nhưng migration chưa applied), harden migration bằng điều kiện giúp update an toàn.
+2. **Đảm bảo an toàn khi nhập liệu danh mục:**
+	 - Vấn đề: Các form quản lý danh mục cũ có thể lưu `BranchId` rỗng, làm vỡ logic phân quyền.
+	 - Giải pháp: Thêm guard clauses ở UI + BLL; buộc gán `BranchId = SessionManager.CurrentBranchId.Value` khi lưu; vô hiệu hóa thao tác khi `CurrentBranchId` chưa xác định.
 
-### **Mô tả**
-- Backfill: Partner.BranchId được populate từ `Debts` (nếu có); TransactionCategory.BranchId populate từ `Transactions` (nếu có); nếu không có nguồn thì fallback lấy branch đầu tiên trong tenant.
-- Migrations: thêm SQL an toàn trước khi thay đổi schema (ví dụ: `IF COL_LENGTH('Transactions','BranchId') IS NULL ALTER TABLE ...`).
-- BLL: thêm helper resolver `ResolveBranchScopeForRead/Write` trong mỗi service để buộc branch-scope theo session.
-- UI: chặn tạo/cập nhật khi `SessionManager.CurrentBranchId` chưa xác định và gán `BranchId = SessionManager.CurrentBranchId.Value` khi lưu.
-
-### **Nhận xét**
-- Thiết kế hiện tại phù hợp nhu cầu multi-tenant + multi-branch; mọi kiểm tra quan trọng nằm ở BLL chứ không chỉ UI.
-- Cần duy trì quy ước: mọi migration liên quan đến khóa ngoại hoặc cột mới có thể cần backfill an toàn.
-
-### **Khó khăn & Giải pháp**
-- Khó: DB local có drift (cột đã tồn tại) gây lỗi duplicate-column khi chạy `dotnet ef database update`.
-- Giải pháp: chỉnh các migration pending để kiểm tra tồn tại (IF COL_LENGTH / IF EXISTS) trước khi tạo column/index/fk, chạy `dotnet ef database update`, sau đó regenerate script idempotent.
-
-### **Các file đã chỉnh sửa (chính)**
-- Business Logic Layer/Services/PartnerService.cs
-- Business Logic Layer/Services/CategoryService.cs
-- Business Logic Layer/Services/TransactionCategoryService.cs
-- Business Logic Layer/Services/TransactionService.cs
-- Data Access Layer/Entities/Partner.cs
-- Data Access Layer/Entities/TransactionCategory.cs
-- Graphical User Interface/ucPartner.cs
-- Graphical User Interface/ucTransactionCategory.cs
-- Migrations/20260330065025_AddBranchIdToTransaction.cs (hardened)
-- Migrations/20260330074507_AddIsActiveToCashFund.cs (hardened)
-- Migrations/20260401020943_AddBranchIdToPartnerAndTransactionCategory.cs
-- Migrations/branch_scope_upgrade.sql
+3. **Null‑Reference khi binding dữ liệu:**
+	 - Vấn đề: Một số khoản nợ không liên kết Partner (Partner = null) dẫn đến lỗi khi hiển thị `Partner.PartnerName`.
+	 - Giải pháp: Áp dụng null‑safety khi binding (toán tử `?.`), kiểm tra null trước khi truy xuất thuộc tính, và hiển thị placeholder khi thiếu dữ liệu.
 
 ---
-Tiếp theo: nếu bạn muốn mình tách thay đổi `Users.TenantId` ra migration riêng để giữ migration feature "sạch" thì mình có thể làm tiếp.
+
+**Ghi chú:** muốn mình tách thay đổi `Users.TenantId` ra migration riêng để giữ các migration feature sạch hơn không? Nếu có, mình sẽ tạo migration idempotent tách riêng và cập nhật script deploy.
+
 

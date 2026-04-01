@@ -721,8 +721,7 @@
             lblBalance.ForeColor = Color.FromArgb(25, 103, 210);
             lblBalance.Location = new Point(3, 72);
             lblBalance.Name = "lblBalance";
-            lblBalance.Padding = new Padding(30, 0, 0, 0);
-            lblBalance.Size = new Size(239, 38);
+            lblBalance.Size = new Size(209, 38);
             lblBalance.TabIndex = 5;
             lblBalance.Text = "Số dư quỹ hiện tại: ... VNĐ";
             // 
