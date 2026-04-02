@@ -29,6 +29,8 @@
         private void InitializeComponent()
         {
             pnlTop = new Panel();
+            tableLayoutPanel1 = new TableLayoutPanel();
+            btnAddNewDebt = new FontAwesome.Sharp.IconButton();
             flowFilters = new FlowLayoutPanel();
             cboDebtType = new ComboBox();
             cboStatus = new ComboBox();
@@ -41,15 +43,8 @@
             tableLayout = new TableLayoutPanel();
             pnlGrid = new Panel();
             dgvDebts = new DataGridView();
-            colDebtId = new DataGridViewTextBoxColumn();
-            colPartner = new DataGridViewTextBoxColumn();
-            colType = new DataGridViewTextBoxColumn();
-            colTotal = new DataGridViewTextBoxColumn();
-            colPaid = new DataGridViewTextBoxColumn();
-            colRemaining = new DataGridViewTextBoxColumn();
-            colStatus = new DataGridViewTextBoxColumn();
-            colRawDebtType = new DataGridViewTextBoxColumn();
             pnlTop.SuspendLayout();
+            tableLayoutPanel1.SuspendLayout();
             flowFilters.SuspendLayout();
             pnlStats.SuspendLayout();
             tableLayout.SuspendLayout();
@@ -60,14 +55,50 @@
             // pnlTop
             // 
             pnlTop.BackColor = Color.WhiteSmoke;
-            pnlTop.Controls.Add(flowFilters);
+            pnlTop.Controls.Add(tableLayoutPanel1);
             pnlTop.Controls.Add(pnlStats);
             pnlTop.Dock = DockStyle.Top;
             pnlTop.Location = new Point(16, 16);
             pnlTop.Name = "pnlTop";
             pnlTop.Padding = new Padding(12);
-            pnlTop.Size = new Size(1136, 100);
+            pnlTop.Size = new Size(1136, 121);
             pnlTop.TabIndex = 1;
+            // 
+            // tableLayoutPanel1
+            // 
+            tableLayoutPanel1.ColumnCount = 1;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Controls.Add(btnAddNewDebt, 0, 1);
+            tableLayoutPanel1.Controls.Add(flowFilters, 0, 0);
+            tableLayoutPanel1.Dock = DockStyle.Fill;
+            tableLayoutPanel1.Location = new Point(12, 12);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 2;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 53.4090919F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 46.5909081F));
+            tableLayoutPanel1.Size = new Size(827, 97);
+            tableLayoutPanel1.TabIndex = 2;
+            // 
+            // btnAddNewDebt
+            // 
+            btnAddNewDebt.BackColor = Color.FromArgb(76, 175, 80);
+            btnAddNewDebt.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnAddNewDebt.ForeColor = Color.White;
+            btnAddNewDebt.IconChar = FontAwesome.Sharp.IconChar.PlusSquare;
+            btnAddNewDebt.IconColor = Color.White;
+            btnAddNewDebt.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnAddNewDebt.IconSize = 24;
+            btnAddNewDebt.ImageAlign = ContentAlignment.MiddleLeft;
+            btnAddNewDebt.Location = new Point(6, 57);
+            btnAddNewDebt.Margin = new Padding(6);
+            btnAddNewDebt.Name = "btnAddNewDebt";
+            btnAddNewDebt.Padding = new Padding(8, 0, 8, 0);
+            btnAddNewDebt.Size = new Size(160, 34);
+            btnAddNewDebt.TabIndex = 5;
+            btnAddNewDebt.Text = "Thêm công nợ";
+            btnAddNewDebt.TextAlign = ContentAlignment.MiddleRight;
+            btnAddNewDebt.UseVisualStyleBackColor = false;
+            btnAddNewDebt.Click += btnAddNewDebt_Click;
             // 
             // flowFilters
             // 
@@ -78,11 +109,11 @@
             flowFilters.Controls.Add(btnFilter);
             flowFilters.Controls.Add(btnPayDebt);
             flowFilters.Dock = DockStyle.Left;
-            flowFilters.Location = new Point(12, 12);
+            flowFilters.Location = new Point(0, 0);
             flowFilters.Margin = new Padding(0);
             flowFilters.Name = "flowFilters";
-            flowFilters.Size = new Size(824, 76);
-            flowFilters.TabIndex = 0;
+            flowFilters.Size = new Size(824, 51);
+            flowFilters.TabIndex = 1;
             flowFilters.WrapContents = false;
             // 
             // cboDebtType
@@ -150,7 +181,6 @@
             btnPayDebt.Text = "Thanh toán";
             btnPayDebt.TextAlign = ContentAlignment.MiddleRight;
             btnPayDebt.UseVisualStyleBackColor = false;
-            btnPayDebt.Click += btnPayDebt_Click;
             // 
             // pnlStats
             // 
@@ -160,7 +190,7 @@
             pnlStats.Location = new Point(839, 12);
             pnlStats.Name = "pnlStats";
             pnlStats.Padding = new Padding(6);
-            pnlStats.Size = new Size(285, 76);
+            pnlStats.Size = new Size(285, 97);
             pnlStats.TabIndex = 1;
             // 
             // lblTotalReceivable
@@ -193,11 +223,11 @@
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tableLayout.Controls.Add(pnlGrid, 0, 0);
             tableLayout.Dock = DockStyle.Fill;
-            tableLayout.Location = new Point(16, 116);
+            tableLayout.Location = new Point(16, 137);
             tableLayout.Name = "tableLayout";
             tableLayout.RowCount = 1;
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayout.Size = new Size(1136, 505);
+            tableLayout.Size = new Size(1136, 484);
             tableLayout.TabIndex = 0;
             // 
             // pnlGrid
@@ -207,87 +237,27 @@
             pnlGrid.Location = new Point(3, 3);
             pnlGrid.Name = "pnlGrid";
             pnlGrid.Padding = new Padding(12);
-            pnlGrid.Size = new Size(1130, 499);
+            pnlGrid.Size = new Size(1130, 478);
             pnlGrid.TabIndex = 0;
             // 
             // dgvDebts
             // 
             dgvDebts.AllowUserToAddRows = false;
             dgvDebts.AllowUserToDeleteRows = false;
-            dgvDebts.AutoGenerateColumns = false;
             dgvDebts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvDebts.BackgroundColor = Color.White;
             dgvDebts.BorderStyle = BorderStyle.None;
-            dgvDebts.Columns.AddRange(new DataGridViewColumn[] { colDebtId, colPartner, colType, colTotal, colPaid, colRemaining, colStatus, colRawDebtType });
             dgvDebts.Dock = DockStyle.Fill;
             dgvDebts.Location = new Point(12, 12);
-            dgvDebts.Name = "dgvDebts";
             dgvDebts.MultiSelect = false;
+            dgvDebts.Name = "dgvDebts";
             dgvDebts.ReadOnly = true;
             dgvDebts.RowHeadersVisible = false;
             dgvDebts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvDebts.Size = new Size(1106, 475);
+            dgvDebts.Size = new Size(1106, 454);
             dgvDebts.TabIndex = 0;
             dgvDebts.CellContentClick += dgvDebts_CellContentClick;
             dgvDebts.SelectionChanged += dgvDebts_SelectionChanged;
-            // 
-            // colDebtId
-            // 
-            colDebtId.DataPropertyName = "DebtId";
-            colDebtId.HeaderText = "DebtId";
-            colDebtId.Name = "colDebtId";
-            colDebtId.ReadOnly = true;
-            colDebtId.Visible = false;
-            // 
-            // colPartner
-            // 
-            colPartner.DataPropertyName = "PartnerName";
-            colPartner.HeaderText = "Đối tác";
-            colPartner.Name = "colPartner";
-            colPartner.ReadOnly = true;
-            // 
-            // colType
-            // 
-            colType.DataPropertyName = "DebtType";
-            colType.HeaderText = "Loại nợ";
-            colType.Name = "colType";
-            colType.ReadOnly = true;
-            // 
-            // colTotal
-            // 
-            colTotal.DataPropertyName = "TotalAmount";
-            colTotal.HeaderText = "Tổng nợ";
-            colTotal.Name = "colTotal";
-            colTotal.ReadOnly = true;
-            // 
-            // colPaid
-            // 
-            colPaid.DataPropertyName = "PaidAmount";
-            colPaid.HeaderText = "Đã trả";
-            colPaid.Name = "colPaid";
-            colPaid.ReadOnly = true;
-            // 
-            // colRemaining
-            // 
-            colRemaining.DataPropertyName = "Remaining";
-            colRemaining.HeaderText = "Còn nợ";
-            colRemaining.Name = "colRemaining";
-            colRemaining.ReadOnly = true;
-            // 
-            // colStatus
-            // 
-            colStatus.DataPropertyName = "Status";
-            colStatus.HeaderText = "Trạng thái";
-            colStatus.Name = "colStatus";
-            colStatus.ReadOnly = true;
-            // 
-            // colRawDebtType
-            // 
-            colRawDebtType.DataPropertyName = "RawDebtType";
-            colRawDebtType.HeaderText = "RawDebtType";
-            colRawDebtType.Name = "colRawDebtType";
-            colRawDebtType.ReadOnly = true;
-            colRawDebtType.Visible = false;
             // 
             // ucDebt
             // 
@@ -301,7 +271,8 @@
             Padding = new Padding(16);
             Size = new Size(1168, 637);
             pnlTop.ResumeLayout(false);
-            pnlTop.PerformLayout();
+            tableLayoutPanel1.ResumeLayout(false);
+            tableLayoutPanel1.PerformLayout();
             flowFilters.ResumeLayout(false);
             flowFilters.PerformLayout();
             pnlStats.ResumeLayout(false);
@@ -313,12 +284,6 @@
 
         #endregion
         private Panel pnlTop;
-        private FlowLayoutPanel flowFilters;
-        private ComboBox cboDebtType;
-        private ComboBox cboStatus;
-        private TextBox txtSearch;
-        private FontAwesome.Sharp.IconButton btnFilter;
-        private FontAwesome.Sharp.IconButton btnPayDebt;
         private Panel pnlStats;
         private Label lblTotalReceivable;
         private Label lblTotalPayable;
@@ -333,5 +298,13 @@
         private DataGridViewTextBoxColumn colRemaining;
         private DataGridViewTextBoxColumn colStatus;
         private DataGridViewTextBoxColumn colRawDebtType;
+        private TableLayoutPanel tableLayoutPanel1;
+        private FontAwesome.Sharp.IconButton btnAddNewDebt;
+        private FlowLayoutPanel flowFilters;
+        private ComboBox cboDebtType;
+        private ComboBox cboStatus;
+        private TextBox txtSearch;
+        private FontAwesome.Sharp.IconButton btnFilter;
+        private FontAwesome.Sharp.IconButton btnPayDebt;
     }
 }

@@ -400,5 +400,16 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
         {
 
         }
+
+        private async void btnAddNewDebt_Click(object sender, EventArgs e)
+        {
+            using (var frm = new frmAddDebt())
+            {
+                if (frm.ShowDialog() == DialogResult.OK)
+                {
+                    await LoadDebtDataAsync();
+                }
+            }
+        }
     }
 }

@@ -113,6 +113,33 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             return query.FirstOrDefault();
         }
 
+        public bool AddDebt(int partnerId, string debtType, decimal totalAmount, DateTime? dueDate, string notes)
+        {
+            try
+            {
+                var newDebt = new Debt
+                {
+                    TenantId = SessionManager.CurrentTenantId ?? 0,
+                    BranchId = SessionManager.CurrentBranchId ?? 0,
+                    PartnerId = partnerId,
+                    DebtType = string.IsNullOrWhiteSpace(debtType) ? "PAYABLE" : debtType.ToUpperInvariant(),
+                    TotalAmount = totalAmount,
+                    PaidAmount = 0,
+                    DueDate = dueDate,
+                    Status = "NEW",
+                    Notes = notes ?? string.Empty,
+                    CreatedDate = DateTime.Now
+                };
+
+                _context.Debts.Add(newDebt);
+                return _context.SaveChanges() > 0;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi khi thêm công nợ: " + ex.Message);
+            }
+        }
+
         /// <summary>
         /// Thực hiện trả nợ: tạo Transaction, cập nhật số dư Quỹ và cập nhật PaidAmount trong bảng Debts.
         /// Sử dụng IDbContextTransaction để đảm bảo atomic.
