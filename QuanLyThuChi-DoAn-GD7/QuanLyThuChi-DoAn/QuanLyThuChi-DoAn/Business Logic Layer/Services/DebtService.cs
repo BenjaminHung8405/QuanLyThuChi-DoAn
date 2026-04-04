@@ -167,6 +167,64 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
         }
 
+        public async Task<bool> ApproveDebtAsync(long debtId)
+        {
+            try
+            {
+                if (!SessionManager.CanApproveDebt)
+                    throw new UnauthorizedAccessException("Bạn không có quyền duyệt công nợ.");
+
+                IQueryable<Debt> query = _context.Debts;
+
+                if (SessionManager.IsSuperAdmin)
+                {
+                    if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentTenantId.Value > 0)
+                    {
+                        int selectedTenantId = SessionManager.CurrentTenantId.Value;
+                        query = query.Where(d => d.TenantId == selectedTenantId);
+                    }
+
+                    if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                    {
+                        int selectedBranchId = SessionManager.CurrentBranchId.Value;
+                        query = query.Where(d => d.BranchId == selectedBranchId);
+                    }
+                }
+                else
+                {
+                    if (!SessionManager.CurrentTenantId.HasValue || SessionManager.CurrentTenantId.Value <= 0)
+                        throw new InvalidOperationException("Không có Tenant trong ngữ cảnh.");
+
+                    int tenantId = SessionManager.CurrentTenantId.Value;
+                    query = query.Where(d => d.TenantId == tenantId);
+
+                    if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+                    {
+                        if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                            throw new InvalidOperationException("Không có Chi nhánh trong ngữ cảnh.");
+
+                        int currentBranchId = SessionManager.CurrentBranchId.Value;
+                        query = query.Where(d => d.BranchId == currentBranchId);
+                    }
+                }
+
+                var debt = await query.FirstOrDefaultAsync(d => d.DebtId == debtId && d.IsActive);
+                if (debt == null) return false;
+
+                // Chỉ cho phép duyệt nếu đang ở trạng thái NEW
+                if (!string.Equals(debt.Status, "NEW", StringComparison.OrdinalIgnoreCase))
+                    throw new Exception("Chỉ có thể duyệt khoản nợ ở trạng thái MỚI TẠO (NEW).");
+
+                debt.Status = "PENDING";
+
+                return await _context.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi khi duyệt công nợ: " + ex.Message);
+            }
+        }
+
         /// <summary>
         /// Thực hiện trả nợ: tạo Transaction, cập nhật số dư Quỹ và cập nhật PaidAmount trong bảng Debts.
         /// Sử dụng IDbContextTransaction để đảm bảo atomic.

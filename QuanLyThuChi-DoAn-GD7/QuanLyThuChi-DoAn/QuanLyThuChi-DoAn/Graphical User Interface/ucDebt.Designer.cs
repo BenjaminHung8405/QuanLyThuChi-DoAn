@@ -30,13 +30,15 @@
         {
             pnlTop = new Panel();
             tableLayoutPanel1 = new TableLayoutPanel();
-            btnAddNewDebt = new FontAwesome.Sharp.IconButton();
             flowFilters = new FlowLayoutPanel();
             cboDebtType = new ComboBox();
             cboStatus = new ComboBox();
             txtSearch = new TextBox();
             btnFilter = new FontAwesome.Sharp.IconButton();
             btnPayDebt = new FontAwesome.Sharp.IconButton();
+            panel1 = new Panel();
+            btnApproveDebt = new FontAwesome.Sharp.IconButton();
+            btnAddNewDebt = new FontAwesome.Sharp.IconButton();
             pnlStats = new Panel();
             lblTotalReceivable = new Label();
             lblTotalPayable = new Label();
@@ -46,6 +48,7 @@
             pnlTop.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             flowFilters.SuspendLayout();
+            panel1.SuspendLayout();
             pnlStats.SuspendLayout();
             tableLayout.SuspendLayout();
             pnlGrid.SuspendLayout();
@@ -68,8 +71,8 @@
             // 
             tableLayoutPanel1.ColumnCount = 1;
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayoutPanel1.Controls.Add(btnAddNewDebt, 0, 1);
             tableLayoutPanel1.Controls.Add(flowFilters, 0, 0);
+            tableLayoutPanel1.Controls.Add(panel1, 0, 1);
             tableLayoutPanel1.Dock = DockStyle.Fill;
             tableLayoutPanel1.Location = new Point(12, 12);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
@@ -79,27 +82,6 @@
             tableLayoutPanel1.Size = new Size(827, 97);
             tableLayoutPanel1.TabIndex = 2;
             // 
-            // btnAddNewDebt
-            // 
-            btnAddNewDebt.BackColor = Color.FromArgb(76, 175, 80);
-            btnAddNewDebt.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnAddNewDebt.ForeColor = Color.White;
-            btnAddNewDebt.IconChar = FontAwesome.Sharp.IconChar.PlusSquare;
-            btnAddNewDebt.IconColor = Color.White;
-            btnAddNewDebt.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            btnAddNewDebt.IconSize = 24;
-            btnAddNewDebt.ImageAlign = ContentAlignment.MiddleLeft;
-            btnAddNewDebt.Location = new Point(6, 57);
-            btnAddNewDebt.Margin = new Padding(6);
-            btnAddNewDebt.Name = "btnAddNewDebt";
-            btnAddNewDebt.Padding = new Padding(8, 0, 8, 0);
-            btnAddNewDebt.Size = new Size(160, 34);
-            btnAddNewDebt.TabIndex = 5;
-            btnAddNewDebt.Text = "Thêm công nợ";
-            btnAddNewDebt.TextAlign = ContentAlignment.MiddleRight;
-            btnAddNewDebt.UseVisualStyleBackColor = false;
-            btnAddNewDebt.Click += btnAddNewDebt_Click;
-            // 
             // flowFilters
             // 
             flowFilters.AutoSize = true;
@@ -108,11 +90,11 @@
             flowFilters.Controls.Add(txtSearch);
             flowFilters.Controls.Add(btnFilter);
             flowFilters.Controls.Add(btnPayDebt);
-            flowFilters.Dock = DockStyle.Left;
+            flowFilters.Dock = DockStyle.Fill;
             flowFilters.Location = new Point(0, 0);
             flowFilters.Margin = new Padding(0);
             flowFilters.Name = "flowFilters";
-            flowFilters.Size = new Size(824, 51);
+            flowFilters.Size = new Size(827, 51);
             flowFilters.TabIndex = 1;
             flowFilters.WrapContents = false;
             // 
@@ -122,25 +104,25 @@
             cboDebtType.Location = new Point(6, 6);
             cboDebtType.Margin = new Padding(6);
             cboDebtType.Name = "cboDebtType";
-            cboDebtType.Size = new Size(160, 23);
+            cboDebtType.Size = new Size(140, 23);
             cboDebtType.TabIndex = 0;
             // 
             // cboStatus
             // 
             cboStatus.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboStatus.Location = new Point(178, 6);
+            cboStatus.Location = new Point(158, 6);
             cboStatus.Margin = new Padding(6);
             cboStatus.Name = "cboStatus";
-            cboStatus.Size = new Size(160, 23);
+            cboStatus.Size = new Size(140, 23);
             cboStatus.TabIndex = 1;
             // 
             // txtSearch
             // 
-            txtSearch.Location = new Point(350, 6);
+            txtSearch.Location = new Point(310, 6);
             txtSearch.Margin = new Padding(6);
             txtSearch.Name = "txtSearch";
             txtSearch.PlaceholderText = "Tìm theo tên đối tác...";
-            txtSearch.Size = new Size(220, 23);
+            txtSearch.Size = new Size(130, 23);
             txtSearch.TabIndex = 2;
             // 
             // btnFilter
@@ -153,11 +135,11 @@
             btnFilter.IconFont = FontAwesome.Sharp.IconFont.Auto;
             btnFilter.IconSize = 24;
             btnFilter.ImageAlign = ContentAlignment.MiddleLeft;
-            btnFilter.Location = new Point(582, 6);
+            btnFilter.Location = new Point(452, 6);
             btnFilter.Margin = new Padding(6);
             btnFilter.Name = "btnFilter";
             btnFilter.Padding = new Padding(8, 0, 8, 0);
-            btnFilter.Size = new Size(92, 36);
+            btnFilter.Size = new Size(88, 36);
             btnFilter.TabIndex = 3;
             btnFilter.Text = "Lọc";
             btnFilter.UseVisualStyleBackColor = false;
@@ -172,7 +154,7 @@
             btnPayDebt.IconFont = FontAwesome.Sharp.IconFont.Auto;
             btnPayDebt.IconSize = 24;
             btnPayDebt.ImageAlign = ContentAlignment.MiddleLeft;
-            btnPayDebt.Location = new Point(686, 6);
+            btnPayDebt.Location = new Point(552, 6);
             btnPayDebt.Margin = new Padding(6);
             btnPayDebt.Name = "btnPayDebt";
             btnPayDebt.Padding = new Padding(8, 0, 8, 0);
@@ -181,6 +163,59 @@
             btnPayDebt.Text = "Thanh toán";
             btnPayDebt.TextAlign = ContentAlignment.MiddleRight;
             btnPayDebt.UseVisualStyleBackColor = false;
+            btnPayDebt.Click += btnPayDebt_Click;
+            // 
+            // panel1
+            // 
+            panel1.Controls.Add(btnApproveDebt);
+            panel1.Controls.Add(btnAddNewDebt);
+            panel1.Dock = DockStyle.Fill;
+            panel1.Location = new Point(3, 54);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(821, 40);
+            panel1.TabIndex = 2;
+            // 
+            // btnApproveDebt
+            // 
+            btnApproveDebt.BackColor = Color.FromArgb(255, 152, 0);
+            btnApproveDebt.Dock = DockStyle.Left;
+            btnApproveDebt.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnApproveDebt.ForeColor = Color.White;
+            btnApproveDebt.IconChar = FontAwesome.Sharp.IconChar.CheckCircle;
+            btnApproveDebt.IconColor = Color.White;
+            btnApproveDebt.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnApproveDebt.IconSize = 24;
+            btnApproveDebt.ImageAlign = ContentAlignment.MiddleLeft;
+            btnApproveDebt.Location = new Point(160, 0);
+            btnApproveDebt.Margin = new Padding(6);
+            btnApproveDebt.Name = "btnApproveDebt";
+            btnApproveDebt.Padding = new Padding(8, 0, 8, 0);
+            btnApproveDebt.Size = new Size(126, 40);
+            btnApproveDebt.TabIndex = 7;
+            btnApproveDebt.Text = "✓ Duyệt nợ";
+            btnApproveDebt.TextAlign = ContentAlignment.MiddleRight;
+            btnApproveDebt.UseVisualStyleBackColor = false;
+            // 
+            // btnAddNewDebt
+            // 
+            btnAddNewDebt.BackColor = Color.FromArgb(76, 175, 80);
+            btnAddNewDebt.Dock = DockStyle.Left;
+            btnAddNewDebt.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnAddNewDebt.ForeColor = Color.White;
+            btnAddNewDebt.IconChar = FontAwesome.Sharp.IconChar.PlusSquare;
+            btnAddNewDebt.IconColor = Color.White;
+            btnAddNewDebt.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnAddNewDebt.IconSize = 24;
+            btnAddNewDebt.ImageAlign = ContentAlignment.MiddleLeft;
+            btnAddNewDebt.Location = new Point(0, 0);
+            btnAddNewDebt.Margin = new Padding(6);
+            btnAddNewDebt.Name = "btnAddNewDebt";
+            btnAddNewDebt.Padding = new Padding(8, 0, 8, 0);
+            btnAddNewDebt.Size = new Size(160, 40);
+            btnAddNewDebt.TabIndex = 6;
+            btnAddNewDebt.Text = "Thêm công nợ";
+            btnAddNewDebt.TextAlign = ContentAlignment.MiddleRight;
+            btnAddNewDebt.UseVisualStyleBackColor = false;
             // 
             // pnlStats
             // 
@@ -275,6 +310,7 @@
             tableLayoutPanel1.PerformLayout();
             flowFilters.ResumeLayout(false);
             flowFilters.PerformLayout();
+            panel1.ResumeLayout(false);
             pnlStats.ResumeLayout(false);
             tableLayout.ResumeLayout(false);
             pnlGrid.ResumeLayout(false);
@@ -299,12 +335,14 @@
         private DataGridViewTextBoxColumn colStatus;
         private DataGridViewTextBoxColumn colRawDebtType;
         private TableLayoutPanel tableLayoutPanel1;
-        private FontAwesome.Sharp.IconButton btnAddNewDebt;
         private FlowLayoutPanel flowFilters;
         private ComboBox cboDebtType;
         private ComboBox cboStatus;
         private TextBox txtSearch;
         private FontAwesome.Sharp.IconButton btnFilter;
         private FontAwesome.Sharp.IconButton btnPayDebt;
+        private Panel panel1;
+        private FontAwesome.Sharp.IconButton btnApproveDebt;
+        private FontAwesome.Sharp.IconButton btnAddNewDebt;
     }
 }

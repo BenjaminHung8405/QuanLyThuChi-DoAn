@@ -25,6 +25,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             public decimal PaidAmount { get; set; }
             public decimal Remaining { get; set; }
             public string Status { get; set; }
+            public string RawStatus { get; set; }
             public string RawDebtType { get; set; }
         }
 
@@ -43,8 +44,10 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             cboStatus.SelectedIndexChanged += filterControl_Changed;
             dgvDebts.CellFormatting += dgvDebts_CellFormatting;
             dgvDebts.CellDoubleClick += dgvDebts_CellDoubleClick;
+            btnApproveDebt.Click += btnApproveDebt_Click;
 
             btnPayDebt.Visible = SessionManager.CanApproveDebt;
+            btnApproveDebt.Visible = SessionManager.CanApproveDebt;
 
             TogglePayButtonState();
             _ = LoadDebtDataAsync();
@@ -159,6 +162,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             // Populate Status
             cboStatus.Items.Clear();
             cboStatus.Items.Add("Tất cả trạng thái");
+            cboStatus.Items.Add("Mới tạo (chờ duyệt)");
             cboStatus.Items.Add("Chưa thanh toán");
             cboStatus.Items.Add("Thanh toán một phần");
             cboStatus.Items.Add("Đã thanh toán");
@@ -216,7 +220,11 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             if (e.Value != null && dgvDebts.Columns[e.ColumnIndex].DataPropertyName == "Status")
             {
                 var status = e.Value.ToString();
-                if (status == "Đã thanh toán")
+                if (status == "Mới tạo")
+                {
+                    e.CellStyle.ForeColor = Color.FromArgb(30, 136, 229);
+                }
+                else if (status == "Đã thanh toán")
                 {
                     e.CellStyle.ForeColor = Color.FromArgb(46, 125, 50);
                 }
@@ -273,6 +281,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                     PaidAmount = d.PaidAmount,
                     Remaining = d.TotalAmount - d.PaidAmount,
                     Status = ToStatusDisplay(d.Status),
+                    RawStatus = d.Status,
                     RawDebtType = d.DebtType
                 }).ToList();
 
@@ -347,6 +356,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
         private string GetSelectedStatusFilter()
         {
             var statusDisplay = cboStatus.SelectedItem?.ToString();
+            if (statusDisplay == "Mới tạo (chờ duyệt)") return "NEW";
             if (statusDisplay == "Chưa thanh toán") return "PENDING";
             if (statusDisplay == "Thanh toán một phần") return "PARTIALLY_PAID";
             if (statusDisplay == "Đã thanh toán") return "PAID";
@@ -355,6 +365,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private static string ToStatusDisplay(string rawStatus)
         {
+            if (string.Equals(rawStatus, "NEW", StringComparison.OrdinalIgnoreCase)) return "Mới tạo";
             if (string.Equals(rawStatus, "PENDING", StringComparison.OrdinalIgnoreCase)) return "Chưa thanh toán";
             if (string.Equals(rawStatus, "PARTIALLY_PAID", StringComparison.OrdinalIgnoreCase)) return "Thanh toán một phần";
             if (string.Equals(rawStatus, "PAID", StringComparison.OrdinalIgnoreCase)) return "Đã thanh toán";
@@ -421,6 +432,52 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             return remaining;
         }
 
+        private string GetCurrentDebtStatus()
+        {
+            if (dgvDebts.CurrentRow == null) return string.Empty;
+
+            if (dgvDebts.CurrentRow.DataBoundItem is DebtGridItem item)
+            {
+                if (!string.IsNullOrWhiteSpace(item.RawStatus))
+                    return NormalizeDebtStatus(item.RawStatus);
+
+                return NormalizeDebtStatus(item.Status);
+            }
+
+            if (dgvDebts.CurrentRow.DataBoundItem is DataRowView drv)
+            {
+                if (drv.Row.Table.Columns.Contains("RawStatus") && drv["RawStatus"] != DBNull.Value)
+                    return NormalizeDebtStatus(drv["RawStatus"]?.ToString());
+
+                if (drv.Row.Table.Columns.Contains("Status") && drv["Status"] != DBNull.Value)
+                    return NormalizeDebtStatus(drv["Status"]?.ToString());
+            }
+
+            var cellValue = dgvDebts.CurrentRow.Cells[colStatus.Index].Value;
+            return NormalizeDebtStatus(cellValue?.ToString());
+        }
+
+        private static string NormalizeDebtStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return string.Empty;
+
+            var trimmed = status.Trim();
+            if (string.Equals(trimmed, "Chưa thanh toán", StringComparison.OrdinalIgnoreCase)) return "PENDING";
+            if (string.Equals(trimmed, "Thanh toán một phần", StringComparison.OrdinalIgnoreCase)) return "PARTIALLY_PAID";
+            if (string.Equals(trimmed, "Đã thanh toán", StringComparison.OrdinalIgnoreCase)) return "PAID";
+            if (string.Equals(trimmed, "Mới tạo", StringComparison.OrdinalIgnoreCase)) return "NEW";
+
+            return trimmed.ToUpperInvariant();
+        }
+
+        private static bool IsPayableStatus(string status)
+        {
+            return string.Equals(status, "PENDING", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "PARTIAL", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "PARTIALLY_PAID", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "PARTIAL_PAID", StringComparison.OrdinalIgnoreCase);
+        }
+
         private bool IsViewAllMode()
         {
             return !SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0;
@@ -437,34 +494,57 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             {
                 btnPayDebt.Enabled = false;
                 btnPayDebt.BackColor = Color.LightGray;
+                btnApproveDebt.Enabled = false;
+                btnApproveDebt.BackColor = Color.LightGray;
             }
             else
             {
                 btnPayDebt.BackColor = Color.FromArgb(76, 175, 80);
+                btnApproveDebt.BackColor = Color.FromArgb(255, 152, 0);
             }
         }
 
         private void TogglePayButtonState()
         {
-            if (!SessionManager.CanApproveDebt)
-            {
-                btnPayDebt.Enabled = false;
-                return;
-            }
-
             if (IsViewAllMode())
             {
                 btnPayDebt.Enabled = false;
+                btnApproveDebt.Enabled = false;
                 return;
             }
+
+            btnApproveDebt.Visible = SessionManager.CanApproveDebt;
 
             if (_isLoadingData || _isOpeningPayment)
             {
                 btnPayDebt.Enabled = false;
+                btnApproveDebt.Enabled = false;
                 return;
             }
 
-            btnPayDebt.Enabled = GetCurrentDebtId().HasValue && GetCurrentRemainingAmount() > 0;
+            long? currentDebtId = GetCurrentDebtId();
+            if (!currentDebtId.HasValue)
+            {
+                btnPayDebt.Enabled = false;
+                btnApproveDebt.Enabled = false;
+                return;
+            }
+
+            string currentStatus = GetCurrentDebtStatus();
+            decimal remainingAmount = GetCurrentRemainingAmount();
+
+            btnApproveDebt.Enabled = SessionManager.CanApproveDebt
+                && string.Equals(currentStatus, "NEW", StringComparison.OrdinalIgnoreCase);
+
+            if (!SessionManager.CanApproveDebt)
+            {
+                btnPayDebt.Enabled = false;
+            }
+            else
+            {
+                bool isValidToPay = remainingAmount > 0 && IsPayableStatus(currentStatus);
+                btnPayDebt.Enabled = isValidToPay;
+            }
         }
 
         private async Task OpenPaymentFormAsync()
@@ -495,6 +575,13 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 return;
             }
 
+            string currentStatus = GetCurrentDebtStatus();
+            if (!IsPayableStatus(currentStatus))
+            {
+                MessageBox.Show("Khoản nợ chưa ở trạng thái cho phép thanh toán. Vui lòng duyệt công nợ trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             try
             {
                 _isOpeningPayment = true;
@@ -522,6 +609,63 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
         private async void btnPayDebt_Click(object sender, EventArgs e)
         {
             await OpenPaymentFormAsync();
+        }
+
+        private async void btnApproveDebt_Click(object sender, EventArgs e)
+        {
+            long? debtId = GetCurrentDebtId();
+            if (!debtId.HasValue) return;
+
+            if (!SessionManager.CanApproveDebt)
+            {
+                MessageBox.Show("Bạn không có quyền duyệt công nợ.", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (IsViewAllMode())
+            {
+                MessageBox.Show("Vui lòng chọn chi nhánh cụ thể trước khi duyệt công nợ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string currentStatus = GetCurrentDebtStatus();
+            if (!string.Equals(currentStatus, "NEW", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("Chỉ có thể duyệt khoản nợ ở trạng thái MỚI TẠO (NEW).", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                "Xác nhận khoản nợ này là hợp lệ và cho phép xuất quỹ thanh toán?",
+                "Xác nhận duyệt",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirm != DialogResult.Yes) return;
+
+            try
+            {
+                btnApproveDebt.Enabled = false;
+
+                bool success = await _debtService.ApproveDebtAsync(debtId.Value);
+                if (success)
+                {
+                    MessageBox.Show("Đã duyệt thành công! Kế toán đã có thể thanh toán khoản nợ này.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    await LoadDebtDataAsync(debtId);
+                }
+                else
+                {
+                    MessageBox.Show("Không tìm thấy khoản nợ để duyệt hoặc khoản nợ không hợp lệ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                TogglePayButtonState();
+            }
         }
 
         private void dgvDebts_CellContentClick(object sender, DataGridViewCellEventArgs e)

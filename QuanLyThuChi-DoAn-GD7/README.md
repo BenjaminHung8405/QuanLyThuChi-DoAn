@@ -1,69 +1,57 @@
-## Documentation Summary
+# 4.7 — Giai đoạn 7: Quản lý Phát sinh Công nợ và Nợ đầu kỳ
 
-1. **Mục tiêu**
-- Xây dựng form `frmAddDebt` (Popup Thêm nợ) theo chuẩn ERP giúp kế toán nhập liệu nhanh, logic và an toàn.
+## 4.7.1 Minh chứng giai đoạn
 
-2. **Task List**
-- Tạo hàm `DebtService.AddDebt(...)` (BLL) trong `DebtService.cs`.
-- Thiết kế GUI `frmAddDebt` theo layout 3 phần Header/Main/Footer.
-- Gán thuộc tính chuẩn form: FixedDialog, CenterParent, không resize (MaximizeBox/MinimizeBox false), kích thước 600x800.
-- Tạo các control cần thiết: `cboPartner`, `cboDebtType`, `txtTotalAmount`, `dtpDueDate`, `txtNotes`, `btnSave`, `btnCancel`.
-- Đảm bảo TabIndex: `cboPartner(0)`, `cboDebtType(1)`, `txtTotalAmount(2)`, `dtpDueDate(3)`, `txtNotes(4)`, `btnSave(5)`.
-- Logic đổi màu header theo loại nợ và tự format số tiền ở `txtTotalAmount`.
-- Valid input trước khi gọi `DebtService.AddDebt(...)`.
+- (Chưa có tài liệu minh chứng cụ thể trong file này)
 
-3. **Thu hoạch cho Báo cáo**
-- Kỹ năng thiết kế UX form nhập liệu theo chiều dọc (Top-Down) cho phép thao tác bằng phím Tab mượt.
-- Áp dụng chuẩn hóa dữ liệu tiền tệ (N0) ngay tại UI, giảm lỗi trước khi gọi BLL.
-- Phân tách rõ ràng trách nhiệm UI/BLL và tái dùng service hiện có.
+## 4.7.2 Mô tả
 
-4. **Mô tả**
-- File BLL: `Business Logic Layer/Services/DebtService.cs` đã có hàm `AddDebt` theo yêu cầu.
-- File GUI: `frmAddDebt.Designer.cs` + `frmAddDebt.cs` triển khai đầy đủ Form và hành vi.
-- Đối tác load từ `PartnerService.GetPartnersByTenant` theo Tenant context.
-- Dữ liệu công nợ ghi vào DB thông qua `DebtService.AddDebt`, cập nhật `Debts` table.
+### Mục tiêu
 
-5. **Nhận xét**
-- Dữ liệu logic và UI đúng với hướng dẫn (màu sắc, font, tab, dịch vụ dữ liệu).
-- Dễ tích hợp vào `ucDebt` bằng popup modal và refresh lưới khi thành công.
+- Xây dựng tính năng ghi nhận nợ phát sinh không đi kèm dòng tiền (Accrual Accounting) như: công nợ đầu kỳ, mua/bán chịu.
+- Hoàn thiện quy trình kiểm soát nội bộ (Maker — Checker) và cung cấp báo cáo tổng quan cho quản lý/giám đốc.
 
-6. **Khó khăn & Giải pháp**
-- Khó khăn: frmAddDebt ban đầu rỗng không có controls, cần tự dựng lại toàn bộ.
-- Giải pháp: Thiết kế toàn bộ layout thủ công trong Designer, kết hợp event và service để đảm bảo tính năng hoàn chỉnh.
+### Kiến trúc dữ liệu (BLL)
 
-Mục tiêu: Thêm lựa chọn “Tất cả chi nhánh” cho SuperAdmin/TenantAdmin khi chọn chi nhánh.
-Task List: Chèn item branch id 0 vào danh sách; cập nhật logic chọn mặc định để nhận giá trị 0.
-Thu hoạch cho Báo cáo: Cần xử lý “branch id = 0” như một ngữ cảnh hợp lệ cho đa chi nhánh.
-Mô tả: Trong LoadBranchesIntoComboBox, thêm item “--- Tất cả chi nhánh ---” và ưu tiên chọn 0 khi không có branch hiện tại.
-Nhận xét: UI nhất quán hơn cho vai trò quản trị; không ảnh hưởng đến role bị khóa chi nhánh.
-Khó khăn & Giải pháp: Tránh xung đột với logic chọn mặc định bằng cách chỉ gán 0 cho SuperAdmin/TenantAdmin.
-Mục tiêu: Thêm phương thức async GetDebtsAsync xử lý chế độ "Tất cả chi nhánh" (BranchId == 0) đúng cách, thay thế wrapping sync method trong Task.Run.
+- `AddDebt`: Tạo khoản nợ mới với các giá trị khởi tạo an toàn (`PaidAmount = 0`, `Status = "NEW"`, `CreatedDate = DateTime.Now`) và liên kết chặt chẽ với `BranchId`/`TenantId`.
+- `GetDebtsAsync(tenantId, branchId)`: Lấy danh sách công nợ theo ngữ cảnh Tenant/Branch. Khi `branchId == 0` sẽ bỏ qua bộ lọc chi nhánh (chế độ "Tất cả chi nhánh"). Sử dụng `async/await` trực tiếp (không dùng `Task.Run`).
+- `ApproveDebtAsync`: Quy trình duyệt nợ, kiểm tra trạng thái gốc (`NEW`) trước khi chuyển sang `PENDING`.
 
-Task List:
+### Giao diện nhập liệu & Tác nghiệp (UI)
 
-Thêm GetDebtsAsync(int tenantId, int? branchId) với logic lọc BranchId có điều kiện
-Cập nhật ucDebt.LoadDebtDataAsync() để gọi phương thức async mới
-Làm rõ nhận xét lọc BranchId trong GetDebts hiện tại
-Thu hoạch cho Báo cáo: Phương thức async giúp tránh Task.Run wrapping và cho phép lọc cơ sở dữ liệu trực tiếp. BranchId == 0 giờ được xử lý nhất quán: bỏ qua lọc chi nhánh để lấy toàn bộ tenant.
+- Form `frmAddDebt`: Dialog cố định (FixedDialog) kích thước phù hợp, hỗ trợ điều hướng bằng phím Tab và định dạng tiền (`N0`).
+- Control `ucDebt`: Cập nhật cơ chế phân quyền và trạng thái nút thao tác thông qua `TogglePayButtonState()` — vô hiệu hóa thao tác khi ở chế độ "Tất cả chi nhánh" và chỉ mở khóa các nút tương ứng theo `RawStatus`/`Status`.
 
-Mô tả:
+### Tích hợp hệ thống
 
-DebtService: Thêm GetDebtsAsync() với điều kiện if (branchId > 0) xác định có lọc chi nhánh hay không
-ucDebt: Gọi GetDebtsAsync(tenantId, branchId) thay vì Task.Run(() => GetDebts(...))
-Logic: Khi BranchId == 0, query trả về toàn bộ công nợ của Tenant
-Nhận xét: Code rõ ràng hơn, hiệu suất tốt hơn (async thực sự, không Task.Run), phù hợp kiến trúc 3-tier.
+- Nạp động danh sách chi nhánh, thêm item `BranchId = 0` cho chế độ xem toàn bộ tenant (dành cho SuperAdmin/TenantAdmin).
+- Đồng bộ sự kiện `SelectedIndexChanged` từ `frmMain` để gọi `LoadDebtDataAsync()` cập nhật lưới ngay lập tức.
 
-Khó khăn & Giải pháp: Ban đầu có thể nhầm lẫn khi BranchId == 0; giải pháp là thêm comment rõ ràng và kiểm tra branchId.Value > 0 trước khi thêm WHERE clause.
+### Đồng bộ trạng thái hiển thị
 
-Mục tiêu: Sửa lỗi dgvDebts không lọc theo chi nhánh khi đổi cbBranchs.
-Task List: Trace flow đổi branch; kiểm tra refresh hiện tại; mở public hàm reload debt; bổ sung nhánh refresh cho ucDebt.
-Thu hoạch cho Báo cáo: Context (TenantId/BranchId) đổi nhưng UI không tự lọc nếu control hiện tại không được đưa vào RefreshCurrentView.
-Mô tả: cbBranchs_SelectedIndexChanged vẫn cập nhật session đúng, nhưng RefreshCurrentView thiếu case ucDebt; đã thêm await ucDebtView.LoadDebtDataAsync() để reload dữ liệu ngay theo branch.
-Nhận xét: Luồng đồng bộ context giữa frmMain và ucDebt giờ nhất quán với các màn hình khác.
-Khó khăn & Giải pháp: Lỗi không nằm ở query service mà ở lớp GUI orchestration; giải quyết bằng cách nối lại luồng refresh thay vì sửa query.
-Mục tiêu: Ổn định flow enable/disable nút trên màn hình công nợ theo ngữ cảnh chi nhánh, tránh kẹt trạng thái khi ở Tất cả chi nhánh.
-Task List: Thêm hàm xác định view-all mode; thêm hàm áp trạng thái nút; cập nhật TogglePayButtonState; thêm guard cho Add/Pay; build xác nhận.
-Thu hoạch cho Báo cáo: Khi có nhiều nơi can thiệp trạng thái nút, cần một hàm trung tâm để tránh ghi đè lẫn nhau.
-Mô tả: ucDebt nay coi null/0 là chế độ tổng hợp, tự khóa nút ghi dữ liệu và hiển thị thông báo yêu cầu chọn chi nhánh cụ thể trước khi thao tác.
-Nhận xét: UI nhất quán hơn, giảm lỗi thao tác sai ngữ cảnh branch.
-Khó khăn & Giải pháp: Nút bị re-enable lại ở finally do TogglePayButtonState; đã thêm check view-all trực tiếp trong Toggle để triệt tiêu xung đột logic.
+- Ánh xạ 2 chiều giữa mã trạng thái DB (`NEW`, `PENDING`, `PARTIALLY_PAID`, `PAID`) và hiển thị tiếng Việt trên DataGridView (`Mới tạo`, `Chưa thanh toán`, `Thanh toán một phần`, `Đã thanh toán`).
+
+## 4.7.3 Nhận xét
+
+- Tách biệt rõ ràng giữa kế toán dồn tích và kế toán tiền mặt; thao tác thêm nợ không sinh giao dịch tiền mặt nên an toàn về tồn quỹ.
+- Cơ chế duyệt công nợ (Maker/Checker) đã giảm rủi ro thao tác trái ngữ cảnh giữa các chi nhánh.
+- UX được cải thiện: màu trạng thái rõ ràng, validations client-side, và hiệu năng tốt hơn nhờ sử dụng `async/await` đúng chỗ.
+
+## 4.7.4 Khó khăn & Giải pháp
+
+1. **Khó khăn:** Rủi ro lệch loại nợ do mã hệ thống (`RECEIVABLE`, `PAYABLE`) gây nhầm lẫn cho kế toán.
+	**Giải pháp:** Sử dụng đối tượng ánh xạ hiển thị (anonymous object) trong ComboBox để trình bày tiếng Việt dễ hiểu (`"Khách nợ mình"`, `"Mình nợ đối tác"`) trong khi vẫn lưu mã chuẩn vào DB.
+
+2. **Khó khăn:** Danh sách đối tác có thể chứa dữ liệu không thuộc chi nhánh hiện tại hoặc đối tác đã khóa.
+	**Giải pháp:** Tái sử dụng `GetAllActive()` hoặc các API có ràng buộc `SessionManager.CurrentBranchId` để đảm bảo tính toàn vẹn dữ liệu.
+
+3. **Khó khăn:** Xung đột trạng thái UI khi người dùng chọn chế độ "Tất cả chi nhánh" (BranchId = 0) làm nút hành động bị kẹt hoặc cho phép thao tác không hợp lệ.
+	**Giải pháp:** Tập trung kiểm tra chế độ "view-all" và vô hiệu hóa các nút hành động (Thêm / Duyệt / Thanh toán) cho đến khi người dùng chọn chi nhánh cụ thể.
+
+4. **Khó khăn:** Đồng bộ trạng thái giữa UI (hiển thị tiếng Việt) và DB (mã tiếng Anh) dễ gây lỗi khi logic kiểm tra dựa trên chuỗi.
+	**Giải pháp:** Bổ sung thuộc tính `RawStatus` khi binding dữ liệu, đồng thời xây dựng `GetCurrentDebtStatus()` + `NormalizeDebtStatus()` để làm việc với mã gốc trước khi đưa ra quyết định UI.
+
+---
+
+Cập nhật: 2026-04-04
+

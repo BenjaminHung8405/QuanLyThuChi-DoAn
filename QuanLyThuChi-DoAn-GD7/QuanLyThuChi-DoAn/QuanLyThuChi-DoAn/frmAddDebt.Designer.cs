@@ -71,7 +71,7 @@ namespace QuanLyThuChi_DoAn
             lblHeaderSubtitle.ForeColor = Color.WhiteSmoke;
             lblHeaderSubtitle.Location = new Point(20, 43);
             lblHeaderSubtitle.Name = "lblHeaderSubtitle";
-            lblHeaderSubtitle.Size = new Size(274, 15);
+            lblHeaderSubtitle.Size = new Size(265, 15);
             lblHeaderSubtitle.TabIndex = 1;
             lblHeaderSubtitle.Text = "Ghi nhận nợ phát sinh không kèm dòng tiền mặt";
             // 
@@ -82,7 +82,7 @@ namespace QuanLyThuChi_DoAn
             lblHeaderTitle.ForeColor = Color.White;
             lblHeaderTitle.Location = new Point(18, 10);
             lblHeaderTitle.Name = "lblHeaderTitle";
-            lblHeaderTitle.Size = new Size(233, 25);
+            lblHeaderTitle.Size = new Size(219, 25);
             lblHeaderTitle.TabIndex = 0;
             lblHeaderTitle.Text = "THÊM KHOẢN NỢ MỚI";
             // 
@@ -92,7 +92,7 @@ namespace QuanLyThuChi_DoAn
             pnlFooter.Controls.Add(btnCancel);
             pnlFooter.Controls.Add(btnSave);
             pnlFooter.Dock = DockStyle.Bottom;
-            pnlFooter.Location = new Point(0, 740);
+            pnlFooter.Location = new Point(0, 501);
             pnlFooter.Name = "pnlFooter";
             pnlFooter.Padding = new Padding(16, 10, 16, 10);
             pnlFooter.Size = new Size(600, 60);
@@ -131,7 +131,7 @@ namespace QuanLyThuChi_DoAn
             pnlMain.Location = new Point(0, 74);
             pnlMain.Name = "pnlMain";
             pnlMain.Padding = new Padding(20);
-            pnlMain.Size = new Size(600, 666);
+            pnlMain.Size = new Size(600, 427);
             pnlMain.TabIndex = 1;
             // 
             // tableInput
@@ -168,7 +168,7 @@ namespace QuanLyThuChi_DoAn
             lblPartner.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblPartner.Location = new Point(3, 23);
             lblPartner.Name = "lblPartner";
-            lblPartner.Size = new Size(74, 19);
+            lblPartner.Size = new Size(70, 19);
             lblPartner.TabIndex = 0;
             lblPartner.Text = "Đối tác (*)";
             // 
@@ -189,7 +189,7 @@ namespace QuanLyThuChi_DoAn
             lblDebtType.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblDebtType.Location = new Point(3, 89);
             lblDebtType.Name = "lblDebtType";
-            lblDebtType.Size = new Size(105, 19);
+            lblDebtType.Size = new Size(106, 19);
             lblDebtType.TabIndex = 2;
             lblDebtType.Text = "Loại công nợ (*)";
             // 
@@ -211,7 +211,7 @@ namespace QuanLyThuChi_DoAn
             lblTotalAmount.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblTotalAmount.Location = new Point(3, 155);
             lblTotalAmount.Name = "lblTotalAmount";
-            lblTotalAmount.Size = new Size(92, 19);
+            lblTotalAmount.Size = new Size(89, 19);
             lblTotalAmount.TabIndex = 4;
             lblTotalAmount.Text = "Số tiền nợ (*)";
             // 
@@ -219,7 +219,7 @@ namespace QuanLyThuChi_DoAn
             // 
             txtTotalAmount.Anchor = AnchorStyles.Left | AnchorStyles.Right;
             txtTotalAmount.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            txtTotalAmount.Location = new Point(148, 151);
+            txtTotalAmount.Location = new Point(148, 150);
             txtTotalAmount.Name = "txtTotalAmount";
             txtTotalAmount.Size = new Size(409, 29);
             txtTotalAmount.TabIndex = 2;
@@ -233,7 +233,7 @@ namespace QuanLyThuChi_DoAn
             lblDueDate.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblDueDate.Location = new Point(3, 221);
             lblDueDate.Name = "lblDueDate";
-            lblDueDate.Size = new Size(98, 19);
+            lblDueDate.Size = new Size(106, 19);
             lblDueDate.TabIndex = 6;
             lblDueDate.Text = "Hạn thanh toán";
             // 
@@ -253,16 +253,16 @@ namespace QuanLyThuChi_DoAn
             lblNotes.Anchor = AnchorStyles.Left;
             lblNotes.AutoSize = true;
             lblNotes.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lblNotes.Location = new Point(3, 317);
+            lblNotes.Location = new Point(3, 319);
             lblNotes.Name = "lblNotes";
-            lblNotes.Size = new Size(93, 19);
+            lblNotes.Size = new Size(94, 19);
             lblNotes.TabIndex = 8;
             lblNotes.Text = "Ghi chú/Lý do";
             // 
             // txtNotes
             // 
             txtNotes.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            txtNotes.Location = new Point(148, 283);
+            txtNotes.Location = new Point(148, 285);
             txtNotes.Multiline = true;
             txtNotes.Name = "txtNotes";
             txtNotes.ScrollBars = ScrollBars.Vertical;
@@ -275,7 +275,7 @@ namespace QuanLyThuChi_DoAn
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             CancelButton = btnCancel;
-            ClientSize = new Size(600, 800);
+            ClientSize = new Size(600, 561);
             Controls.Add(pnlMain);
             Controls.Add(pnlFooter);
             Controls.Add(pnlHeader);
