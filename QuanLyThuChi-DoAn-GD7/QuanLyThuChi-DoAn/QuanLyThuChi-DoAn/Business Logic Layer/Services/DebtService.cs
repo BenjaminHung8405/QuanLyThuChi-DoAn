@@ -37,6 +37,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     query = query.Where(d => d.TenantId == selectedTenantId);
                 }
 
+                // Nếu BranchId > 0 (chi nhánh cụ thể) -> Lọc theo chi nhánh
+                // Nếu BranchId == 0 (Tất cả chi nhánh) -> Bỏ qua điều kiện, query lấy toàn bộ tenant
                 if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
                 {
                     int selectedBranchId = SessionManager.CurrentBranchId.Value;
@@ -71,6 +73,31 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 query = query.Where(d => d.PartnerId == partnerId.Value);
 
             return query.OrderByDescending(d => d.DebtId).ToList();
+        }
+
+        /// <summary>
+        /// Lấy danh sách công nợ bất đồng bộ theo Tenant và Branch
+        /// Nếu branchId == 0, sẽ lấy toàn bộ công nợ của Tenant (chế độ "Tất cả chi nhánh")
+        /// Nếu branchId > 0, sẽ lọc theo chi nhánh cụ thể
+        /// </summary>
+        public async Task<List<Debt>> GetDebtsAsync(int tenantId, int? branchId)
+        {
+            var query = _context.Debts
+                .AsNoTracking()
+                .Where(d => d.TenantId == tenantId && d.IsActive)
+                .AsQueryable();
+
+            // Nếu BranchId > 0 (chi nhánh cụ thể) -> Lọc theo chi nhánh
+            // Nếu BranchId == 0 hoặc null (Tất cả chi nhánh) -> Bỏ qua điều kiện, query lấy toàn bộ tenant
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(d => d.BranchId == branchId.Value);
+            }
+
+            return await query
+                .Include(d => d.Partner)
+                .OrderByDescending(d => d.CreatedDate)
+                .ToListAsync();
         }
 
         // Lấy khoản nợ theo ID (bao gồm Partner)

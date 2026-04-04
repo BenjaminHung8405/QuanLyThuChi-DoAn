@@ -43,5 +43,7 @@ namespace QuanLyThuChi_DoAn
         public string Notes { get; set; }
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
+
+        public bool IsActive { get; set; } = true;
     }
 }

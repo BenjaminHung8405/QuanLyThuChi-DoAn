@@ -314,6 +314,17 @@ namespace QuanLyThuChi_DoAn
         {
             var branches = _branchService.GetBranchesByTenant(tenantId);
 
+            if (SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin)
+            {
+                branches.Insert(0, new Branch
+                {
+                    BranchId = 0,
+                    BranchName = "--- Tất cả chi nhánh ---",
+                    TenantId = tenantId,
+                    IsActive = true
+                });
+            }
+
             cbBranchs.ComboBox.DataSource = null; // Đảm bảo xóa state cũ trước
             cbBranchs.ComboBox.Items.Clear();
 
@@ -333,7 +344,14 @@ namespace QuanLyThuChi_DoAn
                 }
                 else
                 {
-                    cbBranchs.SelectedIndex = 0;
+                    if (SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin)
+                    {
+                        cbBranchs.ComboBox.SelectedValue = 0;
+                    }
+                    else
+                    {
+                        cbBranchs.SelectedIndex = 0;
+                    }
                 }
 
                 if (cbBranchs.ComboBox.SelectedValue is int selectedBranchId)
@@ -542,6 +560,10 @@ namespace QuanLyThuChi_DoAn
                 else if (current is ucCashFund ucFund)
                 {
                     ucFund.LoadData();
+                }
+                else if (current is ucDebt ucDebtView)
+                {
+                    await ucDebtView.LoadDebtDataAsync();
                 }
                 else
                 {

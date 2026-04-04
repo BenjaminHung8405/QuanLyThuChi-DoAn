@@ -52,6 +52,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private void ConfigureGrid()
         {
+            EnsureGridColumns();
             dgvDebts.MultiSelect = false;
             dgvDebts.DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 247, 255);
             dgvDebts.DefaultCellStyle.SelectionForeColor = Color.FromArgb(33, 33, 33);
@@ -63,6 +64,87 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             colTotal.DefaultCellStyle.Format = "N0";
             colPaid.DefaultCellStyle.Format = "N0";
             colRemaining.DefaultCellStyle.Format = "N0";
+        }
+
+        private void EnsureGridColumns()
+        {
+            if (dgvDebts.Columns.Count > 0 && colTotal != null && colPaid != null && colRemaining != null)
+            {
+                return;
+            }
+
+            dgvDebts.AutoGenerateColumns = false;
+            dgvDebts.Columns.Clear();
+
+            colDebtId ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colDebtId",
+                DataPropertyName = "DebtId",
+                HeaderText = "ID",
+                Visible = false
+            };
+
+            colPartner ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colPartner",
+                DataPropertyName = "PartnerName",
+                HeaderText = "Đối tác"
+            };
+
+            colType ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colType",
+                DataPropertyName = "DebtType",
+                HeaderText = "Loại công nợ"
+            };
+
+            colTotal ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colTotal",
+                DataPropertyName = "TotalAmount",
+                HeaderText = "Tổng nợ"
+            };
+
+            colPaid ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colPaid",
+                DataPropertyName = "PaidAmount",
+                HeaderText = "Đã trả"
+            };
+
+            colRemaining ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colRemaining",
+                DataPropertyName = "Remaining",
+                HeaderText = "Còn lại"
+            };
+
+            colStatus ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colStatus",
+                DataPropertyName = "Status",
+                HeaderText = "Trạng thái"
+            };
+
+            colRawDebtType ??= new DataGridViewTextBoxColumn
+            {
+                Name = "colRawDebtType",
+                DataPropertyName = "RawDebtType",
+                HeaderText = "RawDebtType",
+                Visible = false
+            };
+
+            dgvDebts.Columns.AddRange(new DataGridViewColumn[]
+            {
+                colDebtId,
+                colPartner,
+                colType,
+                colTotal,
+                colPaid,
+                colRemaining,
+                colStatus,
+                colRawDebtType
+            });
         }
 
         private void InitializeComboboxes()
@@ -149,9 +231,11 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             }
         }
 
-        private async Task LoadDebtDataAsync(long? preferredDebtId = null)
+        public async Task LoadDebtDataAsync(long? preferredDebtId = null)
         {
             if (_isLoadingData) return;
+
+            ApplyBranchContextActionState();
 
             var main = this.FindForm() as frmMain;
             try
@@ -165,7 +249,15 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 string status = GetSelectedStatusFilter();
                 string search = txtSearch.Text?.Trim();
 
-                var data = await Task.Run(() => _debtService.GetDebts(type, status, null));
+                int tenantId = SessionManager.CurrentTenantId ?? 0;
+                int? branchId = SessionManager.CurrentBranchId;
+
+                var allDebts = await _debtService.GetDebtsAsync(tenantId, branchId);
+
+                var data = allDebts
+                    .Where(d => (type == null || d.DebtType == type) &&
+                                (status == null || d.Status == status))
+                    .ToList();
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
@@ -195,6 +287,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 main?.SetLoadingState(false);
                 _isLoadingData = false;
                 SetFilterState(false);
+                ApplyBranchContextActionState();
                 TogglePayButtonState();
             }
         }
@@ -328,9 +421,38 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             return remaining;
         }
 
+        private bool IsViewAllMode()
+        {
+            return !SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0;
+        }
+
+        private void ApplyBranchContextActionState()
+        {
+            bool isViewAllMode = IsViewAllMode();
+
+            btnAddNewDebt.Enabled = !isViewAllMode;
+            btnAddNewDebt.BackColor = isViewAllMode ? Color.LightGray : Color.FromArgb(76, 175, 80);
+
+            if (isViewAllMode)
+            {
+                btnPayDebt.Enabled = false;
+                btnPayDebt.BackColor = Color.LightGray;
+            }
+            else
+            {
+                btnPayDebt.BackColor = Color.FromArgb(76, 175, 80);
+            }
+        }
+
         private void TogglePayButtonState()
         {
             if (!SessionManager.CanApproveDebt)
+            {
+                btnPayDebt.Enabled = false;
+                return;
+            }
+
+            if (IsViewAllMode())
             {
                 btnPayDebt.Enabled = false;
                 return;
@@ -350,6 +472,12 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             if (!SessionManager.CanApproveDebt)
             {
                 MessageBox.Show("Bạn không có quyền duyệt/thanh toán công nợ.", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (IsViewAllMode())
+            {
+                MessageBox.Show("Vui lòng chọn chi nhánh cụ thể trước khi thanh toán công nợ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -403,6 +531,12 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private async void btnAddNewDebt_Click(object sender, EventArgs e)
         {
+            if (IsViewAllMode())
+            {
+                MessageBox.Show("Vui lòng chọn chi nhánh cụ thể trước khi thêm công nợ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             using (var frm = new frmAddDebt())
             {
                 if (frm.ShowDialog() == DialogResult.OK)
