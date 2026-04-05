@@ -71,7 +71,7 @@
             lblHeaderSubtitle.ForeColor = Color.WhiteSmoke;
             lblHeaderSubtitle.Location = new Point(20, 43);
             lblHeaderSubtitle.Name = "lblHeaderSubtitle";
-            lblHeaderSubtitle.Size = new Size(223, 15);
+            lblHeaderSubtitle.Size = new Size(211, 15);
             lblHeaderSubtitle.TabIndex = 1;
             lblHeaderSubtitle.Text = "Thiết lập thông tin tài khoản nhân viên";
             // 
@@ -82,7 +82,7 @@
             lblHeaderTitle.ForeColor = Color.White;
             lblHeaderTitle.Location = new Point(18, 10);
             lblHeaderTitle.Name = "lblHeaderTitle";
-            lblHeaderTitle.Size = new Size(247, 25);
+            lblHeaderTitle.Size = new Size(222, 25);
             lblHeaderTitle.TabIndex = 0;
             lblHeaderTitle.Text = "THÊM NHÂN VIÊN MỚI";
             // 
@@ -118,9 +118,9 @@
             btnSave.FlatStyle = FlatStyle.Flat;
             btnSave.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnSave.ForeColor = Color.White;
-            btnSave.Location = new Point(327, 12);
+            btnSave.Location = new Point(275, 12);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(122, 36);
+            btnSave.Size = new Size(174, 36);
             btnSave.TabIndex = 5;
             btnSave.Text = "💾 Lưu thông tin";
             btnSave.UseVisualStyleBackColor = false;
@@ -170,7 +170,7 @@
             lblFullName.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblFullName.Location = new Point(3, 23);
             lblFullName.Name = "lblFullName";
-            lblFullName.Size = new Size(89, 19);
+            lblFullName.Size = new Size(88, 19);
             lblFullName.TabIndex = 0;
             lblFullName.Text = "Họ và Tên (*)";
             // 
@@ -189,7 +189,7 @@
             lblUsername.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblUsername.Location = new Point(3, 89);
             lblUsername.Name = "lblUsername";
-            lblUsername.Size = new Size(114, 19);
+            lblUsername.Size = new Size(118, 19);
             lblUsername.TabIndex = 2;
             lblUsername.Text = "Tên đăng nhập (*)";
             // 
@@ -208,7 +208,7 @@
             lblPassword.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblPassword.Location = new Point(3, 155);
             lblPassword.Name = "lblPassword";
-            lblPassword.Size = new Size(84, 19);
+            lblPassword.Size = new Size(86, 19);
             lblPassword.TabIndex = 4;
             lblPassword.Text = "Mật khẩu (*)";
             // 
@@ -228,7 +228,7 @@
             lblBranch.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblBranch.Location = new Point(3, 221);
             lblBranch.Name = "lblBranch";
-            lblBranch.Size = new Size(81, 19);
+            lblBranch.Size = new Size(90, 19);
             lblBranch.TabIndex = 6;
             lblBranch.Text = "Chi nhánh (*)";
             // 
@@ -249,7 +249,7 @@
             lblRole.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblRole.Location = new Point(3, 287);
             lblRole.Name = "lblRole";
-            lblRole.Size = new Size(75, 19);
+            lblRole.Size = new Size(77, 19);
             lblRole.TabIndex = 8;
             lblRole.Text = "Chức vụ (*)";
             // 

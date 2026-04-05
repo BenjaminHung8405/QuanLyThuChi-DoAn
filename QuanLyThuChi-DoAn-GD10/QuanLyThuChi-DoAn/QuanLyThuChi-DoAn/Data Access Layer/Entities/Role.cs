@@ -12,17 +12,22 @@ namespace QuanLyThuChi_DoAn
         [Key]
         public int RoleId { get; set; }
 
-        public int TenantId { get; set; }
-        [ForeignKey("TenantId")]
-        public virtual Tenant Tenant { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string RoleCode { get; set; } = string.Empty;
 
         [Required]
         [StringLength(100)]
-        public string RoleName { get; set; }
+        public string RoleName { get; set; } = string.Empty;
 
         [StringLength(255)]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
-        public virtual ICollection<RolePermission> RolePermissions { get; set; }
+        [Required]
+        public int PriorityLevel { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public virtual ICollection<User> Users { get; set; } = new List<User>();
     }
 }

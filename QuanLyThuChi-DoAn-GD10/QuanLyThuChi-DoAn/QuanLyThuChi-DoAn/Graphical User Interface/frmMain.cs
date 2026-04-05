@@ -113,6 +113,17 @@ namespace QuanLyThuChi_DoAn
             mnuReconciliation.Visible = SessionManager.CanViewSummaryReports;
             mnuInternalTransfer.Visible = SessionManager.CanTransferInterBranch;
             mnuDebtManagement.Visible = SessionManager.CanApproveDebt;
+
+            string currentRoleCode = (SessionManager.CurrentRoleCode ?? string.Empty).Trim().ToUpperInvariant();
+            if (currentRoleCode == "STAFF")
+            {
+                mnuReports.Visible = false;
+                mnuManageUsers.Visible = false;
+            }
+            else if (currentRoleCode == "BRANCHMANAGER")
+            {
+                mnuReconciliation.Visible = false;
+            }
         }
 
         // Sự kiện khi bấm vào menu Đối tác

@@ -34,6 +34,49 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Role>()
+                .HasIndex(r => r.RoleCode)
+                .IsUnique();
+
+            modelBuilder.Entity<Role>()
+                .HasData(
+                    new Role
+                    {
+                        RoleId = 1,
+                        RoleCode = "SUPERADMIN",
+                        RoleName = "SuperAdmin",
+                        Description = "Quản trị hệ thống tối cao",
+                        PriorityLevel = 0,
+                        IsActive = true
+                    },
+                    new Role
+                    {
+                        RoleId = 2,
+                        RoleCode = "TENANTADMIN",
+                        RoleName = "TenantAdmin",
+                        Description = "Giám đốc công ty",
+                        PriorityLevel = 1,
+                        IsActive = true
+                    },
+                    new Role
+                    {
+                        RoleId = 3,
+                        RoleCode = "BRANCHMANAGER",
+                        RoleName = "BranchManager",
+                        Description = "Quản lý chi nhánh",
+                        PriorityLevel = 2,
+                        IsActive = true
+                    },
+                    new Role
+                    {
+                        RoleId = 4,
+                        RoleCode = "STAFF",
+                        RoleName = "Staff",
+                        Description = "Nhân viên",
+                        PriorityLevel = 3,
+                        IsActive = true
+                    });
+
             // 1. Cấu hình Khóa chính kết hợp (Composite Key) cho bảng RolePermissions
             modelBuilder.Entity<RolePermission>()
                 .HasKey(rp => new { rp.RoleId, rp.PermissionCode });

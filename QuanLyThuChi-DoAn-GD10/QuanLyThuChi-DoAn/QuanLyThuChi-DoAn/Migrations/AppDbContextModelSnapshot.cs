@@ -284,23 +284,69 @@ namespace QuanLyThuChi_DoAn.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PriorityLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RoleCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("RoleName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("TenantId")
-                        .HasColumnType("int");
-
                     b.HasKey("RoleId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("RoleCode")
+                        .IsUnique();
 
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleId = 1,
+                            Description = "Quản trị hệ thống tối cao",
+                            IsActive = true,
+                            PriorityLevel = 0,
+                            RoleCode = "SUPERADMIN",
+                            RoleName = "SuperAdmin"
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            Description = "Giám đốc công ty",
+                            IsActive = true,
+                            PriorityLevel = 1,
+                            RoleCode = "TENANTADMIN",
+                            RoleName = "TenantAdmin"
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            Description = "Quản lý chi nhánh",
+                            IsActive = true,
+                            PriorityLevel = 2,
+                            RoleCode = "BRANCHMANAGER",
+                            RoleName = "BranchManager"
+                        },
+                        new
+                        {
+                            RoleId = 4,
+                            Description = "Nhân viên",
+                            IsActive = true,
+                            PriorityLevel = 3,
+                            RoleCode = "STAFF",
+                            RoleName = "Staff"
+                        });
                 });
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.RolePermission", b =>
@@ -631,17 +677,6 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("QuanLyThuChi_DoAn.Role", b =>
-                {
-                    b.HasOne("QuanLyThuChi_DoAn.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("QuanLyThuChi_DoAn.RolePermission", b =>
                 {
                     b.HasOne("QuanLyThuChi_DoAn.Permission", "Permission")
@@ -651,7 +686,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .IsRequired();
 
                     b.HasOne("QuanLyThuChi_DoAn.Role", "Role")
-                        .WithMany("RolePermissions")
+                        .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -759,7 +794,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .HasForeignKey("BranchId");
 
                     b.HasOne("QuanLyThuChi_DoAn.Role", "Role")
-                        .WithMany()
+                        .WithMany("Users")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -782,7 +817,7 @@ namespace QuanLyThuChi_DoAn.Migrations
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.Role", b =>
                 {
-                    b.Navigation("RolePermissions");
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.Transaction", b =>

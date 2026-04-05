@@ -17,6 +17,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         private readonly BaseRepository<User> _userRepo;
         private readonly AppDbContext _context;
 
+        private const string SuperAdminCode = "SUPERADMIN";
+        private const string TenantAdminCode = "TENANTADMIN";
+        private const string BranchManagerCode = "BRANCHMANAGER";
+        private const string StaffCode = "STAFF";
+
         public UserService(AppDbContext context)
         {
             _userRepo = new BaseRepository<User>(context);
@@ -31,40 +36,46 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
         }
 
-        private static bool IsBranchScopedRole(string? roleName)
+        private static string NormalizeRoleCode(string? roleCode)
         {
-            return string.Equals(roleName, "BranchManager", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase);
+            return (roleCode ?? string.Empty).Trim().ToUpperInvariant();
         }
 
-        private static string MapRoleDisplayName(string? roleName)
+        private static bool IsBranchScopedRole(string? roleCode)
         {
-            if (string.IsNullOrWhiteSpace(roleName))
-            {
-                return "N/A";
-            }
+            string normalizedCode = NormalizeRoleCode(roleCode);
+            return normalizedCode == BranchManagerCode || normalizedCode == StaffCode;
+        }
 
-            if (string.Equals(roleName, "TenantAdmin", StringComparison.OrdinalIgnoreCase) || string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Giám đốc";
-            }
-
-            if (string.Equals(roleName, "BranchManager", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Quản lý chi nhánh";
-            }
-
-            if (string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Nhân viên";
-            }
-
-            if (string.Equals(roleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+        private static string MapRoleDisplayName(string? roleCode, string? roleName)
+        {
+            string normalizedCode = NormalizeRoleCode(roleCode);
+            if (normalizedCode == SuperAdminCode)
             {
                 return "Quản trị hệ thống";
             }
 
-            return roleName;
+            if (normalizedCode == TenantAdminCode)
+            {
+                return "Giám đốc";
+            }
+
+            if (normalizedCode == BranchManagerCode)
+            {
+                return "Quản lý chi nhánh";
+            }
+
+            if (normalizedCode == StaffCode)
+            {
+                return "Nhân viên";
+            }
+
+            if (string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Giám đốc";
+            }
+
+            return string.IsNullOrWhiteSpace(roleName) ? "N/A" : roleName;
         }
 
         private static int ResolveTenantScope(int? requestedTenantId)
@@ -125,6 +136,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                             u.PasswordHash,
                             u.FullName,
                             u.IsActive,
+                            r.RoleCode,
+                            r.PriorityLevel,
                             r.RoleName,
                             b.BranchName
                         FROM Users u
@@ -152,6 +165,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                             int usernameOrdinal = reader.GetOrdinal("Username");
                             int passwordHashOrdinal = reader.GetOrdinal("PasswordHash");
                             int fullNameOrdinal = reader.GetOrdinal("FullName");
+                            int roleCodeOrdinal = reader.GetOrdinal("RoleCode");
+                            int priorityLevelOrdinal = reader.GetOrdinal("PriorityLevel");
                             int roleNameOrdinal = reader.GetOrdinal("RoleName");
                             int branchNameOrdinal = reader.GetOrdinal("BranchName");
 
@@ -163,6 +178,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                             string usernameTrim = reader.IsDBNull(usernameOrdinal) ? string.Empty : reader.GetString(usernameOrdinal);
                             string passwordHash = reader.IsDBNull(passwordHashOrdinal) ? string.Empty : reader.GetString(passwordHashOrdinal);
                             string fullName = reader.IsDBNull(fullNameOrdinal) ? string.Empty : reader.GetString(fullNameOrdinal);
+                            string roleCode = reader.IsDBNull(roleCodeOrdinal) ? string.Empty : reader.GetString(roleCodeOrdinal);
+                            int priorityLevel = reader.IsDBNull(priorityLevelOrdinal) ? int.MaxValue : reader.GetInt32(priorityLevelOrdinal);
                             string roleName = reader.IsDBNull(roleNameOrdinal) ? "Unknown" : reader.GetString(roleNameOrdinal);
                             string branchName = reader.IsDBNull(branchNameOrdinal) ? string.Empty : reader.GetString(branchNameOrdinal);
 
@@ -190,10 +207,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
                                     // Set role info first and treat numeric roleId as authoritative
                                     SessionManager.RoleId = roleId;
+                                    SessionManager.CurrentRoleCode = roleCode ?? string.Empty;
+                                    SessionManager.CurrentPriorityLevel = priorityLevel;
                                     SessionManager.RoleName = roleName ?? "Unknown";
 
                                     // Warn if DB has inconsistent roleId/roleName
-                                    if (roleName == "SuperAdmin" && !SessionManager.IsSuperAdmin)
+                                    if ((string.Equals(roleCode, SuperAdminCode, StringComparison.OrdinalIgnoreCase)
+                                         || string.Equals(roleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                                         && !SessionManager.IsSuperAdmin)
                                     {
                                         System.Diagnostics.Debug.WriteLine($"[AUTH-WARN] RoleName says SuperAdmin but roleId={roleId} != SuperAdmin. Using roleId as source-of-truth.");
                                     }
@@ -298,6 +319,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     u.UserId,
                     u.FullName,
                     u.Username,
+                    RoleCode = u.Role != null ? u.Role.RoleCode : null,
                     RoleName = u.Role != null ? u.Role.RoleName : null,
                     BranchName = u.Branch != null ? u.Branch.BranchName : null,
                     u.IsActive
@@ -310,7 +332,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 UserId = u.UserId,
                 FullName = u.FullName ?? string.Empty,
                 Username = u.Username ?? string.Empty,
-                RoleName = MapRoleDisplayName(u.RoleName),
+                RoleName = MapRoleDisplayName(u.RoleCode, u.RoleName),
                 BranchName = string.IsNullOrWhiteSpace(u.BranchName) ? "Toàn hệ thống" : u.BranchName,
                 IsActive = u.IsActive,
                 CreatedDate = DateTime.Now
@@ -321,19 +343,23 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         {
             EnsureCanManageUsers();
 
-            int effectiveTenantId = ResolveTenantScope(tenantId);
+            _ = ResolveTenantScope(tenantId);
+
+            int fallbackPriority = SessionManager.IsSuperAdmin ? -1 : int.MaxValue;
+            int currentRolePriority = await _context.Roles
+                .AsNoTracking()
+                .Where(r => r.RoleId == SessionManager.RoleId)
+                .Select(r => (int?)r.PriorityLevel)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false) ?? fallbackPriority;
 
             var query = _context.Roles
                 .AsNoTracking()
-                .Where(r => r.TenantId == effectiveTenantId);
-
-            if (SessionManager.IsTenantAdmin)
-            {
-                query = query.Where(r => r.RoleName == "BranchManager" || r.RoleName == "Staff");
-            }
+                .Where(r => r.IsActive && r.PriorityLevel > currentRolePriority);
 
             return await query
-                .OrderBy(r => r.RoleName)
+                .OrderBy(r => r.PriorityLevel)
+                .ThenBy(r => r.RoleName)
                 .ToListAsync()
                 .ConfigureAwait(false);
         }
@@ -350,6 +376,154 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .OrderBy(b => b.BranchName)
                 .ToListAsync()
                 .ConfigureAwait(false);
+        }
+
+        public async Task<User?> GetUserByIdAsync(int userId, int tenantId)
+        {
+            EnsureCanManageUsers();
+
+            if (userId <= 0)
+            {
+                throw new ArgumentException("Mã người dùng không hợp lệ.", nameof(userId));
+            }
+
+            int effectiveTenantId = ResolveTenantScope(tenantId);
+
+            return await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserId == userId && u.TenantId == effectiveTenantId)
+                .ConfigureAwait(false);
+        }
+
+        public async Task<bool> UpdateUserAsync(User user, string? rawPassword = null)
+        {
+            EnsureCanManageUsers();
+
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            if (user.UserId <= 0)
+            {
+                throw new ArgumentException("Mã người dùng không hợp lệ.");
+            }
+
+            if (string.IsNullOrWhiteSpace(user.FullName))
+            {
+                throw new ArgumentException("Họ tên không được để trống.");
+            }
+
+            if (user.RoleId <= 0)
+            {
+                throw new ArgumentException("Vai trò không hợp lệ.");
+            }
+
+            var existingUser = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserId == user.UserId)
+                .ConfigureAwait(false);
+
+            if (existingUser == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy người dùng.");
+            }
+
+            int effectiveTenantId = ResolveTenantScope(existingUser.TenantId);
+            if (existingUser.TenantId != effectiveTenantId)
+            {
+                throw new UnauthorizedAccessException("Bạn không có quyền cập nhật tài khoản của Tenant khác.");
+            }
+
+            var targetRole = existingUser.Role
+                ?? await _context.Roles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.RoleId == existingUser.RoleId)
+                    .ConfigureAwait(false);
+
+            if (targetRole == null)
+            {
+                throw new InvalidOperationException("Vai trò hiện tại của người dùng không hợp lệ.");
+            }
+
+            var desiredRole = await _context.Roles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RoleId == user.RoleId && r.IsActive)
+                .ConfigureAwait(false);
+
+            if (desiredRole == null)
+            {
+                throw new InvalidOperationException("Vai trò cập nhật không hợp lệ hoặc đã ngừng hoạt động.");
+            }
+
+            int fallbackPriority = SessionManager.IsSuperAdmin ? -1 : int.MaxValue;
+            int editorPriority = await _context.Roles
+                .AsNoTracking()
+                .Where(r => r.RoleId == SessionManager.RoleId)
+                .Select(r => (int?)r.PriorityLevel)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false) ?? fallbackPriority;
+
+            bool isUpdatingSelf = existingUser.UserId == SessionManager.CurrentUserId;
+            if (!isUpdatingSelf && targetRole.PriorityLevel <= editorPriority)
+            {
+                throw new UnauthorizedAccessException("Bạn chỉ được cập nhật tài khoản có cấp quyền thấp hơn quyền hiện tại.");
+            }
+
+            if (desiredRole.PriorityLevel <= editorPriority)
+            {
+                throw new UnauthorizedAccessException("Bạn chỉ được gán vai trò có cấp quyền thấp hơn quyền hiện tại.");
+            }
+
+            bool requiresBranch = IsBranchScopedRole(desiredRole.RoleCode);
+            int? newBranchId = user.BranchId;
+
+            if (requiresBranch && (!newBranchId.HasValue || newBranchId.Value <= 0))
+            {
+                throw new InvalidOperationException("Vai trò này bắt buộc phải gắn với một chi nhánh.");
+            }
+
+            if (newBranchId.HasValue)
+            {
+                bool isBranchValid = await _context.Branches
+                    .AsNoTracking()
+                    .AnyAsync(b => b.BranchId == newBranchId.Value && b.TenantId == effectiveTenantId && b.IsActive)
+                    .ConfigureAwait(false);
+
+                if (!isBranchValid)
+                {
+                    throw new InvalidOperationException("Chi nhánh không hợp lệ hoặc không thuộc Tenant hiện tại.");
+                }
+            }
+
+            if (!requiresBranch)
+            {
+                newBranchId = null;
+            }
+
+            string normalizedFullName = user.FullName.Trim();
+            bool shouldUpdatePassword = !string.IsNullOrWhiteSpace(rawPassword);
+            bool hasChanges = !string.Equals(existingUser.FullName, normalizedFullName, StringComparison.Ordinal)
+                              || existingUser.RoleId != desiredRole.RoleId
+                              || existingUser.BranchId != newBranchId
+                              || shouldUpdatePassword;
+
+            if (!hasChanges)
+            {
+                return true;
+            }
+
+            existingUser.TenantId = effectiveTenantId;
+            existingUser.FullName = normalizedFullName;
+            existingUser.RoleId = desiredRole.RoleId;
+            existingUser.BranchId = newBranchId;
+
+            if (shouldUpdatePassword)
+            {
+                existingUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(rawPassword!);
+            }
+
+            return await _context.SaveChangesAsync().ConfigureAwait(false) > 0;
         }
 
         // 2. TẠO TÀI KHOẢN MỚI
@@ -381,23 +555,28 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             var role = await _context.Roles
                 .AsNoTracking()
-                .FirstOrDefaultAsync(r => r.RoleId == newUser.RoleId && r.TenantId == effectiveTenantId)
+                .FirstOrDefaultAsync(r => r.RoleId == newUser.RoleId && r.IsActive)
                 .ConfigureAwait(false);
 
             if (role == null)
             {
-                throw new InvalidOperationException("Vai trò không hợp lệ hoặc không thuộc Tenant hiện tại.");
+                throw new InvalidOperationException("Vai trò không hợp lệ hoặc đã ngừng hoạt động.");
             }
 
-            if (SessionManager.IsTenantAdmin &&
-                (string.Equals(role.RoleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(role.RoleName, "TenantAdmin", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(role.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)))
+            int fallbackPriority = SessionManager.IsSuperAdmin ? -1 : int.MaxValue;
+            int creatorPriority = await _context.Roles
+                .AsNoTracking()
+                .Where(r => r.RoleId == SessionManager.RoleId)
+                .Select(r => (int?)r.PriorityLevel)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false) ?? fallbackPriority;
+
+            if (role.PriorityLevel <= creatorPriority)
             {
-                throw new UnauthorizedAccessException("Giám đốc chỉ được tạo tài khoản Quản lý chi nhánh hoặc Nhân viên.");
+                throw new UnauthorizedAccessException("Bạn chỉ được tạo tài khoản có cấp quyền thấp hơn quyền hiện tại.");
             }
 
-            bool requiresBranch = IsBranchScopedRole(role.RoleName);
+            bool requiresBranch = IsBranchScopedRole(role.RoleCode);
             if (requiresBranch && !newUser.BranchId.HasValue)
             {
                 throw new InvalidOperationException("Vai trò này bắt buộc phải gắn với một chi nhánh.");
@@ -467,7 +646,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new InvalidOperationException("Không thể tự khóa tài khoản đang đăng nhập.");
             }
 
-            if (!SessionManager.IsSuperAdmin && user.Role != null && string.Equals(user.Role.RoleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+            if (!SessionManager.IsSuperAdmin
+                && user.Role != null
+                && (string.Equals(user.Role.RoleCode, SuperAdminCode, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(user.Role.RoleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền thay đổi trạng thái của SuperAdmin.");
             }

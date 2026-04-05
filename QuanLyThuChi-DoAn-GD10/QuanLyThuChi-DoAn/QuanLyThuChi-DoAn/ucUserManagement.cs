@@ -36,6 +36,7 @@ namespace QuanLyThuChi_DoAn
             dgvUsers.DataSource = _bindingSource;
             ConfigureGrid();
             WireEvents();
+            UpdateToggleButtonState();
 
             Disposed += OnDisposed;
         }
@@ -44,10 +45,13 @@ namespace QuanLyThuChi_DoAn
         {
             Load += ucUserManagement_Load;
             btnSearch.Click += (_, __) => ApplySearchFilter();
+            txtSearch.TextChanged += TxtSearch_TextChanged;
             txtSearch.KeyDown += TxtSearch_KeyDown;
             btnAddUser.Click += btnAddUser_Click;
+            btnEditUser.Click += btnEditUser_Click;
             btnToggleStatus.Click += async (_, __) => await ToggleStatusAsync();
             dgvUsers.SelectionChanged += (_, __) => UpdateToggleButtonState();
+            dgvUsers.CellDoubleClick += dgvUsers_CellDoubleClick;
             dgvUsers.CellFormatting += dgvUsers_CellFormatting;
             dgvUsers.DataError += dgvUsers_DataError;
         }
@@ -55,6 +59,26 @@ namespace QuanLyThuChi_DoAn
         private async void btnAddUser_Click(object? sender, EventArgs e)
         {
             await OpenAddUserDialogAsync();
+        }
+
+        private async void btnEditUser_Click(object? sender, EventArgs e)
+        {
+            await OpenEditUserDialogAsync();
+        }
+
+        private async void dgvUsers_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || _isBusy)
+            {
+                return;
+            }
+
+            if (e.ColumnIndex >= 0 && dgvUsers.Columns[e.ColumnIndex].Name == "IsActive")
+            {
+                return;
+            }
+
+            await OpenEditUserDialogAsync();
         }
 
         private void dgvUsers_DataError(object? sender, DataGridViewDataErrorEventArgs e)
@@ -111,7 +135,7 @@ namespace QuanLyThuChi_DoAn
             return SessionManager.CurrentTenantId.Value;
         }
 
-        private async Task LoadUsersAsync()
+        private async Task LoadUsersAsync(int? preferredUserId = null)
         {
             int tenantId = GetTenantIdOrThrow();
 
@@ -119,9 +143,7 @@ namespace QuanLyThuChi_DoAn
             try
             {
                 _userList = await _userService.GetUsersByTenantAsync(tenantId);
-                _bindingSource.DataSource = _userList.ToList();
-                FormatGrid();
-                UpdateToggleButtonState();
+                ApplySearchFilter(preferredUserId);
             }
             finally
             {
@@ -144,7 +166,31 @@ namespace QuanLyThuChi_DoAn
             if (dialogResult == DialogResult.OK)
             {
                 await LoadUsersAsync();
-                ApplySearchFilter();
+            }
+        }
+
+        private async Task OpenEditUserDialogAsync()
+        {
+            if (_isBusy)
+            {
+                return;
+            }
+
+            UserDTO? selectedUser = GetSelectedUser();
+            if (selectedUser == null || selectedUser.UserId <= 0)
+            {
+                MessageBox.Show("Vui lòng chọn một tài khoản để chỉnh sửa.", "Chưa chọn dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var editUserForm = new frmEditUser(selectedUser.UserId);
+            DialogResult dialogResult = FindForm() is Form owner
+                ? editUserForm.ShowDialog(owner)
+                : editUserForm.ShowDialog();
+
+            if (dialogResult == DialogResult.OK)
+            {
+                await LoadUsersAsync(selectedUser.UserId);
             }
         }
 
@@ -180,8 +226,7 @@ namespace QuanLyThuChi_DoAn
                 bool isSuccess = await _userService.ToggleUserStatusAsync(selectedUser.UserId);
                 if (isSuccess)
                 {
-                    await LoadUsersAsync();
-                    ApplySearchFilter();
+                    await LoadUsersAsync(selectedUser.UserId);
                 }
             }
             catch (Exception ex)
@@ -201,17 +246,40 @@ namespace QuanLyThuChi_DoAn
 
         private void TxtSearch_KeyDown(object? sender, KeyEventArgs e)
         {
-            if (e.KeyCode != Keys.Enter)
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                ApplySearchFilter();
+                return;
+            }
+
+            if (e.KeyCode == Keys.Escape)
+            {
+                if (txtSearch.TextLength == 0)
+                {
+                    return;
+                }
+
+                e.SuppressKeyPress = true;
+                txtSearch.Clear();
+                ApplySearchFilter();
+                return;
+            }
+        }
+
+        private void TxtSearch_TextChanged(object? sender, EventArgs e)
+        {
+            if (_isBusy)
             {
                 return;
             }
 
-            e.SuppressKeyPress = true;
             ApplySearchFilter();
         }
 
-        private void ApplySearchFilter()
+        private void ApplySearchFilter(int? preferredUserId = null)
         {
+            int? selectedUserId = preferredUserId ?? GetSelectedUser()?.UserId;
             IEnumerable<UserDTO> filteredUsers = _userList;
 
             string keyword = txtSearch.Text.Trim();
@@ -224,7 +292,49 @@ namespace QuanLyThuChi_DoAn
 
             _bindingSource.DataSource = filteredUsers.ToList();
             FormatGrid();
+            SelectRowByUserIdOrFallback(selectedUserId);
             UpdateToggleButtonState();
+        }
+
+        private void SelectRowByUserIdOrFallback(int? userId)
+        {
+            if (dgvUsers.Rows.Count == 0)
+            {
+                return;
+            }
+
+            DataGridViewRow? targetRow = null;
+            if (userId.HasValue)
+            {
+                foreach (DataGridViewRow row in dgvUsers.Rows)
+                {
+                    if (row.DataBoundItem is UserDTO rowUser && rowUser.UserId == userId.Value)
+                    {
+                        targetRow = row;
+                        break;
+                    }
+                }
+            }
+
+            targetRow ??= dgvUsers.Rows[0];
+
+            // CurrentCell cannot point to a hidden column (e.g. UserId), so choose the first visible cell.
+            DataGridViewCell? firstVisibleCell = null;
+            foreach (DataGridViewCell cell in targetRow.Cells)
+            {
+                if (cell.OwningColumn != null && cell.OwningColumn.Visible)
+                {
+                    firstVisibleCell = cell;
+                    break;
+                }
+            }
+
+            dgvUsers.ClearSelection();
+            targetRow.Selected = true;
+            if (firstVisibleCell != null)
+            {
+                dgvUsers.CurrentCell = firstVisibleCell;
+            }
         }
 
         private void SetBusyState(bool isBusy)
@@ -232,8 +342,9 @@ namespace QuanLyThuChi_DoAn
             _isBusy = isBusy;
             btnSearch.Enabled = !isBusy;
             btnAddUser.Enabled = !isBusy;
-            btnToggleStatus.Enabled = !isBusy;
             txtSearch.Enabled = !isBusy;
+            UseWaitCursor = isBusy;
+            UpdateToggleButtonState();
         }
 
         private void UpdateToggleButtonState()
@@ -241,10 +352,15 @@ namespace QuanLyThuChi_DoAn
             UserDTO? selectedUser = GetSelectedUser();
             if (selectedUser == null)
             {
+                btnEditUser.Enabled = false;
+                btnToggleStatus.Enabled = false;
                 btnToggleStatus.Text = "🔒 Khóa / Mở Khóa";
                 btnToggleStatus.BackColor = Color.Goldenrod;
                 return;
             }
+
+            btnEditUser.Enabled = !_isBusy;
+            btnToggleStatus.Enabled = !_isBusy;
 
             btnToggleStatus.Text = selectedUser.IsActive ? "🔒 Khóa tài khoản" : "🔓 Mở khóa tài khoản";
             btnToggleStatus.BackColor = selectedUser.IsActive ? Color.Firebrick : Color.SeaGreen;
@@ -257,10 +373,27 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
+            EnsureStatusTextColumn();
+
             // 1. Ẩn các cột không cần thiết (như ID)
             if (dgvUsers.Columns["UserId"] is DataGridViewColumn userIdColumn)
             {
                 userIdColumn.Visible = false;
+            }
+
+            if (dgvUsers.Columns["TenantId"] is DataGridViewColumn tenantIdColumn)
+            {
+                tenantIdColumn.Visible = false;
+            }
+
+            if (dgvUsers.Columns["RoleId"] is DataGridViewColumn roleIdColumn)
+            {
+                roleIdColumn.Visible = false;
+            }
+
+            if (dgvUsers.Columns["BranchId"] is DataGridViewColumn branchIdColumn)
+            {
+                branchIdColumn.Visible = false;
             }
 
             // 2. Đổi tên cột Tiếng Việt và căn chỉnh độ rộng
@@ -297,7 +430,34 @@ namespace QuanLyThuChi_DoAn
             {
                 isActiveColumn.HeaderText = "Trạng Thái";
                 isActiveColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                isActiveColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
+                isActiveColumn.FillWeight = 90;
             }
+        }
+
+        private void EnsureStatusTextColumn()
+        {
+            if (dgvUsers.Columns["IsActive"] is not DataGridViewCheckBoxColumn checkBoxColumn)
+            {
+                return;
+            }
+
+            int insertionIndex = checkBoxColumn.Index;
+            int displayIndex = checkBoxColumn.DisplayIndex;
+
+            dgvUsers.Columns.Remove(checkBoxColumn);
+
+            var statusTextColumn = new DataGridViewTextBoxColumn
+            {
+                Name = "IsActive",
+                DataPropertyName = nameof(UserDTO.IsActive),
+                HeaderText = "Trạng Thái",
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+
+            dgvUsers.Columns.Insert(insertionIndex, statusTextColumn);
+            statusTextColumn.DisplayIndex = displayIndex;
         }
 
         private void dgvUsers_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
@@ -316,14 +476,14 @@ namespace QuanLyThuChi_DoAn
             {
                 if (isActive)
                 {
-                    e.Value = "Đang hoạt động";
+                    e.Value = "● Đang hoạt động";
                     e.CellStyle.ForeColor = Color.SeaGreen;
                     e.CellStyle.Font = _activeStatusFont;
                     dgvUsers.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
                 }
                 else
                 {
-                    e.Value = "Đã khóa";
+                    e.Value = "● Đã khóa";
                     e.CellStyle.ForeColor = Color.IndianRed;
                     e.CellStyle.Font = _inactiveStatusFont;
                     dgvUsers.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);

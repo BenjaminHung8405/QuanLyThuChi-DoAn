@@ -36,6 +36,7 @@
             txtSearch = new TextBox();
             btnSearch = new Button();
             btnAddUser = new Button();
+            btnEditUser = new Button();
             btnToggleStatus = new Button();
             pnlMain = new Panel();
             dgvUsers = new DataGridView();
@@ -58,17 +59,19 @@
             // 
             // tlpHeader
             // 
-            tlpHeader.ColumnCount = 5;
+            tlpHeader.ColumnCount = 6;
             tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 310F));
             tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120F));
-            tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 185F));
+            tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170F));
+            tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155F));
             tlpHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180F));
             tlpHeader.Controls.Add(lblTitle, 0, 0);
             tlpHeader.Controls.Add(txtSearch, 1, 0);
             tlpHeader.Controls.Add(btnSearch, 2, 0);
             tlpHeader.Controls.Add(btnAddUser, 3, 0);
-            tlpHeader.Controls.Add(btnToggleStatus, 4, 0);
+            tlpHeader.Controls.Add(btnEditUser, 4, 0);
+            tlpHeader.Controls.Add(btnToggleStatus, 5, 0);
             tlpHeader.Dock = DockStyle.Fill;
             tlpHeader.Location = new Point(10, 10);
             tlpHeader.Name = "tlpHeader";
@@ -125,10 +128,26 @@
             btnAddUser.Location = new Point(783, 12);
             btnAddUser.Margin = new Padding(3, 12, 3, 12);
             btnAddUser.Name = "btnAddUser";
-            btnAddUser.Size = new Size(179, 36);
+            btnAddUser.Size = new Size(164, 36);
             btnAddUser.TabIndex = 3;
             btnAddUser.Text = "➕ Thêm Nhân Viên";
             btnAddUser.UseVisualStyleBackColor = false;
+            // 
+            // btnEditUser
+            // 
+            btnEditUser.BackColor = Color.DarkOrange;
+            btnEditUser.Dock = DockStyle.Fill;
+            btnEditUser.FlatAppearance.BorderSize = 0;
+            btnEditUser.FlatStyle = FlatStyle.Flat;
+            btnEditUser.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnEditUser.ForeColor = Color.White;
+            btnEditUser.Location = new Point(816, 12);
+            btnEditUser.Margin = new Padding(3, 12, 3, 12);
+            btnEditUser.Name = "btnEditUser";
+            btnEditUser.Size = new Size(149, 36);
+            btnEditUser.TabIndex = 4;
+            btnEditUser.Text = "✏️ Sửa Thông Tin";
+            btnEditUser.UseVisualStyleBackColor = false;
             // 
             // btnToggleStatus
             // 
@@ -138,11 +157,11 @@
             btnToggleStatus.FlatStyle = FlatStyle.Flat;
             btnToggleStatus.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnToggleStatus.ForeColor = Color.White;
-            btnToggleStatus.Location = new Point(968, 12);
+            btnToggleStatus.Location = new Point(971, 12);
             btnToggleStatus.Margin = new Padding(3, 12, 3, 12);
             btnToggleStatus.Name = "btnToggleStatus";
-            btnToggleStatus.Size = new Size(177, 36);
-            btnToggleStatus.TabIndex = 4;
+            btnToggleStatus.Size = new Size(174, 36);
+            btnToggleStatus.TabIndex = 5;
             btnToggleStatus.Text = "🔒 Khóa / Mở Khóa";
             btnToggleStatus.UseVisualStyleBackColor = false;
             // 
@@ -218,6 +237,7 @@
         private TextBox txtSearch;
         private Button btnSearch;
         private Button btnAddUser;
+        private Button btnEditUser;
         private Button btnToggleStatus;
         private Panel pnlMain;
         private DataGridView dgvUsers;

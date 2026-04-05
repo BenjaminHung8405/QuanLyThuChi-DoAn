@@ -65,6 +65,15 @@ namespace QuanLyThuChi_DoAn.BLL.Common
 
         // Thông tin phân quyền
         public static int RoleId { get; set; } = 0;
+        public static string RoleCode { get; set; } = string.Empty;
+        public static string CurrentRoleCode
+        {
+            get => RoleCode;
+            set => RoleCode = value ?? string.Empty;
+        }
+
+        // Số càng nhỏ quyền càng cao: 0=SuperAdmin, 1=TenantAdmin, 2=BranchManager, 3=Staff
+        public static int CurrentPriorityLevel { get; set; } = int.MaxValue;
         public static string RoleName { get; set; } = string.Empty;
 
         // Helper: map RoleId to enum for clearer checks
@@ -74,10 +83,27 @@ namespace QuanLyThuChi_DoAn.BLL.Common
             set => RoleId = (int)value;
         }
 
-        public static bool IsSuperAdmin => RoleId == (int)UserRole.SuperAdmin;
-        public static bool IsTenantAdmin => RoleId == (int)UserRole.TenantAdmin || string.Equals(RoleName, "TenantAdmin", StringComparison.OrdinalIgnoreCase) || string.Equals(RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
-        public static bool IsBranchManager => RoleId == (int)UserRole.BranchManager || string.Equals(RoleName, "BranchManager", StringComparison.OrdinalIgnoreCase) || string.Equals(RoleName, "Manager", StringComparison.OrdinalIgnoreCase);
-        public static bool IsStaff => RoleId == (int)UserRole.Staff || string.Equals(RoleName, "Staff", StringComparison.OrdinalIgnoreCase);
+        public static bool IsSuperAdmin =>
+            RoleId == (int)UserRole.SuperAdmin
+            || string.Equals(RoleCode, "SUPERADMIN", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(RoleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsTenantAdmin =>
+            RoleId == (int)UserRole.TenantAdmin
+            || string.Equals(RoleCode, "TENANTADMIN", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(RoleName, "TenantAdmin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsBranchManager =>
+            RoleId == (int)UserRole.BranchManager
+            || string.Equals(RoleCode, "BRANCHMANAGER", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(RoleName, "BranchManager", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(RoleName, "Manager", StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsStaff =>
+            RoleId == (int)UserRole.Staff
+            || string.Equals(RoleCode, "STAFF", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(RoleName, "Staff", StringComparison.OrdinalIgnoreCase);
 
         public static bool CanChangeTenantContext => IsSuperAdmin;
         public static bool CanChangeBranchContext => IsSuperAdmin || IsTenantAdmin;
@@ -117,6 +143,8 @@ namespace QuanLyThuChi_DoAn.BLL.Common
             FixedTenantId = null;
             FixedBranchId = null;
             RoleId = 0;
+            RoleCode = string.Empty;
+            CurrentPriorityLevel = int.MaxValue;
             RoleName = string.Empty;
         }
 

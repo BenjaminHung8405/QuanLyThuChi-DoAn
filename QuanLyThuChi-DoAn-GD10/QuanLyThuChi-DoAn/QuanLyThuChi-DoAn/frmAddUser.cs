@@ -15,11 +15,13 @@ namespace QuanLyThuChi_DoAn
         private readonly UserService _userService;
         private readonly BranchService _branchService;
         private bool _isSaving;
+        private bool _isFormReady;
+        private bool _allowCloseWhenSaving;
 
         private sealed class RoleOption
         {
             public int RoleId { get; set; }
-            public string RoleName { get; set; } = string.Empty;
+            public string RoleCode { get; set; } = string.Empty;
             public string DisplayName { get; set; } = string.Empty;
             public bool RequiresBranch { get; set; }
         }
@@ -36,7 +38,25 @@ namespace QuanLyThuChi_DoAn
             btnSave.Click += btnSave_Click;
             btnCancel.Click += btnCancel_Click;
             cbRole.SelectedIndexChanged += cbRole_SelectedIndexChanged;
+            cbBranch.SelectedIndexChanged += (_, __) => UpdateSaveButtonState();
+            txtFullName.TextChanged += (_, __) => UpdateSaveButtonState();
+            txtUsername.TextChanged += (_, __) => UpdateSaveButtonState();
+            txtPassword.TextChanged += (_, __) => UpdateSaveButtonState();
+            txtFullName.PlaceholderText = "Ví dụ: Nguyễn Văn A";
+            txtUsername.PlaceholderText = "Ví dụ: nguyenvana";
+            txtPassword.PlaceholderText = "Tối thiểu 6 ký tự";
+            FormClosing += frmAddUser_FormClosing;
             FormClosed += frmAddUser_FormClosed;
+
+            btnSave.Enabled = false;
+        }
+
+        private void frmAddUser_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            if (_isSaving && !_allowCloseWhenSaving)
+            {
+                e.Cancel = true;
+            }
         }
 
         private void frmAddUser_FormClosed(object? sender, FormClosedEventArgs e)
@@ -46,9 +66,12 @@ namespace QuanLyThuChi_DoAn
 
         private async void frmAddUser_Load(object? sender, EventArgs e)
         {
+            UseWaitCursor = true;
             try
             {
                 await LoadComboBoxDataAsync();
+                _isFormReady = true;
+                UpdateSaveButtonState();
                 txtFullName.Focus();
             }
             catch (Exception ex)
@@ -56,6 +79,19 @@ namespace QuanLyThuChi_DoAn
                 MessageBox.Show($"Không thể tải dữ liệu form: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 btnSave.Enabled = false;
             }
+            finally
+            {
+                if (!IsDisposed)
+                {
+                    UseWaitCursor = false;
+                }
+            }
+        }
+
+        private static string NormalizeWhitespace(string? value)
+        {
+            return string.Join(" ", (value ?? string.Empty)
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         }
 
         private int GetTenantIdOrThrow()
@@ -68,41 +104,41 @@ namespace QuanLyThuChi_DoAn
             return SessionManager.CurrentTenantId.Value;
         }
 
-        private static bool IsBranchScopedRole(string? roleName)
+        private static string NormalizeRoleCode(string? roleCode)
         {
-            return string.Equals(roleName, "BranchManager", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase);
+            return (roleCode ?? string.Empty).Trim().ToUpperInvariant();
         }
 
-        private static string MapRoleDisplayName(string? roleName)
+        private static bool IsBranchScopedRole(string? roleCode)
         {
-            if (string.IsNullOrWhiteSpace(roleName))
-            {
-                return "N/A";
-            }
+            string normalizedCode = NormalizeRoleCode(roleCode);
+            return normalizedCode == "BRANCHMANAGER" || normalizedCode == "STAFF";
+        }
 
-            if (string.Equals(roleName, "TenantAdmin", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Giám đốc";
-            }
-
-            if (string.Equals(roleName, "BranchManager", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Quản lý chi nhánh";
-            }
-
-            if (string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Nhân viên thu ngân";
-            }
-
-            if (string.Equals(roleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+        private static string MapRoleDisplayName(string? roleCode, string? roleName)
+        {
+            string normalizedCode = NormalizeRoleCode(roleCode);
+            if (normalizedCode == "SUPERADMIN")
             {
                 return "Quản trị hệ thống";
             }
 
-            return roleName;
+            if (normalizedCode == "TENANTADMIN")
+            {
+                return "Giám đốc";
+            }
+
+            if (normalizedCode == "BRANCHMANAGER")
+            {
+                return "Quản lý chi nhánh";
+            }
+
+            if (normalizedCode == "STAFF")
+            {
+                return "Nhân viên thu ngân";
+            }
+
+            return string.IsNullOrWhiteSpace(roleName) ? "N/A" : roleName;
         }
 
         private async Task LoadComboBoxDataAsync()
@@ -115,14 +151,16 @@ namespace QuanLyThuChi_DoAn
             cbBranch.ValueMember = nameof(Branch.BranchId);
             cbBranch.SelectedIndex = branches.Count > 0 ? 0 : -1;
 
+            int currentPriority = SessionManager.CurrentPriorityLevel;
             var roles = await _userService.GetAssignableRolesByTenantAsync(tenantId);
             var roleOptions = roles
+                .Where(r => r.PriorityLevel > currentPriority)
                 .Select(r => new RoleOption
                 {
                     RoleId = r.RoleId,
-                    RoleName = r.RoleName ?? string.Empty,
-                    DisplayName = MapRoleDisplayName(r.RoleName),
-                    RequiresBranch = IsBranchScopedRole(r.RoleName)
+                    RoleCode = r.RoleCode ?? string.Empty,
+                    DisplayName = MapRoleDisplayName(r.RoleCode, r.RoleName),
+                    RequiresBranch = IsBranchScopedRole(r.RoleCode)
                 })
                 .ToList();
 
@@ -161,6 +199,8 @@ namespace QuanLyThuChi_DoAn
             {
                 cbBranch.SelectedIndex = 0;
             }
+
+            UpdateSaveButtonState();
         }
 
         private static bool TryGetSelectedInt(ComboBox comboBox, out int selectedValue)
@@ -183,17 +223,34 @@ namespace QuanLyThuChi_DoAn
             out int? branchId,
             out RoleOption? selectedRole)
         {
-            fullName = txtFullName.Text.Trim();
+            fullName = NormalizeWhitespace(txtFullName.Text);
             username = txtUsername.Text.Trim();
             rawPassword = txtPassword.Text;
             selectedRole = cbRole.SelectedItem as RoleOption;
             branchId = null;
+
+            txtFullName.Text = fullName;
+            txtUsername.Text = username;
 
             if (string.IsNullOrWhiteSpace(fullName) ||
                 string.IsNullOrWhiteSpace(username) ||
                 string.IsNullOrWhiteSpace(rawPassword))
             {
                 MessageBox.Show("Vui lòng nhập đầy đủ Họ tên, Tên đăng nhập và Mật khẩu.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (username.Any(char.IsWhiteSpace))
+            {
+                MessageBox.Show("Tên đăng nhập không được chứa khoảng trắng.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtUsername.Focus();
+                return false;
+            }
+
+            if (rawPassword.Length < 6)
+            {
+                MessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPassword.Focus();
                 return false;
             }
 
@@ -219,9 +276,33 @@ namespace QuanLyThuChi_DoAn
             return true;
         }
 
+        private void UpdateSaveButtonState()
+        {
+            if (!_isFormReady || _isSaving)
+            {
+                btnSave.Enabled = false;
+                return;
+            }
+
+            bool hasFullName = !string.IsNullOrWhiteSpace(txtFullName.Text);
+            bool hasUsername = !string.IsNullOrWhiteSpace(txtUsername.Text);
+            bool hasPassword = !string.IsNullOrWhiteSpace(txtPassword.Text);
+            RoleOption? selectedRole = cbRole.SelectedItem as RoleOption;
+            bool hasRole = selectedRole != null;
+            bool requiresBranch = selectedRole?.RequiresBranch ?? true;
+            bool hasBranch = !requiresBranch || (TryGetSelectedInt(cbBranch, out int branchId) && branchId > 0);
+
+            btnSave.Enabled = hasFullName && hasUsername && hasPassword && hasRole && hasBranch;
+        }
+
         private void SetSavingState(bool isSaving)
         {
             _isSaving = isSaving;
+            if (!isSaving)
+            {
+                _allowCloseWhenSaving = false;
+            }
+
             btnSave.Enabled = !isSaving;
             btnCancel.Enabled = !isSaving;
             txtFullName.Enabled = !isSaving;
@@ -230,6 +311,11 @@ namespace QuanLyThuChi_DoAn
             cbBranch.Enabled = !isSaving && ((cbRole.SelectedItem as RoleOption)?.RequiresBranch ?? true);
             cbRole.Enabled = !isSaving;
             UseWaitCursor = isSaving;
+
+            if (!isSaving)
+            {
+                UpdateSaveButtonState();
+            }
         }
 
         private async void btnSave_Click(object? sender, EventArgs e)
@@ -263,6 +349,7 @@ namespace QuanLyThuChi_DoAn
                 {
                     MessageBox.Show("Tạo tài khoản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     DialogResult = DialogResult.OK;
+                    _allowCloseWhenSaving = true;
                     Close();
                     return;
                 }
