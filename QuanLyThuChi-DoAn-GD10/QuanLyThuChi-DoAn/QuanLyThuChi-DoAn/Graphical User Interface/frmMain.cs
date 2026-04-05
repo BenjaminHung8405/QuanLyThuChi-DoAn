@@ -27,6 +27,7 @@ namespace QuanLyThuChi_DoAn
                 mnuDashboard.Click += mnuDashboard_Click;
                 mnuReconciliation.Click += mnuReconciliation_Click;
                 mnuManageUsers.Click += mnuManageUsers_Click;
+                mnuBranchConfig.Click += mnuBranchConfig_Click;
             }
             catch
             {
@@ -277,6 +278,34 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
+        private void mnuBranchConfig_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var branchManagement = new ucBranchManagement();
+                branchManagement.BranchChanged += BranchManagement_BranchChanged;
+                ShowUserControl(branchManagement);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Quản lý chi nhánh: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void BranchManagement_BranchChanged(object? sender, ucBranchManagement.BranchChangedEventArgs e)
+        {
+            try
+            {
+                await RefreshBranchComboAfterBranchChangedAsync(e.TenantId, e.BranchId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Không thể đồng bộ danh sách chi nhánh: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private async Task SetupContextComboBoxes()
         {
             _isInitializing = true;
@@ -458,6 +487,97 @@ namespace QuanLyThuChi_DoAn
             }
 
             UpdateUserStatusLabel();
+        }
+
+        private async Task RefreshBranchComboAfterBranchChangedAsync(int tenantId, int? preferredBranchId)
+        {
+            if (!SessionManager.CurrentTenantId.HasValue)
+            {
+                return;
+            }
+
+            if (SessionManager.CurrentTenantId.Value != tenantId)
+            {
+                return;
+            }
+
+            if (SessionManager.IsStaff)
+            {
+                return;
+            }
+
+            if (SessionManager.FixedBranchId.HasValue && SessionManager.FixedBranchId.Value > 0)
+            {
+                return;
+            }
+
+            _isInitializing = true;
+            cbBranchs.SelectedIndexChanged -= cbBranchs_SelectedIndexChanged;
+            try
+            {
+                var branches = await Task.Run(() =>
+                {
+                    using var context = new AppDbContext();
+                    var service = new BranchService(context);
+                    return service.GetBranchesByTenant(tenantId);
+                });
+
+                if (SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin)
+                {
+                    branches.Insert(0, new Branch
+                    {
+                        BranchId = 0,
+                        BranchName = "--- Tất cả chi nhánh ---",
+                        TenantId = tenantId,
+                        IsActive = true
+                    });
+                }
+
+                cbBranchs.ComboBox.DataSource = null;
+                cbBranchs.ComboBox.Items.Clear();
+                cbBranchs.ComboBox.DataSource = branches;
+                cbBranchs.ComboBox.DisplayMember = "BranchName";
+                cbBranchs.ComboBox.ValueMember = "BranchId";
+
+                if (branches.Count == 0)
+                {
+                    cbBranchs.ComboBox.SelectedIndex = -1;
+                    SessionManager.CurrentBranchId = null;
+                    SessionManager.BranchId = null;
+                    SessionManager.BranchName = string.Empty;
+                    UpdateUserStatusLabel();
+                    return;
+                }
+
+                int targetBranchId;
+                if (preferredBranchId.HasValue && branches.Any(b => b.BranchId == preferredBranchId.Value))
+                {
+                    targetBranchId = preferredBranchId.Value;
+                }
+                else if (SessionManager.CurrentBranchId.HasValue && branches.Any(b => b.BranchId == SessionManager.CurrentBranchId.Value))
+                {
+                    targetBranchId = SessionManager.CurrentBranchId.Value;
+                }
+                else if ((SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin) && branches.Any(b => b.BranchId == 0))
+                {
+                    targetBranchId = 0;
+                }
+                else
+                {
+                    targetBranchId = branches[0].BranchId;
+                }
+
+                cbBranchs.ComboBox.SelectedValue = targetBranchId;
+                SessionManager.CurrentBranchId = targetBranchId;
+                SessionManager.BranchId = targetBranchId;
+                SetBranchNameFromComboBox();
+                UpdateUserStatusLabel();
+            }
+            finally
+            {
+                cbBranchs.SelectedIndexChanged += cbBranchs_SelectedIndexChanged;
+                _isInitializing = false;
+            }
         }
 
         private async void cbTenants_SelectedIndexChanged(object sender, EventArgs e)

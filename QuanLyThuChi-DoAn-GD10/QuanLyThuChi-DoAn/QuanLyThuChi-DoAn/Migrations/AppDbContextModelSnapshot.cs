@@ -82,13 +82,16 @@ namespace QuanLyThuChi_DoAn.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("BranchName")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -699,7 +702,7 @@ namespace QuanLyThuChi_DoAn.Migrations
             modelBuilder.Entity("QuanLyThuChi_DoAn.Transaction", b =>
                 {
                     b.HasOne("QuanLyThuChi_DoAn.Branch", "Branch")
-                        .WithMany()
+                        .WithMany("Transactions")
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -790,7 +793,7 @@ namespace QuanLyThuChi_DoAn.Migrations
             modelBuilder.Entity("QuanLyThuChi_DoAn.User", b =>
                 {
                     b.HasOne("QuanLyThuChi_DoAn.Branch", "Branch")
-                        .WithMany()
+                        .WithMany("Users")
                         .HasForeignKey("BranchId");
 
                     b.HasOne("QuanLyThuChi_DoAn.Role", "Role")
@@ -808,6 +811,13 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("QuanLyThuChi_DoAn.Branch", b =>
+                {
+                    b.Navigation("Transactions");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.Permission", b =>

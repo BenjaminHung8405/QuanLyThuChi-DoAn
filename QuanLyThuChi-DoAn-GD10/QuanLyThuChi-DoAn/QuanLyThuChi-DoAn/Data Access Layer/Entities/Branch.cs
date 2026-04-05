@@ -17,15 +17,21 @@ namespace QuanLyThuChi_DoAn
         public virtual Tenant Tenant { get; set; }
 
         [Required]
-        [StringLength(255)]
+        [StringLength(100)]
         public string BranchName { get; set; }
 
-        [StringLength(500)]
+        [StringLength(200)]
         public string Address { get; set; }
 
         [StringLength(20)]
         public string Phone { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
+
+        // Navigation properties
+        public virtual ICollection<User> Users { get; set; } = new List<User>();
+        public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }
