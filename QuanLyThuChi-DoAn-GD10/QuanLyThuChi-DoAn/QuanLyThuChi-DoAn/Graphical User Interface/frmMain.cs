@@ -25,6 +25,7 @@ namespace QuanLyThuChi_DoAn
             {
                 mnuDebtManagement.Click += mnuDebtManagement_Click;
                 mnuDashboard.Click += mnuDashboard_Click;
+                mnuCashLedger.Click += mnuCashLedger_Click;
                 mnuReconciliation.Click += mnuReconciliation_Click;
                 mnuManageUsers.Click += mnuManageUsers_Click;
                 mnuBranchConfig.Click += mnuBranchConfig_Click;
@@ -222,6 +223,19 @@ namespace QuanLyThuChi_DoAn
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi khi mở màn hình Tổng quan: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void mnuCashLedger_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                ShowUserControl(new ucCashbookReport());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Sổ quỹ chi tiết: {ex.Message}", "Lỗi hệ thống",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -776,6 +790,10 @@ namespace QuanLyThuChi_DoAn
                 else if (current is ucDashboard ucDashboardView)
                 {
                     await ucDashboardView.LoadReportDataAsync();
+                }
+                else if (current is ucCashbookReport ucCashbookView)
+                {
+                    await ucCashbookView.ReloadDataAsync();
                 }
                 else
                 {

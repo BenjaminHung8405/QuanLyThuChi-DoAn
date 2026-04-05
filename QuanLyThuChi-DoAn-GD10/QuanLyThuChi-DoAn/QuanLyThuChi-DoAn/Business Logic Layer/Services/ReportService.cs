@@ -131,6 +131,134 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             return trendList;
         }
 
+        public async Task<List<CashbookDetailDTO>> GetCashbookDetailsAsync(int tenantId, int? branchId, DateTime fromDate, DateTime toDate)
+        {
+            DateTime startDate = fromDate.Date;
+            DateTime endDate = toDate.Date.AddDays(1).AddTicks(-1);
+
+            IQueryable<Transaction> pastQuery = _context.Transactions
+                .AsNoTracking()
+                .Where(t => t.TenantId == tenantId
+                            && t.IsActive == true
+                            && t.Status == "COMPLETED"
+                            && t.TransDate < startDate);
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                pastQuery = pastQuery.Where(t => t.BranchId == branchId.Value);
+            }
+
+            decimal pastIncome = await pastQuery
+                .Where(t => t.TransType == "IN")
+                .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+            decimal pastExpense = await pastQuery
+                .Where(t => t.TransType == "OUT")
+                .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+            decimal currentBalance = pastIncome - pastExpense;
+
+            IQueryable<Transaction> periodQuery = _context.Transactions
+                .AsNoTracking()
+                .Include(t => t.Category)
+                .Include(t => t.User)
+                .Where(t => t.TenantId == tenantId
+                            && t.IsActive == true
+                            && t.Status == "COMPLETED"
+                            && t.TransDate >= startDate
+                            && t.TransDate <= endDate);
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                periodQuery = periodQuery.Where(t => t.BranchId == branchId.Value);
+            }
+
+            List<Transaction> transactions = await periodQuery
+                .OrderBy(t => t.TransDate)
+                .ThenBy(t => t.TransId)
+                .ToListAsync();
+
+            var resultList = new List<CashbookDetailDTO>(transactions.Count + 1)
+            {
+                new CashbookDetailDTO
+                {
+                    TransactionDate = startDate,
+                    TransactionType = "-",
+                    CategoryName = "SỐ DƯ ĐẦU KỲ",
+                    Notes = string.Empty,
+                    IncomeAmount = 0,
+                    ExpenseAmount = 0,
+                    RunningBalance = currentBalance,
+                    CreatorName = string.Empty
+                }
+            };
+
+            foreach (Transaction transaction in transactions)
+            {
+                bool isIncome = string.Equals(transaction.TransType, "IN", StringComparison.OrdinalIgnoreCase);
+
+                decimal income = isIncome
+                    ? transaction.Amount
+                    : 0;
+                decimal expense = !isIncome
+                    ? transaction.Amount
+                    : 0;
+
+                currentBalance += income - expense;
+
+                resultList.Add(new CashbookDetailDTO
+                {
+                    TransactionDate = transaction.TransDate,
+                    TransactionType = isIncome ? "Thu" : "Chi",
+                    CategoryName = transaction.Category != null ? transaction.Category.CategoryName ?? "Khác" : "Khác",
+                    Notes = transaction.Description ?? string.Empty,
+                    IncomeAmount = income,
+                    ExpenseAmount = expense,
+                    RunningBalance = currentBalance,
+                    CreatorName = transaction.User != null ? transaction.User.FullName ?? string.Empty : string.Empty
+                });
+            }
+
+            return resultList;
+        }
+
+        public async Task<List<CashbookSummaryDTO>> GetCashbookSummaryAsync(int tenantId, int? branchId, DateTime fromDate, DateTime toDate)
+        {
+            DateTime startDate = fromDate.Date;
+            DateTime endDate = toDate.Date.AddDays(1).AddTicks(-1);
+
+            IQueryable<Transaction> periodQuery = _context.Transactions
+                .AsNoTracking()
+                .Include(t => t.Category)
+                .Where(t => t.TenantId == tenantId
+                            && t.IsActive == true
+                            && t.Status == "COMPLETED"
+                            && t.TransDate >= startDate
+                            && t.TransDate <= endDate);
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                periodQuery = periodQuery.Where(t => t.BranchId == branchId.Value);
+            }
+
+            return await periodQuery
+                .GroupBy(t => new
+                {
+                    t.TransType,
+                    CategoryName = t.Category != null ? t.Category.CategoryName : "Khác"
+                })
+                .Select(g => new CashbookSummaryDTO
+                {
+                    TransactionType = g.Key.TransType == "IN" ? "Thu" : "Chi",
+                    CategoryName = g.Key.CategoryName ?? "Khác",
+                    TotalTransactions = g.Count(),
+                    TotalAmount = g.Sum(x => x.Amount)
+                })
+                .OrderBy(x => x.TransactionType)
+                .ThenByDescending(x => x.TotalAmount)
+                .ToListAsync();
+        }
+
         public async Task<List<BranchReconciliationDTO>> GetChainReconciliationAsync(int tenantId, DateTime fromDate, DateTime toDate)
         {
             // 1. Chuẩn hóa biên độ thời gian (Chống trượt giao dịch ngày cuối)
