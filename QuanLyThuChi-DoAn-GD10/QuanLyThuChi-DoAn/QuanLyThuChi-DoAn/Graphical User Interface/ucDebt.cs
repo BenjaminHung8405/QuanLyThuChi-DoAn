@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.DTOs;
 using QuanLyThuChi_DoAn.BLL.Services;
 
 namespace QuanLyThuChi_DoAn.Graphical_User_Interface
@@ -15,18 +16,34 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
         private readonly DebtService _debtService = new DebtService();
         private bool _isLoadingData;
         private bool _isOpeningPayment;
+        private int? _drillDownPartnerId;
+        private bool _isUpdatingSearchByCode;
+        private int? _savedDetailStatusIndex;
+        private bool _isUpdatingFilterModeUI;
 
         private sealed class DebtGridItem
         {
             public long DebtId { get; set; }
-            public string PartnerName { get; set; }
-            public string DebtType { get; set; }
+            public string PartnerName { get; set; } = string.Empty;
+            public string DebtType { get; set; } = string.Empty;
             public decimal TotalAmount { get; set; }
             public decimal PaidAmount { get; set; }
             public decimal Remaining { get; set; }
-            public string Status { get; set; }
-            public string RawStatus { get; set; }
-            public string RawDebtType { get; set; }
+            public string Status { get; set; } = string.Empty;
+            public string RawStatus { get; set; } = string.Empty;
+            public string RawDebtType { get; set; } = string.Empty;
+        }
+
+        private sealed class DebtSummaryGridItem
+        {
+            public int PartnerId { get; set; }
+            public string PartnerName { get; set; } = string.Empty;
+            public string DebtType { get; set; } = string.Empty;
+            public int TotalVouchers { get; set; }
+            public decimal TotalAmount { get; set; }
+            public decimal TotalPaid { get; set; }
+            public decimal RemainingDebt { get; set; }
+            public string RawDebtType { get; set; } = string.Empty;
         }
 
         public ucDebt()
@@ -40,15 +57,21 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
             btnFilter.Click += async (s, e) => await LoadDebtDataAsync();
             txtSearch.KeyDown += txtSearch_KeyDown;
+            txtSearch.TextChanged += txtSearch_TextChanged;
             cboDebtType.SelectedIndexChanged += filterControl_Changed;
             cboStatus.SelectedIndexChanged += filterControl_Changed;
             dgvDebts.CellFormatting += dgvDebts_CellFormatting;
             dgvDebts.CellDoubleClick += dgvDebts_CellDoubleClick;
+            chkToggleView.CheckedChanged += chkToggleView_CheckedChanged;
+            btnResetView.Click += btnResetView_Click;
             btnApproveDebt.Click += btnApproveDebt_Click;
 
             btnPayDebt.Visible = SessionManager.CanApproveDebt;
             btnApproveDebt.Visible = SessionManager.CanApproveDebt;
 
+            UpdateToggleViewAppearance();
+            ApplyFilterModeUI();
+            UpdateResetViewButtonState();
             TogglePayButtonState();
             _ = LoadDebtDataAsync();
         }
@@ -71,7 +94,10 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private void EnsureGridColumns()
         {
-            if (dgvDebts.Columns.Count > 0 && colTotal != null && colPaid != null && colRemaining != null)
+            if (dgvDebts.Columns.Contains("colDebtId")
+                && dgvDebts.Columns.Contains("colTotal")
+                && dgvDebts.Columns.Contains("colPaid")
+                && dgvDebts.Columns.Contains("colRemaining"))
             {
                 return;
             }
@@ -150,6 +176,122 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             });
         }
 
+        private void ConfigureSummaryGrid()
+        {
+            if (dgvDebts.Columns.Contains("colSummaryPartnerName")
+                && dgvDebts.Columns.Contains("colSummaryRemaining"))
+            {
+                return;
+            }
+
+            dgvDebts.AutoGenerateColumns = false;
+            dgvDebts.Columns.Clear();
+
+            var colSummaryPartnerId = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryPartnerId",
+                DataPropertyName = "PartnerId",
+                HeaderText = "PartnerId",
+                Visible = false
+            };
+
+            var colSummaryPartnerName = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryPartnerName",
+                DataPropertyName = "PartnerName",
+                HeaderText = "Đối tác / khách hàng",
+                FillWeight = 180
+            };
+
+            var colSummaryDebtType = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryDebtType",
+                DataPropertyName = "DebtType",
+                HeaderText = "Loại nợ",
+                FillWeight = 120
+            };
+
+            var colSummaryVouchers = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryVouchers",
+                DataPropertyName = "TotalVouchers",
+                HeaderText = "Số phiếu",
+                FillWeight = 80
+            };
+            colSummaryVouchers.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            var colSummaryTotal = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryTotal",
+                DataPropertyName = "TotalAmount",
+                HeaderText = "Tổng nợ",
+                FillWeight = 110
+            };
+            colSummaryTotal.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colSummaryTotal.DefaultCellStyle.Format = "N0";
+
+            var colSummaryPaid = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryPaid",
+                DataPropertyName = "TotalPaid",
+                HeaderText = "Đã trả",
+                FillWeight = 110
+            };
+            colSummaryPaid.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colSummaryPaid.DefaultCellStyle.Format = "N0";
+
+            var colSummaryRemaining = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryRemaining",
+                DataPropertyName = "RemainingDebt",
+                HeaderText = "Còn nợ",
+                FillWeight = 120
+            };
+            colSummaryRemaining.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colSummaryRemaining.DefaultCellStyle.Format = "N0";
+            colSummaryRemaining.DefaultCellStyle.ForeColor = Color.FromArgb(211, 47, 47);
+            colSummaryRemaining.DefaultCellStyle.Font = new Font(dgvDebts.Font, FontStyle.Bold);
+
+            var colSummaryRawDebtType = new DataGridViewTextBoxColumn
+            {
+                Name = "colSummaryRawDebtType",
+                DataPropertyName = "RawDebtType",
+                HeaderText = "RawDebtType",
+                Visible = false
+            };
+
+            dgvDebts.Columns.AddRange(new DataGridViewColumn[]
+            {
+                colSummaryPartnerId,
+                colSummaryPartnerName,
+                colSummaryDebtType,
+                colSummaryVouchers,
+                colSummaryTotal,
+                colSummaryPaid,
+                colSummaryRemaining,
+                colSummaryRawDebtType
+            });
+        }
+
+        private bool IsSummaryViewMode()
+        {
+            return chkToggleView.Checked;
+        }
+
+        private void UpdateToggleViewAppearance()
+        {
+            if (chkToggleView.Checked)
+            {
+                chkToggleView.Text = "Góc nhìn: Tổng đối tác";
+                chkToggleView.BackColor = Color.FromArgb(255, 249, 196);
+            }
+            else
+            {
+                chkToggleView.Text = "Góc nhìn: Từng phiếu";
+                chkToggleView.BackColor = Color.White;
+            }
+        }
+
         private void InitializeComboboxes()
         {
             // Populate Debt Type
@@ -171,6 +313,13 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private async void txtSearch_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyCode == Keys.Escape)
+            {
+                e.SuppressKeyPress = true;
+                await ResetToFullListAsync();
+                return;
+            }
+
             if (e.KeyCode != Keys.Enter) return;
 
             e.SuppressKeyPress = true;
@@ -179,14 +328,195 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private async void filterControl_Changed(object sender, EventArgs e)
         {
-            if (_isLoadingData || !IsHandleCreated) return;
+            if (_isLoadingData || _isUpdatingFilterModeUI || !IsHandleCreated) return;
             await LoadDebtDataAsync();
+        }
+
+        private async void chkToggleView_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_isLoadingData || !IsHandleCreated) return;
+
+            if (chkToggleView.Checked)
+            {
+                _drillDownPartnerId = null;
+            }
+
+            UpdateToggleViewAppearance();
+            ApplyFilterModeUI();
+            ApplyBranchContextActionState();
+            TogglePayButtonState();
+            UpdateResetViewButtonState();
+            await LoadDebtDataAsync();
+        }
+
+        private void ApplyFilterModeUI()
+        {
+            bool isSummaryMode = IsSummaryViewMode();
+
+            try
+            {
+                _isUpdatingFilterModeUI = true;
+
+                cboStatus.Visible = !isSummaryMode;
+
+                if (isSummaryMode)
+                {
+                    if (cboStatus.Items.Count > 0 && cboStatus.SelectedIndex > 0)
+                    {
+                        _savedDetailStatusIndex = cboStatus.SelectedIndex;
+                    }
+
+                    if (cboStatus.Items.Count > 0)
+                    {
+                        cboStatus.SelectedIndex = 0;
+                    }
+
+                    txtSearch.PlaceholderText = "Tìm đối tác để drill-down...";
+                }
+                else
+                {
+                    if (_savedDetailStatusIndex.HasValue
+                        && _savedDetailStatusIndex.Value >= 0
+                        && _savedDetailStatusIndex.Value < cboStatus.Items.Count)
+                    {
+                        cboStatus.SelectedIndex = _savedDetailStatusIndex.Value;
+                    }
+
+                    _savedDetailStatusIndex = null;
+                    txtSearch.PlaceholderText = "Tìm theo tên đối tác...";
+                }
+            }
+            finally
+            {
+                _isUpdatingFilterModeUI = false;
+            }
+
+            UpdateResetViewButtonState();
+        }
+
+        private bool HasAnyActiveFilter()
+        {
+            bool hasSearchFilter = !string.IsNullOrWhiteSpace(txtSearch.Text);
+            bool hasTypeFilter = cboDebtType.SelectedIndex > 0;
+            bool hasStatusFilter = !IsSummaryViewMode() && cboStatus.SelectedIndex > 0;
+
+            return _drillDownPartnerId.HasValue || hasSearchFilter || hasTypeFilter || hasStatusFilter;
+        }
+
+        private void UpdateResetViewButtonState()
+        {
+            bool hasActiveFilter = HasAnyActiveFilter();
+
+            btnResetView.Visible = hasActiveFilter;
+            btnResetView.Enabled = !_isLoadingData;
+            btnResetView.Text = _drillDownPartnerId.HasValue ? "Quay lại tất cả" : "Xóa bộ lọc";
+        }
+
+        private async Task ResetToFullListAsync()
+        {
+            bool hadFilter = HasAnyActiveFilter();
+            if (!hadFilter)
+            {
+                return;
+            }
+
+            _drillDownPartnerId = null;
+            _savedDetailStatusIndex = null;
+
+            try
+            {
+                _isUpdatingFilterModeUI = true;
+
+                if (cboDebtType.Items.Count > 0)
+                {
+                    cboDebtType.SelectedIndex = 0;
+                }
+
+                if (cboStatus.Items.Count > 0)
+                {
+                    cboStatus.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                _isUpdatingFilterModeUI = false;
+            }
+
+            try
+            {
+                _isUpdatingSearchByCode = true;
+                txtSearch.Clear();
+            }
+            finally
+            {
+                _isUpdatingSearchByCode = false;
+            }
+
+            ApplyFilterModeUI();
+            UpdateResetViewButtonState();
+            await LoadDebtDataAsync();
+        }
+
+        private async void btnResetView_Click(object sender, EventArgs e)
+        {
+            await ResetToFullListAsync();
         }
 
         private async void dgvDebts_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
+
+            if (IsSummaryViewMode())
+            {
+                await DrillDownToPartnerDetailAsync(e.RowIndex);
+                return;
+            }
+
             await OpenPaymentFormAsync();
+        }
+
+        private async Task DrillDownToPartnerDetailAsync(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvDebts.Rows.Count) return;
+
+            if (dgvDebts.Rows[rowIndex].DataBoundItem is not DebtSummaryGridItem summaryItem)
+            {
+                return;
+            }
+
+            if (summaryItem.PartnerId <= 0)
+            {
+                MessageBox.Show("Không xác định được đối tác để drill-down.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _drillDownPartnerId = summaryItem.PartnerId;
+
+            try
+            {
+                _isUpdatingSearchByCode = true;
+                txtSearch.Text = summaryItem.PartnerName;
+            }
+            finally
+            {
+                _isUpdatingSearchByCode = false;
+            }
+
+            chkToggleView.Checked = false;
+            UpdateResetViewButtonState();
+            await Task.CompletedTask;
+        }
+
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (_isUpdatingSearchByCode) return;
+
+            if (!IsSummaryViewMode() && _drillDownPartnerId.HasValue)
+            {
+                _drillDownPartnerId = null;
+            }
+
+            UpdateResetViewButtonState();
         }
 
         private void dgvDebts_SelectionChanged(object sender, EventArgs e)
@@ -199,11 +529,15 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             if (e.RowIndex < 0 || dgvDebts.Rows.Count <= e.RowIndex) return;
 
             var row = dgvDebts.Rows[e.RowIndex];
-            string rawType = null;
+            string? rawType = null;
 
             if (row.DataBoundItem is DebtGridItem item)
             {
                 rawType = item.RawDebtType;
+            }
+            else if (row.DataBoundItem is DebtSummaryGridItem summaryItem)
+            {
+                rawType = summaryItem.RawDebtType;
             }
             else if (row.DataBoundItem is DataRowView drv && drv.Row.Table.Columns.Contains("RawDebtType"))
             {
@@ -219,7 +553,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
             if (e.Value != null && dgvDebts.Columns[e.ColumnIndex].DataPropertyName == "Status")
             {
-                var status = e.Value.ToString();
+                string status = e.Value?.ToString() ?? string.Empty;
                 if (status == "Mới tạo")
                 {
                     e.CellStyle.ForeColor = Color.FromArgb(30, 136, 229);
@@ -252,13 +586,25 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 SetFilterState(true);
                 main?.SetLoadingState(true);
 
-                long? selectedDebtId = preferredDebtId ?? GetCurrentDebtId();
-                string type = GetSelectedDebtTypeFilter();
-                string status = GetSelectedStatusFilter();
-                string search = txtSearch.Text?.Trim();
+                string? type = GetSelectedDebtTypeFilter();
+                string? status = GetSelectedStatusFilter();
+                string? search = txtSearch.Text?.Trim();
 
                 int tenantId = SessionManager.CurrentTenantId ?? 0;
                 int? branchId = SessionManager.CurrentBranchId;
+
+                if (IsSummaryViewMode())
+                {
+                    ConfigureSummaryGrid();
+
+                    var summaryData = await _debtService.GetDebtSummaryAsync(tenantId, branchId, type, status, search);
+                    BindSummaryGrid(summaryData);
+                    return;
+                }
+
+                ConfigureGrid();
+
+                long? selectedDebtId = preferredDebtId ?? GetCurrentDebtId();
 
                 var allDebts = await _debtService.GetDebtsAsync(tenantId, branchId);
 
@@ -266,6 +612,11 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                     .Where(d => (type == null || d.DebtType == type) &&
                                 (status == null || d.Status == status))
                     .ToList();
+
+                if (_drillDownPartnerId.HasValue)
+                {
+                    data = data.Where(d => d.PartnerId == _drillDownPartnerId.Value).ToList();
+                }
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
@@ -276,7 +627,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 {
                     DebtId = d.DebtId,
                     PartnerName = d.Partner?.PartnerName ?? string.Empty,
-                    DebtType = string.Equals(d.DebtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase) ? "Khách nợ (Phải thu)" : "Mình nợ (Phải trả)",
+                    DebtType = ToDebtTypeDisplay(d.DebtType),
                     TotalAmount = d.TotalAmount,
                     PaidAmount = d.PaidAmount,
                     Remaining = d.TotalAmount - d.PaidAmount,
@@ -285,7 +636,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                     RawDebtType = d.DebtType
                 }).ToList();
 
-                BindGrid(displayData, selectedDebtId);
+                BindDetailGrid(displayData, selectedDebtId);
             }
             catch (Exception ex)
             {
@@ -298,10 +649,11 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 SetFilterState(false);
                 ApplyBranchContextActionState();
                 TogglePayButtonState();
+                UpdateResetViewButtonState();
             }
         }
 
-        private void BindGrid(List<DebtGridItem> displayData, long? selectedDebtId)
+        private void BindDetailGrid(List<DebtGridItem> displayData, long? selectedDebtId)
         {
             dgvDebts.DataSource = null;
             dgvDebts.DataSource = displayData;
@@ -345,7 +697,50 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             }
         }
 
-        private string GetSelectedDebtTypeFilter()
+        private void BindSummaryGrid(List<DebtSummaryDTO> summaryData)
+        {
+            var displayData = summaryData
+                .Select(s => new DebtSummaryGridItem
+                {
+                    PartnerId = s.PartnerId,
+                    PartnerName = s.PartnerName,
+                    DebtType = ToDebtTypeDisplay(s.DebtType),
+                    TotalVouchers = s.TotalVouchers,
+                    TotalAmount = s.TotalAmount,
+                    TotalPaid = s.TotalPaid,
+                    RemainingDebt = s.RemainingDebt,
+                    RawDebtType = s.DebtType
+                })
+                .ToList();
+
+            dgvDebts.DataSource = null;
+            dgvDebts.DataSource = displayData;
+
+            decimal totalReceivable = displayData
+                .Where(x => string.Equals(x.RawDebtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.RemainingDebt);
+            decimal totalPayable = displayData
+                .Where(x => string.Equals(x.RawDebtType, "PAYABLE", StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.RemainingDebt);
+
+            lblTotalReceivable.Text = $"Khách nợ: {totalReceivable:N0} đ";
+            lblTotalPayable.Text = $"Nợ NCC: {totalPayable:N0} đ";
+
+            if (dgvDebts.Rows.Count == 0)
+            {
+                dgvDebts.ClearSelection();
+                return;
+            }
+
+            dgvDebts.Rows[0].Selected = true;
+            var partnerColumn = dgvDebts.Columns["colSummaryPartnerName"];
+            if (partnerColumn != null)
+            {
+                dgvDebts.CurrentCell = dgvDebts.Rows[0].Cells[partnerColumn.Index];
+            }
+        }
+
+        private string? GetSelectedDebtTypeFilter()
         {
             var typeDisplay = cboDebtType.SelectedItem?.ToString();
             if (typeDisplay == "Khách nợ (Phải thu)") return "RECEIVABLE";
@@ -353,7 +748,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             return null;
         }
 
-        private string GetSelectedStatusFilter()
+        private string? GetSelectedStatusFilter()
         {
             var statusDisplay = cboStatus.SelectedItem?.ToString();
             if (statusDisplay == "Mới tạo (chờ duyệt)") return "NEW";
@@ -372,12 +767,21 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             return string.IsNullOrWhiteSpace(rawStatus) ? "Không xác định" : rawStatus;
         }
 
+        private static string ToDebtTypeDisplay(string? debtType)
+        {
+            return string.Equals(debtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase)
+                ? "Khách nợ (Phải thu)"
+                : "Nợ NCC (Phải trả)";
+        }
+
         private void SetFilterState(bool isLoading)
         {
             btnFilter.Enabled = !isLoading;
             cboDebtType.Enabled = !isLoading;
             cboStatus.Enabled = !isLoading;
             txtSearch.Enabled = !isLoading;
+            chkToggleView.Enabled = !isLoading;
+            btnResetView.Enabled = !isLoading;
             btnFilter.Text = isLoading ? "Đang tải..." : "Lọc";
         }
 
@@ -396,6 +800,11 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 && long.TryParse(drv["DebtId"].ToString(), out long rowDebtId))
             {
                 return rowDebtId;
+            }
+
+            if (colDebtId == null || colDebtId.Index < 0)
+            {
+                return null;
             }
 
             var cellValue = dgvDebts.CurrentRow.Cells[colDebtId.Index].Value;
@@ -426,6 +835,11 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 return rowRemaining;
             }
 
+            if (colRemaining == null || colRemaining.Index < 0)
+            {
+                return 0m;
+            }
+
             var cellValue = dgvDebts.CurrentRow.Cells[colRemaining.Index].Value;
             if (cellValue == null) return 0m;
             decimal.TryParse(cellValue.ToString(), out decimal remaining);
@@ -453,11 +867,16 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                     return NormalizeDebtStatus(drv["Status"]?.ToString());
             }
 
+            if (colStatus == null || colStatus.Index < 0)
+            {
+                return string.Empty;
+            }
+
             var cellValue = dgvDebts.CurrentRow.Cells[colStatus.Index].Value;
             return NormalizeDebtStatus(cellValue?.ToString());
         }
 
-        private static string NormalizeDebtStatus(string status)
+        private static string NormalizeDebtStatus(string? status)
         {
             if (string.IsNullOrWhiteSpace(status)) return string.Empty;
 
@@ -486,11 +905,13 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
         private void ApplyBranchContextActionState()
         {
             bool isViewAllMode = IsViewAllMode();
+            bool isSummaryMode = IsSummaryViewMode();
 
-            btnAddNewDebt.Enabled = !isViewAllMode;
-            btnAddNewDebt.BackColor = isViewAllMode ? Color.LightGray : Color.FromArgb(76, 175, 80);
+            bool canAddDebt = !isViewAllMode && !isSummaryMode;
+            btnAddNewDebt.Enabled = canAddDebt;
+            btnAddNewDebt.BackColor = canAddDebt ? Color.FromArgb(76, 175, 80) : Color.LightGray;
 
-            if (isViewAllMode)
+            if (isViewAllMode || isSummaryMode)
             {
                 btnPayDebt.Enabled = false;
                 btnPayDebt.BackColor = Color.LightGray;
@@ -506,7 +927,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private void TogglePayButtonState()
         {
-            if (IsViewAllMode())
+            if (IsViewAllMode() || IsSummaryViewMode())
             {
                 btnPayDebt.Enabled = false;
                 btnApproveDebt.Enabled = false;
@@ -552,6 +973,12 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             if (!SessionManager.CanApproveDebt)
             {
                 MessageBox.Show("Bạn không có quyền duyệt/thanh toán công nợ.", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (IsSummaryViewMode())
+            {
+                MessageBox.Show("Vui lòng chuyển về góc nhìn Từng phiếu để thanh toán công nợ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -613,6 +1040,12 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private async void btnApproveDebt_Click(object sender, EventArgs e)
         {
+            if (IsSummaryViewMode())
+            {
+                MessageBox.Show("Vui lòng chuyển về góc nhìn Từng phiếu để duyệt công nợ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             long? debtId = GetCurrentDebtId();
             if (!debtId.HasValue) return;
 
@@ -675,6 +1108,12 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
         private async void btnAddNewDebt_Click(object sender, EventArgs e)
         {
+            if (IsSummaryViewMode())
+            {
+                MessageBox.Show("Vui lòng chuyển về góc nhìn Từng phiếu để thêm công nợ mới.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             if (IsViewAllMode())
             {
                 MessageBox.Show("Vui lòng chọn chi nhánh cụ thể trước khi thêm công nợ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);

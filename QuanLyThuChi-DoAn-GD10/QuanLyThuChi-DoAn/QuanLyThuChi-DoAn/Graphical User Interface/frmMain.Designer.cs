@@ -44,8 +44,6 @@
             mnuReports = new ToolStripMenuItem();
             mnuDashboard = new ToolStripMenuItem();
             mnuCashLedger = new ToolStripMenuItem();
-            mnuReportByPeriod = new ToolStripMenuItem();
-            mnuDebtSummary = new ToolStripMenuItem();
             mnuReconciliation = new ToolStripMenuItem();
             toolStrip1 = new ToolStrip();
             cbTenants = new ToolStripComboBox();
@@ -161,7 +159,7 @@
             // 
             // mnuReports
             // 
-            mnuReports.DropDownItems.AddRange(new ToolStripItem[] { mnuDashboard, mnuCashLedger, mnuReportByPeriod, mnuDebtSummary, mnuReconciliation });
+            mnuReports.DropDownItems.AddRange(new ToolStripItem[] { mnuDashboard, mnuCashLedger, mnuReconciliation });
             mnuReports.Name = "mnuReports";
             mnuReports.ShortcutKeys = Keys.Alt | Keys.B;
             mnuReports.Size = new Size(61, 20);
@@ -176,20 +174,9 @@
             // mnuCashLedger
             // 
             mnuCashLedger.Name = "mnuCashLedger";
-            mnuCashLedger.Size = new Size(206, 22);
-            mnuCashLedger.Text = "Sổ quỹ chi tiết";
-            // 
-            // mnuReportByPeriod
-            // 
-            mnuReportByPeriod.Name = "mnuReportByPeriod";
-            mnuReportByPeriod.Size = new Size(206, 22);
-            mnuReportByPeriod.Text = "Báo cáo thu chi theo kỳ";
-            // 
-            // mnuDebtSummary
-            // 
-            mnuDebtSummary.Name = "mnuDebtSummary";
-            mnuDebtSummary.Size = new Size(206, 22);
-            mnuDebtSummary.Text = "Tổng hợp công nợ";
+            mnuCashLedger.Size = new Size(291, 22);
+            mnuCashLedger.Text = "Sổ quỹ chi tiết và Báo cáo thu chi theo kỳ";
+            mnuCashLedger.Click += mnuCashLedger_Click_1;
             // 
             // mnuReconciliation
             // 
@@ -327,8 +314,6 @@
         private ToolStripMenuItem mnuInternalTransfer;
         private ToolStripMenuItem mnuReports;
         private ToolStripMenuItem mnuCashLedger;
-        private ToolStripMenuItem mnuReportByPeriod;
-        private ToolStripMenuItem mnuDebtSummary;
         private ToolStripStatusLabel lblUserStatus;
         private ToolStripComboBox cbTenants;
         private ToolStripComboBox cbBranchs;

@@ -111,7 +111,7 @@ namespace QuanLyThuChi_DoAn
             mnuManageUsers.Visible = SessionManager.CanManageUsers;
             mnuBranchConfig.Visible = SessionManager.CanManageBranches;
             mnuCashFunds.Visible = true;
-            mnuDebtSummary.Visible = SessionManager.CanViewSummaryReports;
+            mnuDashboard.Visible = SessionManager.CanViewSummaryReports;
             mnuReconciliation.Visible = SessionManager.CanViewSummaryReports;
             mnuInternalTransfer.Visible = SessionManager.CanTransferInterBranch;
             mnuDebtManagement.Visible = SessionManager.CanApproveDebt;
@@ -862,6 +862,11 @@ namespace QuanLyThuChi_DoAn
         }
 
         private void mnuChangePassword_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void mnuCashLedger_Click_1(object sender, EventArgs e)
         {
 
         }

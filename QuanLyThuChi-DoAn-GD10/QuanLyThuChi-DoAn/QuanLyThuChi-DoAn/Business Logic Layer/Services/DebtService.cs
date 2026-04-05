@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.DTOs;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using System;
 using System.Collections.Generic;
@@ -97,6 +98,58 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             return await query
                 .Include(d => d.Partner)
                 .OrderByDescending(d => d.CreatedDate)
+                .ToListAsync();
+        }
+
+        public async Task<List<DebtSummaryDTO>> GetDebtSummaryAsync(int tenantId, int? branchId, string? type = null, string? status = null, string? search = null)
+        {
+            IQueryable<Debt> query = _context.Debts
+                .AsNoTracking()
+                .Where(d => d.TenantId == tenantId && d.IsActive);
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(d => d.BranchId == branchId.Value);
+            }
+
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(d => d.Status != "PAID");
+            }
+            else
+            {
+                query = query.Where(d => d.Status == status);
+            }
+
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                query = query.Where(d => d.DebtType == type);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string keyword = search.Trim();
+                query = query.Where(d => d.Partner != null
+                                         && EF.Functions.Like(d.Partner.PartnerName ?? string.Empty, $"%{keyword}%"));
+            }
+
+            return await query
+                .GroupBy(d => new
+                {
+                    d.PartnerId,
+                    PartnerName = d.Partner.PartnerName,
+                    d.DebtType
+                })
+                .Select(g => new DebtSummaryDTO
+                {
+                    PartnerId = g.Key.PartnerId,
+                    PartnerName = g.Key.PartnerName ?? "Khách hàng không xác định",
+                    DebtType = g.Key.DebtType,
+                    TotalVouchers = g.Count(),
+                    TotalAmount = g.Sum(x => x.TotalAmount),
+                    TotalPaid = g.Sum(x => x.PaidAmount)
+                })
+                .OrderByDescending(x => x.TotalAmount - x.TotalPaid)
                 .ToListAsync();
         }
 

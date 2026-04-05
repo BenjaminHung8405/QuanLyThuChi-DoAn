@@ -36,7 +36,9 @@
             txtSearch = new TextBox();
             btnFilter = new FontAwesome.Sharp.IconButton();
             btnPayDebt = new FontAwesome.Sharp.IconButton();
+            chkToggleView = new CheckBox();
             panel1 = new Panel();
+            btnResetView = new FontAwesome.Sharp.IconButton();
             btnApproveDebt = new FontAwesome.Sharp.IconButton();
             btnAddNewDebt = new FontAwesome.Sharp.IconButton();
             pnlStats = new Panel();
@@ -90,6 +92,7 @@
             flowFilters.Controls.Add(txtSearch);
             flowFilters.Controls.Add(btnFilter);
             flowFilters.Controls.Add(btnPayDebt);
+            flowFilters.Controls.Add(chkToggleView);
             flowFilters.Dock = DockStyle.Fill;
             flowFilters.Location = new Point(0, 0);
             flowFilters.Margin = new Padding(0);
@@ -165,8 +168,26 @@
             btnPayDebt.UseVisualStyleBackColor = false;
             btnPayDebt.Click += btnPayDebt_Click;
             // 
+            // chkToggleView
+            // 
+            chkToggleView.Appearance = Appearance.Button;
+            chkToggleView.BackColor = Color.White;
+            chkToggleView.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
+            chkToggleView.FlatStyle = FlatStyle.Flat;
+            chkToggleView.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            chkToggleView.ForeColor = Color.FromArgb(33, 33, 33);
+            chkToggleView.Location = new Point(696, 6);
+            chkToggleView.Margin = new Padding(6);
+            chkToggleView.Name = "chkToggleView";
+            chkToggleView.Size = new Size(125, 36);
+            chkToggleView.TabIndex = 5;
+            chkToggleView.Text = "Góc nhìn: Từng phiếu";
+            chkToggleView.TextAlign = ContentAlignment.MiddleCenter;
+            chkToggleView.UseVisualStyleBackColor = false;
+            // 
             // panel1
             // 
+            panel1.Controls.Add(btnResetView);
             panel1.Controls.Add(btnApproveDebt);
             panel1.Controls.Add(btnAddNewDebt);
             panel1.Dock = DockStyle.Fill;
@@ -174,6 +195,28 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(821, 40);
             panel1.TabIndex = 2;
+            // 
+            // btnResetView
+            // 
+            btnResetView.BackColor = Color.FromArgb(96, 125, 139);
+            btnResetView.Dock = DockStyle.Left;
+            btnResetView.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnResetView.ForeColor = Color.White;
+            btnResetView.IconChar = FontAwesome.Sharp.IconChar.ArrowRotateLeft;
+            btnResetView.IconColor = Color.White;
+            btnResetView.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            btnResetView.IconSize = 20;
+            btnResetView.ImageAlign = ContentAlignment.MiddleLeft;
+            btnResetView.Location = new Point(286, 0);
+            btnResetView.Margin = new Padding(6);
+            btnResetView.Name = "btnResetView";
+            btnResetView.Padding = new Padding(8, 0, 8, 0);
+            btnResetView.Size = new Size(136, 40);
+            btnResetView.TabIndex = 8;
+            btnResetView.Text = "Xem tất cả";
+            btnResetView.TextAlign = ContentAlignment.MiddleRight;
+            btnResetView.UseVisualStyleBackColor = false;
+            btnResetView.Visible = false;
             // 
             // btnApproveDebt
             // 
@@ -341,7 +384,9 @@
         private TextBox txtSearch;
         private FontAwesome.Sharp.IconButton btnFilter;
         private FontAwesome.Sharp.IconButton btnPayDebt;
+        private CheckBox chkToggleView;
         private Panel panel1;
+        private FontAwesome.Sharp.IconButton btnResetView;
         private FontAwesome.Sharp.IconButton btnApproveDebt;
         private FontAwesome.Sharp.IconButton btnAddNewDebt;
     }
