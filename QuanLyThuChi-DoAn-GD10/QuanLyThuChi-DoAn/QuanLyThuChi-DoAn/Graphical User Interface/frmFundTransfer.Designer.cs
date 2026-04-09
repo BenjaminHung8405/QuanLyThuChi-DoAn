@@ -46,6 +46,8 @@
             label6 = new Label();
             dateTimePicker1 = new DateTimePicker();
             label5 = new Label();
+            txtBankFee = new NumericUpDown();
+            label8 = new Label();
             txtAmount = new NumericUpDown();
             label4 = new Label();
             panel5 = new Panel();
@@ -56,6 +58,7 @@
             panel2.SuspendLayout();
             panel4.SuspendLayout();
             panel5.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)txtBankFee).BeginInit();
             ((System.ComponentModel.ISupportInitialize)txtAmount).BeginInit();
             SuspendLayout();
             // 
@@ -223,6 +226,8 @@
             panel4.Controls.Add(label6);
             panel4.Controls.Add(dateTimePicker1);
             panel4.Controls.Add(label5);
+            panel4.Controls.Add(txtBankFee);
+            panel4.Controls.Add(label8);
             panel4.Controls.Add(txtAmount);
             panel4.Controls.Add(label4);
             panel4.Dock = DockStyle.Fill;
@@ -236,7 +241,7 @@
             // 
             txtNotes.BorderStyle = BorderStyle.FixedSingle;
             txtNotes.Dock = DockStyle.Top;
-            txtNotes.Location = new Point(16, 205);
+            txtNotes.Location = new Point(16, 263);
             txtNotes.Multiline = true;
             txtNotes.Name = "txtNotes";
             txtNotes.Size = new Size(212, 62);
@@ -247,7 +252,7 @@
             label6.AutoSize = true;
             label6.Dock = DockStyle.Top;
             label6.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label6.Location = new Point(16, 152);
+            label6.Location = new Point(16, 210);
             label6.Name = "label6";
             label6.Padding = new Padding(0, 16, 0, 16);
             label6.Size = new Size(82, 53);
@@ -259,7 +264,7 @@
             dateTimePicker1.CustomFormat = "dd/MM/yyyy";
             dateTimePicker1.Dock = DockStyle.Top;
             dateTimePicker1.Format = DateTimePickerFormat.Custom;
-            dateTimePicker1.Location = new Point(16, 129);
+            dateTimePicker1.Location = new Point(16, 187);
             dateTimePicker1.Name = "dateTimePicker1";
             dateTimePicker1.Size = new Size(212, 23);
             dateTimePicker1.TabIndex = 9;
@@ -269,12 +274,37 @@
             label5.AutoSize = true;
             label5.Dock = DockStyle.Top;
             label5.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label5.Location = new Point(16, 76);
+            label5.Location = new Point(16, 134);
             label5.Name = "label5";
             label5.Padding = new Padding(0, 16, 0, 16);
             label5.Size = new Size(111, 53);
             label5.TabIndex = 8;
             label5.Text = "Ngày chuyển";
+            // 
+            // txtBankFee
+            // 
+            txtBankFee.BorderStyle = BorderStyle.FixedSingle;
+            txtBankFee.Dock = DockStyle.Top;
+            txtBankFee.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
+            txtBankFee.Location = new Point(16, 111);
+            txtBankFee.Maximum = decimal.MaxValue;
+            txtBankFee.Name = "txtBankFee";
+            txtBankFee.Size = new Size(212, 23);
+            txtBankFee.TabIndex = 13;
+            txtBankFee.TextAlign = HorizontalAlignment.Right;
+            txtBankFee.ThousandsSeparator = true;
+            // 
+            // label8
+            // 
+            label8.AutoSize = true;
+            label8.Dock = DockStyle.Top;
+            label8.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label8.Location = new Point(16, 76);
+            label8.Name = "label8";
+            label8.Padding = new Padding(0, 16, 0, 16);
+            label8.Size = new Size(96, 35);
+            label8.TabIndex = 12;
+            label8.Text = "Phí giao dịch";
             // 
             // txtAmount
             // 
@@ -353,6 +383,7 @@
             panel4.ResumeLayout(false);
             panel4.PerformLayout();
             panel5.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)txtBankFee).EndInit();
             ((System.ComponentModel.ISupportInitialize)txtAmount).EndInit();
             ResumeLayout(false);
         }
@@ -369,7 +400,6 @@
         private ComboBox cbSourceFund;
         private Label label1;
         private Panel panel4;
-        private TextBox textBox2;
         private Label label4;
         private Panel panel5;
         private FontAwesome.Sharp.IconButton btnTransfer;
@@ -378,6 +408,8 @@
         private DateTimePicker dateTimePicker1;
         private Label label5;
         private NumericUpDown txtAmount;
+        private NumericUpDown txtBankFee;
+        private Label label8;
         private Label lblBalanceSourceFund;
         private Label label7;
         private Label lblBalanceDestFund;

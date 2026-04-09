@@ -121,6 +121,25 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         }
 
         /// <summary>
+        /// Lấy danh mục dân dụng cho session hiện tại, loại trừ danh mục hệ thống/nhạy cảm (98, 99).
+        /// </summary>
+        public List<TransactionCategory> GetPublicCategoriesForCurrentSession(string type = null)
+        {
+            int scopedTenantId = ResolveTenantScope();
+            int? scopedBranchId = ResolveBranchScopeForRead();
+            var query = _catRepo.Find(c => c.TenantId == scopedTenantId
+                                        && c.IsActive
+                                        && c.CategoryId != 98
+                                        && c.CategoryId != 99
+                                        && (!scopedBranchId.HasValue || c.BranchId == scopedBranchId.Value));
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                query = query.Where(c => c.Type == type);
+            }
+            return query.OrderBy(c => c.CategoryName).ToList();
+        }
+
+        /// <summary>
         /// Tạo loại thu chi mới
         /// </summary>
         public void CreateCategory(TransactionCategory category)

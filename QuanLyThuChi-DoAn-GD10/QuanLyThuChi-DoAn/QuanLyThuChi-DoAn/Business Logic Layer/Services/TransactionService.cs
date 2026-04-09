@@ -8,10 +8,253 @@ namespace QuanLyThuChi_DoAn.BLL.Services
     public class TransactionService
     {
         private readonly AppDbContext _context;
+        private const int InternalTransferOutCategoryId = 98;
+        private const int InternalTransferInCategoryId = 99;
 
         public TransactionService(AppDbContext context)
         {
             _context = context;
+        }
+
+        /// <summary>
+        /// Tạo lệnh chuyển quỹ nội bộ theo mô hình 2 bước:
+        /// B1: Phiếu OUT ở quỹ nguồn = COMPLETED (trừ quỹ nguồn ngay)
+        /// B2: Phiếu IN ở quỹ đích = PENDING (chưa cộng quỹ đích)
+        /// </summary>
+        public async Task<InternalTransferResult> CreateInternalTransferAsync(
+            int sourceFundId,
+            int destinationFundId,
+            decimal amount,
+            decimal bankFee,
+            string description)
+        {
+            if (!SessionManager.CanTransferInterBranch)
+                throw new UnauthorizedAccessException("Bạn không có quyền chuyển quỹ liên chi nhánh.");
+
+            if (sourceFundId <= 0 || destinationFundId <= 0)
+                throw new ArgumentException("Quỹ nguồn hoặc quỹ đích không hợp lệ.");
+
+            if (sourceFundId == destinationFundId)
+                throw new ArgumentException("Quỹ nguồn và quỹ đích không được trùng nhau.");
+
+            if (amount <= 0)
+                throw new ArgumentException("Số tiền chuyển phải lớn hơn 0.");
+
+            if (bankFee < 0)
+                throw new ArgumentException("Phí giao dịch không được âm.");
+
+            var sourceFund = await _context.CashFunds
+                .FirstOrDefaultAsync(f => f.FundId == sourceFundId && f.IsActive);
+
+            var destinationFund = await _context.CashFunds
+                .FirstOrDefaultAsync(f => f.FundId == destinationFundId && f.IsActive);
+
+            if (sourceFund == null)
+                throw new KeyNotFoundException("Không tìm thấy quỹ nguồn hợp lệ.");
+
+            if (destinationFund == null)
+                throw new KeyNotFoundException("Không tìm thấy quỹ đích hợp lệ.");
+
+            if (sourceFund.TenantId != destinationFund.TenantId)
+                throw new InvalidOperationException("Không thể chuyển quỹ giữa 2 tenant khác nhau.");
+
+            if (!SessionManager.IsSuperAdmin)
+            {
+                if (!SessionManager.CurrentTenantId.HasValue || SessionManager.CurrentTenantId.Value <= 0)
+                    throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
+
+                if (sourceFund.TenantId != SessionManager.CurrentTenantId.Value)
+                    throw new UnauthorizedAccessException("Bạn không có quyền thao tác quỹ ngoài tenant hiện tại.");
+
+                if (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0
+                    && sourceFund.BranchId != SessionManager.CurrentBranchId.Value)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền chuyển từ quỹ nguồn ngoài chi nhánh hiện tại.");
+                }
+            }
+
+            decimal totalDeduct = amount + bankFee;
+            if (sourceFund.Balance < totalDeduct)
+                throw new InvalidOperationException("Quỹ nguồn không đủ số dư cho cả tiền chuyển và phí giao dịch.");
+
+            int createdBy = SessionManager.CurrentUserId > 0 ? SessionManager.CurrentUserId : 1;
+            var now = DateTime.Now;
+            string transferRefNo = BuildTransferRefNo(now, sourceFundId, destinationFundId);
+            string normalizedDescription = string.IsNullOrWhiteSpace(description)
+                ? "Chuyển quỹ nội bộ"
+                : description.Trim();
+
+            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var transferOut = new Transaction
+                {
+                    TenantId = sourceFund.TenantId,
+                    BranchId = sourceFund.BranchId,
+                    FundId = sourceFund.FundId,
+                    CategoryId = InternalTransferOutCategoryId,
+                    TransType = "OUT",
+                    Amount = amount,
+                    SubTotal = amount,
+                    TaxAmount = 0,
+                    TaxId = null,
+                    TransDate = now,
+                    Description = normalizedDescription,
+                    RefNo = transferRefNo,
+                    CreatedBy = createdBy,
+                    Status = "COMPLETED",
+                    IsActive = true
+                };
+
+                _context.Transactions.Add(transferOut);
+                await _context.SaveChangesAsync();
+
+                var transferInPending = new Transaction
+                {
+                    TenantId = destinationFund.TenantId,
+                    BranchId = destinationFund.BranchId,
+                    FundId = destinationFund.FundId,
+                    CategoryId = InternalTransferInCategoryId,
+                    TransType = "IN",
+                    Amount = amount,
+                    SubTotal = amount,
+                    TaxAmount = 0,
+                    TaxId = null,
+                    TransDate = now,
+                    Description = normalizedDescription,
+                    RefNo = transferRefNo,
+                    CreatedBy = createdBy,
+                    Status = "PENDING",
+                    IsActive = true,
+                    TransferRefId = transferOut.TransId
+                };
+
+                _context.Transactions.Add(transferInPending);
+
+                if (bankFee > 0)
+                {
+                    int bankFeeCategoryId = await ResolveBankFeeCategoryIdAsync(sourceFund.TenantId, sourceFund.BranchId);
+                    var bankFeeTrans = new Transaction
+                    {
+                        TenantId = sourceFund.TenantId,
+                        BranchId = sourceFund.BranchId,
+                        FundId = sourceFund.FundId,
+                        CategoryId = bankFeeCategoryId,
+                        TransType = "OUT",
+                        Amount = bankFee,
+                        SubTotal = bankFee,
+                        TaxAmount = 0,
+                        TaxId = null,
+                        TransDate = now,
+                        Description = $"Phí ngân hàng cho lệnh {transferRefNo}",
+                        RefNo = $"{transferRefNo}-FEE",
+                        CreatedBy = createdBy,
+                        Status = "COMPLETED",
+                        IsActive = true,
+                        TransferRefId = transferOut.TransId
+                    };
+
+                    _context.Transactions.Add(bankFeeTrans);
+                }
+
+                sourceFund.Balance -= totalDeduct;
+                _context.CashFunds.Update(sourceFund);
+
+                await _context.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                return new InternalTransferResult
+                {
+                    TransferRefNo = transferRefNo,
+                    OutTransactionId = transferOut.TransId,
+                    PendingInTransactionId = transferInPending.TransId,
+                    Amount = amount,
+                    BankFee = bankFee
+                };
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Chi nhánh đích xác nhận đã nhận tiền: đổi PENDING -> COMPLETED và cộng quỹ đích.
+        /// </summary>
+        public async Task<bool> ConfirmPendingInboundTransferAsync(long pendingInTransactionId)
+        {
+            if (pendingInTransactionId <= 0)
+                throw new ArgumentException("Mã giao dịch không hợp lệ.", nameof(pendingInTransactionId));
+
+            if (!(SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin || SessionManager.IsBranchManager))
+                throw new UnauthorizedAccessException("Bạn không có quyền xác nhận nhận tiền chuyển quỹ.");
+
+            var pendingInbound = await _context.Transactions
+                .FirstOrDefaultAsync(t => t.TransId == pendingInTransactionId && t.IsActive);
+
+            if (pendingInbound == null)
+                throw new KeyNotFoundException("Không tìm thấy phiếu nhận tiền cần xác nhận.");
+
+            if (!string.Equals(pendingInbound.TransType, "IN", StringComparison.OrdinalIgnoreCase)
+                || !pendingInbound.TransferRefId.HasValue)
+            {
+                throw new InvalidOperationException("Phiếu này không phải phiếu nhận tiền nội bộ chờ xác nhận.");
+            }
+
+            if (!string.Equals(pendingInbound.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(pendingInbound.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Phiếu nhận này đã được xác nhận trước đó.");
+
+                throw new InvalidOperationException("Phiếu nhận không ở trạng thái chờ xác nhận.");
+            }
+
+            if (!SessionManager.IsSuperAdmin)
+            {
+                if (!SessionManager.CurrentTenantId.HasValue || SessionManager.CurrentTenantId.Value <= 0)
+                    throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
+
+                if (pendingInbound.TenantId != SessionManager.CurrentTenantId.Value)
+                    throw new UnauthorizedAccessException("Bạn không có quyền xác nhận phiếu ngoài tenant hiện tại.");
+
+                if (SessionManager.IsBranchManager)
+                {
+                    if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                        throw new UnauthorizedAccessException("Không có chi nhánh ngữ cảnh.");
+
+                    if (pendingInbound.BranchId != SessionManager.CurrentBranchId.Value)
+                        throw new UnauthorizedAccessException("Bạn chỉ được xác nhận phiếu thuộc chi nhánh hiện tại.");
+                }
+            }
+
+            var destinationFund = await _context.CashFunds
+                .FirstOrDefaultAsync(f => f.FundId == pendingInbound.FundId && f.IsActive);
+
+            if (destinationFund == null)
+                throw new InvalidOperationException("Quỹ đích đã bị khóa hoặc không còn tồn tại.");
+
+            if (destinationFund.TenantId != pendingInbound.TenantId || destinationFund.BranchId != pendingInbound.BranchId)
+                throw new InvalidOperationException("Phiếu nhận và quỹ đích không cùng ngữ cảnh tenant/chi nhánh.");
+
+            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                destinationFund.Balance += pendingInbound.Amount;
+                pendingInbound.Status = "COMPLETED";
+
+                _context.CashFunds.Update(destinationFund);
+                _context.Transactions.Update(pendingInbound);
+
+                bool saved = await _context.SaveChangesAsync() > 0;
+                await dbTransaction.CommitAsync();
+                return saved;
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
         }
 
         // 1. Lấy danh sách giao dịch (Có lọc theo ngày và từ khóa)
@@ -98,7 +341,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             var query = _context.Transactions
                 .Include(t => t.Category)
                 .Include(t => t.Partner)
-                .Where(t => t.IsActive == true && t.Status == "COMPLETED")
+                .Where(t => t.IsActive == true)
+                .Where(t => t.Status != "DELETED")
                 .Where(t => t.TenantId == currentTenantId);
 
             if (currentBranchId > 0)
@@ -578,5 +822,61 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 }
             }
         }
+
+        private async Task<int> ResolveBankFeeCategoryIdAsync(int tenantId, int branchId)
+        {
+            var feeCategory = await _context.TransactionCategories
+                .AsNoTracking()
+                .Where(c => c.TenantId == tenantId
+                         && c.BranchId == branchId
+                         && c.IsActive
+                         && c.Type == "OUT")
+                .FirstOrDefaultAsync(c =>
+                    (c.CategoryName ?? string.Empty).ToLower().Contains("phí ngân hàng")
+                    || (c.CategoryName ?? string.Empty).ToLower().Contains("phi ngan hang"));
+
+            if (feeCategory != null)
+                return feeCategory.CategoryId;
+
+            var transferOutCategory = await _context.TransactionCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CategoryId == InternalTransferOutCategoryId
+                                       && c.TenantId == tenantId
+                                       && c.BranchId == branchId
+                                       && c.IsActive
+                                       && c.Type == "OUT");
+
+            if (transferOutCategory != null)
+                return transferOutCategory.CategoryId;
+
+            var fallbackOutCategory = await _context.TransactionCategories
+                .AsNoTracking()
+                .Where(c => c.TenantId == tenantId
+                         && c.BranchId == branchId
+                         && c.IsActive
+                         && c.Type == "OUT")
+                .OrderBy(c => c.CategoryId)
+                .FirstOrDefaultAsync();
+
+            if (fallbackOutCategory == null)
+                throw new InvalidOperationException("Không tìm thấy danh mục OUT hợp lệ để ghi nhận phí giao dịch.");
+
+            return fallbackOutCategory.CategoryId;
+        }
+
+        private static string BuildTransferRefNo(DateTime now, int sourceFundId, int destinationFundId)
+        {
+            string shortId = Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+            return $"TRF-{now:yyyyMMddHHmmss}-{sourceFundId}-{destinationFundId}-{shortId}";
+        }
+    }
+
+    public class InternalTransferResult
+    {
+        public string TransferRefNo { get; set; } = string.Empty;
+        public long OutTransactionId { get; set; }
+        public long PendingInTransactionId { get; set; }
+        public decimal Amount { get; set; }
+        public decimal BankFee { get; set; }
     }
 }

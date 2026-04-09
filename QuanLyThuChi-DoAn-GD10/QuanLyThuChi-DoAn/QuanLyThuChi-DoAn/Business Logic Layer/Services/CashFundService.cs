@@ -196,11 +196,17 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             // 2. Tính lại tổng tiền Thu (IN) và Chi (OUT) từ bảng Giao dịch
             decimal totalIn = _context.Transactions
-                .Where(t => t.FundId == fundId && t.TransType == "IN" && t.IsActive == true)
+                .Where(t => t.FundId == fundId
+                         && t.TransType == "IN"
+                         && t.IsActive == true
+                         && t.Status == "COMPLETED")
                 .Sum(t => t.Amount);
 
             decimal totalOut = _context.Transactions
-                .Where(t => t.FundId == fundId && t.TransType == "OUT" && t.IsActive == true)
+                .Where(t => t.FundId == fundId
+                         && t.TransType == "OUT"
+                         && t.IsActive == true
+                         && t.Status == "COMPLETED")
                 .Sum(t => t.Amount);
 
             // 3. Cập nhật số dư mới
@@ -238,11 +244,17 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             decimal totalIn = _context.Transactions
-                .Where(t => t.FundId == fundId && t.TransType == "IN" && t.IsActive == true)
+                .Where(t => t.FundId == fundId
+                         && t.TransType == "IN"
+                         && t.IsActive == true
+                         && t.Status == "COMPLETED")
                 .Sum(t => t.Amount);
 
             decimal totalOut = _context.Transactions
-                .Where(t => t.FundId == fundId && t.TransType == "OUT" && t.IsActive == true)
+                .Where(t => t.FundId == fundId
+                         && t.TransType == "OUT"
+                         && t.IsActive == true
+                         && t.Status == "COMPLETED")
                 .Sum(t => t.Amount);
 
             decimal calculated = totalIn - totalOut;
@@ -269,11 +281,17 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             foreach (var fund in funds)
             {
                 decimal totalIn = _context.Transactions
-                    .Where(t => t.FundId == fund.FundId && t.TransType == "IN" && t.IsActive == true)
+                    .Where(t => t.FundId == fund.FundId
+                             && t.TransType == "IN"
+                             && t.IsActive == true
+                             && t.Status == "COMPLETED")
                     .Sum(t => t.Amount);
 
                 decimal totalOut = _context.Transactions
-                    .Where(t => t.FundId == fund.FundId && t.TransType == "OUT" && t.IsActive == true)
+                    .Where(t => t.FundId == fund.FundId
+                             && t.TransType == "OUT"
+                             && t.IsActive == true
+                             && t.Status == "COMPLETED")
                     .Sum(t => t.Amount);
 
                 decimal calculated = totalIn - totalOut;

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.DTOs;
+using QuanLyThuChi_DoAn.Helpers;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
 {
@@ -537,6 +538,13 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             string normalized = rawText.Trim();
+            CultureInfo configuredCulture = AppCulture.GetConfiguredCulture();
+
+            if (decimal.TryParse(normalized, NumberStyles.Any, configuredCulture, out value))
+            {
+                return true;
+            }
+
             if (decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out value))
             {
                 return true;
@@ -610,7 +618,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         private static string FormatVnd(decimal value)
         {
-            return value.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"));
+            return value.ToString("N0", AppCulture.GetConfiguredCulture());
         }
     }
 }

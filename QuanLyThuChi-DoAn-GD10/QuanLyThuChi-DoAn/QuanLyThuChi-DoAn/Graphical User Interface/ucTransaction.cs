@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace QuanLyThuChi_DoAn
         private readonly TaxService _taxService;
         private bool _isAddMode = false;
         private object _selectedTransaction = null;
+        private bool _isFormattingSubTotalInput = false;
 
         public ucTransaction()
         {
@@ -90,6 +92,7 @@ namespace QuanLyThuChi_DoAn
 
             // Auto-calculate tax and total
             txtSubTotal.ValueChanged += txtSubTotal_ValueChanged;
+            txtSubTotal.TextChanged += txtSubTotal_TextChanged;
             cbTax.SelectedIndexChanged += cbTax_SelectedIndexChanged;
 
             // Filter and refresh buttons
@@ -128,7 +131,7 @@ namespace QuanLyThuChi_DoAn
             string type = radIn.Checked ? "IN" : "OUT";
 
             // Lọc category theo loại giao dịch (IN/OUT)
-            var categories = _categoryService.GetCategoriesForCurrentSession(type);
+            var categories = _categoryService.GetPublicCategoriesForCurrentSession(type);
             cboCategory.DataSource = categories;
             cboCategory.DisplayMember = "CategoryName";
             cboCategory.ValueMember = "CategoryId";
@@ -177,6 +180,14 @@ namespace QuanLyThuChi_DoAn
                 Width = 120
             };
 
+            var colStatus = new DataGridViewTextBoxColumn
+            {
+                Name = "colStatus",
+                DataPropertyName = "Status",
+                HeaderText = "Trạng thái",
+                Width = 120
+            };
+
             var colDescription = new DataGridViewTextBoxColumn
             {
                 Name = "colDescription",
@@ -199,6 +210,7 @@ namespace QuanLyThuChi_DoAn
                 colTransDate,
                 colTransType,
                 colAmount,
+                colStatus,
                 colDescription,
                 colRefNo
             });
@@ -255,8 +267,12 @@ namespace QuanLyThuChi_DoAn
                 dgvTransactions.DataSource = null;
                 dgvTransactions.DataSource = transactions;
 
-                decimal totalIn = transactions.Where(t => t.TransType == "IN").Sum(t => t.Amount);
-                decimal totalOut = transactions.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
+                var completedTransactions = transactions
+                    .Where(t => string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                decimal totalIn = completedTransactions.Where(t => t.TransType == "IN").Sum(t => t.Amount);
+                decimal totalOut = completedTransactions.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
                 decimal balance = totalIn - totalOut;
 
                 lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
@@ -341,8 +357,12 @@ namespace QuanLyThuChi_DoAn
                     dgvTransactions.DataSource = result;
                 }
 
-                var totalIn = result.Where(t => t.TransType == "IN").Sum(t => t.Amount);
-                var totalOut = result.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
+                var completedResult = result
+                    .Where(t => string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                var totalIn = completedResult.Where(t => t.TransType == "IN").Sum(t => t.Amount);
+                var totalOut = completedResult.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
                 var balance = totalIn - totalOut;
 
                 lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
@@ -394,6 +414,31 @@ namespace QuanLyThuChi_DoAn
                 e.Value = isIn ? "Thu" : "Chi";
                 e.CellStyle.ForeColor = isIn ? Color.MediumSeaGreen : Color.Crimson;
                 e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                e.FormattingApplied = true;
+                return;
+            }
+            else if (colName == "colStatus")
+            {
+                string status = Convert.ToString(e.Value)?.Trim().ToUpperInvariant() ?? string.Empty;
+
+                if (status == "PENDING")
+                {
+                    e.Value = "Chờ xác nhận";
+                    e.CellStyle.ForeColor = Color.DarkOrange;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "COMPLETED")
+                {
+                    e.Value = "Hoàn tất";
+                    e.CellStyle.ForeColor = Color.SeaGreen;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "CANCELLED")
+                {
+                    e.Value = "Đã hủy";
+                    e.CellStyle.ForeColor = Color.IndianRed;
+                }
+
                 e.FormattingApplied = true;
                 return;
             }
@@ -463,14 +508,31 @@ namespace QuanLyThuChi_DoAn
                 }
 
                 _isAddMode = false;
-                SetInputFieldsEnabled(true);
 
-                if (SessionManager.RoleName == "Staff")
+                bool isPendingInboundTransfer = IsPendingInboundTransfer(selected);
+                if (isPendingInboundTransfer)
                 {
-                    bool isOwner = selected.CreatedBy == SessionManager.UserId;
-                    bool within24h = selected.TransDate >= DateTime.Now.AddHours(-24);
-                    btnSave.Enabled = isOwner && within24h;
+                    SetInputFieldsEnabled(false);
+
+                    bool canConfirmTransfer = CanCurrentUserConfirmTransfer(selected);
+                    btnSave.Enabled = canConfirmTransfer;
+                    btnSave.Text = canConfirmTransfer ? "Xác nhận đã nhận" : "Phiếu chờ xác nhận";
+                    btnDelete.Visible = true;
                     btnDelete.Enabled = false;
+                    btnDelete.Text = "Hủy Phiếu";
+                }
+                else
+                {
+                    SetInputFieldsEnabled(true);
+                    btnDelete.Text = "Hủy Phiếu";
+
+                    if (SessionManager.RoleName == "Staff")
+                    {
+                        bool isOwner = selected.CreatedBy == SessionManager.UserId;
+                        bool within24h = selected.TransDate >= DateTime.Now.AddHours(-24);
+                        btnSave.Enabled = isOwner && within24h;
+                        btnDelete.Enabled = false;
+                    }
                 }
 
                 ApplyPermissionRules();
@@ -504,6 +566,12 @@ namespace QuanLyThuChi_DoAn
         /// </summary>
         private async Task SaveTransactionAsync()
         {
+            if (_selectedTransaction is Transaction pendingTransaction && IsPendingInboundTransfer(pendingTransaction))
+            {
+                await ConfirmPendingInboundTransferAsync(pendingTransaction);
+                return;
+            }
+
             // Gọi hàm kiểm tra trước khi làm bất cứ việc gì khác
             if (!ValidateInput()) return;
 
@@ -627,15 +695,24 @@ namespace QuanLyThuChi_DoAn
             // 1. Kiểm tra xem người dùng đã chọn phiếu nào chưa
             if (dgvTransactions.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn một phiếu giao dịch để hủy!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn một phiếu giao dịch để thao tác!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             // 2. Lấy ID của phiếu đang chọn
             var selectedRow = dgvTransactions.SelectedRows[0];
+            var selectedTransaction = selectedRow.DataBoundItem as Transaction;
+
+            if (selectedTransaction != null && IsPendingInboundTransfer(selectedTransaction))
+            {
+                MessageBox.Show("Phiếu chuyển quỹ đang chờ xác nhận. Vui lòng dùng nút Cập nhật để xác nhận đã nhận.",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             long transId = 0;
 
-            if (selectedRow.DataBoundItem is Transaction selectedTransaction)
+            if (selectedTransaction != null)
             {
                 transId = selectedTransaction.TransId;
             }
@@ -662,9 +739,9 @@ namespace QuanLyThuChi_DoAn
             }
 
             // (Tùy chọn) Kiểm tra xem phiếu này đã bị hủy chưa
-            if (selectedRow.DataBoundItem is Transaction selectedTx)
+            if (selectedTransaction != null)
             {
-                if (!selectedTx.IsActive)
+                if (!selectedTransaction.IsActive)
                 {
                     MessageBox.Show("Phiếu này đã bị hủy từ trước, không thể hủy thêm!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
@@ -730,6 +807,94 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
+        private static bool IsPendingInboundTransfer(Transaction transaction)
+        {
+            if (transaction == null)
+                return false;
+
+            return transaction.IsActive
+                && string.Equals(transaction.TransType, "IN", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(transaction.Status, "PENDING", StringComparison.OrdinalIgnoreCase)
+                && transaction.TransferRefId.HasValue;
+        }
+
+        private static bool CanCurrentUserConfirmTransfer(Transaction transaction)
+        {
+            if (!IsPendingInboundTransfer(transaction))
+                return false;
+
+            if (SessionManager.IsSuperAdmin)
+                return true;
+
+            if (!SessionManager.CurrentTenantId.HasValue || SessionManager.CurrentTenantId.Value <= 0)
+                return false;
+
+            if (transaction.TenantId != SessionManager.CurrentTenantId.Value)
+                return false;
+
+            if (SessionManager.IsTenantAdmin)
+                return true;
+
+            if (SessionManager.IsBranchManager)
+            {
+                return SessionManager.CurrentBranchId.HasValue
+                    && SessionManager.CurrentBranchId.Value > 0
+                    && transaction.BranchId == SessionManager.CurrentBranchId.Value;
+            }
+
+            return false;
+        }
+
+        private async Task ConfirmPendingInboundTransferAsync(Transaction pendingTransaction)
+        {
+            if (!CanCurrentUserConfirmTransfer(pendingTransaction))
+            {
+                MessageBox.Show("Bạn không có quyền xác nhận phiếu nhận tiền này.", "Từ chối", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var confirmResult = MessageBox.Show(
+                "Xác nhận tiền đã về quỹ đích?\nSau khi xác nhận, hệ thống sẽ cộng tiền vào quỹ đích và chuyển trạng thái phiếu sang HOÀN TẤT.",
+                "Xác nhận nhận tiền",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirmResult != DialogResult.Yes)
+                return;
+
+            bool previousSaveEnabled = btnSave.Enabled;
+            string previousSaveText = btnSave.Text;
+            try
+            {
+                btnSave.Enabled = false;
+
+                bool isSuccess = await _transactionService.ConfirmPendingInboundTransferAsync(pendingTransaction.TransId);
+                if (!isSuccess)
+                {
+                    MessageBox.Show("Không thể xác nhận nhận tiền. Vui lòng thử lại.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                MessageBox.Show("Đã xác nhận nhận tiền thành công.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadDataAsync();
+                ResetForm();
+                SetInputFieldsEnabled(false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi xác nhận nhận tiền: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (_selectedTransaction is Transaction currentSelected && IsPendingInboundTransfer(currentSelected))
+                {
+                    btnSave.Enabled = previousSaveEnabled;
+                    btnSave.Text = previousSaveText;
+                }
+                btnDelete.Text = "Hủy Phiếu";
+            }
+        }
+
         /// <summary>
         /// Reset all form input fields
         /// </summary>
@@ -745,6 +910,7 @@ namespace QuanLyThuChi_DoAn
             if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = -1;
             if (cbTax.Items.Count > 0) cbTax.SelectedIndex = 0;
             _selectedTransaction = null;
+            btnDelete.Text = "Hủy Phiếu";
 
             UpdateTaxAndTotalPreview();
 
@@ -945,6 +1111,52 @@ namespace QuanLyThuChi_DoAn
             CalculateTotal();
         }
 
+        private void txtSubTotal_TextChanged(object? sender, EventArgs e)
+        {
+            ApplyLiveThousandsSeparator();
+        }
+
+        private void ApplyLiveThousandsSeparator()
+        {
+            if (_isFormattingSubTotalInput || !txtSubTotal.Focused)
+            {
+                return;
+            }
+
+            try
+            {
+                _isFormattingSubTotalInput = true;
+
+                string digitsOnly = new string(txtSubTotal.Text.Where(char.IsDigit).ToArray());
+                if (digitsOnly.Length == 0)
+                {
+                    if (txtSubTotal.Value != 0)
+                    {
+                        txtSubTotal.Value = 0;
+                    }
+                    return;
+                }
+
+                if (!decimal.TryParse(digitsOnly, NumberStyles.None, CultureInfo.InvariantCulture, out decimal parsedValue))
+                {
+                    return;
+                }
+
+                parsedValue = Math.Min(txtSubTotal.Maximum, Math.Max(txtSubTotal.Minimum, parsedValue));
+                if (txtSubTotal.Value != parsedValue)
+                {
+                    txtSubTotal.Value = parsedValue;
+                }
+
+                // Keep caret at the end so users can continue typing naturally.
+                txtSubTotal.Select(txtSubTotal.Text.Length, 0);
+            }
+            finally
+            {
+                _isFormattingSubTotalInput = false;
+            }
+        }
+
         // Sự kiện khi thay đổi thuế suất
         private void cbTax_SelectedIndexChanged(object? sender, EventArgs e)
         {
@@ -1012,7 +1224,7 @@ namespace QuanLyThuChi_DoAn
                 int currentTenantId = SessionManager.CurrentTenantId.Value;
 
                 // Category filter (include "Tất cả")
-                var categories = _categoryService.GetCategoriesForCurrentSession();
+                var categories = _categoryService.GetPublicCategoriesForCurrentSession();
                 categories.Insert(0, new TransactionCategory
                 {
                     CategoryId = 0,

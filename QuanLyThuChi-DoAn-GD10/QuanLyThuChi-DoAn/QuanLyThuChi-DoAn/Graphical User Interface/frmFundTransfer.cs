@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using QuanLyThuChi_DoAn.Data_Access_Layer;
+﻿using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.BLL.Services;
+using QuanLyThuChi_DoAn.Helpers;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -12,21 +13,32 @@ namespace QuanLyThuChi_DoAn
     {
         private readonly AppDbContext _context;
         private readonly CashFundService _cashFundService;
-        private readonly CategoryService _categoryService;
+        private readonly TransactionService _transactionService;
+        private bool _isFormattingAmountInput;
+        private bool _isFormattingBankFeeInput;
 
         public frmFundTransfer()
         {
             InitializeComponent();
             _context = new AppDbContext();
             _cashFundService = new CashFundService(_context);
-            _categoryService = new CategoryService(_context);
-            this.Load += FrmFundTransfer_Load;
+            _transactionService = new TransactionService(_context);
+            AttachEventHandlers();
         }
 
-        private void FrmFundTransfer_Load(object sender, EventArgs e)
+        private void AttachEventHandlers()
+        {
+            txtAmount.TextChanged += txtAmount_TextChanged;
+            txtBankFee.TextChanged += txtBankFee_TextChanged;
+        }
+
+        private void FrmFundTransfer_Load(object? sender, EventArgs e)
         {
             LoadFundComboBoxes();
             dateTimePicker1.Value = DateTime.Now;
+            dateTimePicker1.Enabled = false;
+            txtAmount.Value = 0;
+            txtBankFee.Value = 0;
         }
 
         private void LoadFundComboBoxes()
@@ -43,6 +55,9 @@ namespace QuanLyThuChi_DoAn
                 int currentBranchId = SessionManager.CurrentBranchId.Value;
                 int roleId = SessionManager.RoleId;
 
+                cbSourceFund.SelectedIndexChanged -= CbSourceFund_SelectedIndexChanged;
+                cbDestFund.SelectedIndexChanged -= CbDestFund_SelectedIndexChanged;
+
                 var sourceFunds = _cashFundService.GetFundsByBranch(tenantId, currentBranchId, roleId);
                 cbSourceFund.DataSource = sourceFunds;
                 cbSourceFund.DisplayMember = "FundName";
@@ -57,14 +72,8 @@ namespace QuanLyThuChi_DoAn
                     cbSourceFund.SelectedIndex = -1;
                 }
 
-                var destinationFunds = _cashFundService.GetFundsByTenant(tenantId)
-                    .Where(f => f.BranchId != currentBranchId || f.IsActive)
-                    .ToList();
-
-                cbDestFund.DataSource = destinationFunds;
-                cbDestFund.DisplayMember = "FundName";
-                cbDestFund.ValueMember = "FundId";
-                cbDestFund.SelectedIndex = -1;
+                int selectedSourceFundId = sourceFunds.FirstOrDefault()?.FundId ?? 0;
+                BindDestinationFundsBySource(selectedSourceFundId);
 
                 cbSourceFund.SelectedIndexChanged += CbSourceFund_SelectedIndexChanged;
                 cbDestFund.SelectedIndexChanged += CbDestFund_SelectedIndexChanged;
@@ -77,26 +86,86 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
-        private void CbSourceFund_SelectedIndexChanged(object sender, EventArgs e)
+        private void CbSourceFund_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (!SessionManager.CurrentTenantId.HasValue)
+            if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
                 return;
 
             if (cbSourceFund.SelectedValue == null || !int.TryParse(cbSourceFund.SelectedValue.ToString(), out int selectedSourceId))
             {
-                lblBalanceSourceFund.Text = "0 đ";
+                lblBalanceSourceFund.Text = FormatMoney(0);
                 return;
             }
 
-            var source = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId)
+            int tenantId = SessionManager.CurrentTenantId.Value;
+            int branchId = SessionManager.CurrentBranchId.Value;
+
+            var source = _cashFundService.GetFundsByBranch(tenantId, branchId, SessionManager.RoleId)
                 .FirstOrDefault(f => f.FundId == selectedSourceId);
 
-            lblBalanceSourceFund.Text = source != null ? $"{source.Balance:N0} đ" : "0 đ";
+            lblBalanceSourceFund.Text = source != null ? FormatMoney(source.Balance) : FormatMoney(0);
 
-            int sourceTenantId = source?.TenantId ?? SessionManager.CurrentTenantId.Value;
+            BindDestinationFundsBySource(selectedSourceId);
+        }
 
-            var destinationFunds = _cashFundService.GetFundsByTenant(sourceTenantId)
-                .Where(f => f.FundId != selectedSourceId)
+        private void CbDestFund_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (!SessionManager.CurrentTenantId.HasValue)
+                return;
+
+            if (cbDestFund.SelectedValue == null || !int.TryParse(cbDestFund.SelectedValue.ToString(), out int selectedDestId))
+            {
+                lblBalanceDestFund.Text = FormatMoney(0);
+                return;
+            }
+
+            var dest = _cashFundService.GetFundsByTenant(SessionManager.CurrentTenantId.Value)
+                .FirstOrDefault(f => f.FundId == selectedDestId);
+
+            lblBalanceDestFund.Text = dest != null ? FormatMoney(dest.Balance) : FormatMoney(0);
+        }
+
+        private void UpdateBalanceLabels()
+        {
+            if (SessionManager.CurrentTenantId.HasValue
+                && SessionManager.CurrentBranchId.HasValue
+                && cbSourceFund.SelectedValue != null
+                && int.TryParse(cbSourceFund.SelectedValue.ToString(), out int sourceId))
+            {
+                var source = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId)
+                    .FirstOrDefault(f => f.FundId == sourceId);
+                lblBalanceSourceFund.Text = source != null ? FormatMoney(source.Balance) : FormatMoney(0);
+            }
+            else
+            {
+                lblBalanceSourceFund.Text = FormatMoney(0);
+            }
+
+            if (SessionManager.CurrentTenantId.HasValue
+                && cbDestFund.SelectedValue != null
+                && int.TryParse(cbDestFund.SelectedValue.ToString(), out int destId))
+            {
+                var dest = _cashFundService.GetFundsByTenant(SessionManager.CurrentTenantId.Value)
+                    .FirstOrDefault(f => f.FundId == destId);
+                lblBalanceDestFund.Text = dest != null ? FormatMoney(dest.Balance) : FormatMoney(0);
+            }
+            else
+            {
+                lblBalanceDestFund.Text = FormatMoney(0);
+            }
+        }
+
+        private void BindDestinationFundsBySource(int selectedSourceFundId)
+        {
+            if (!SessionManager.CurrentTenantId.HasValue)
+            {
+                cbDestFund.DataSource = null;
+                return;
+            }
+
+            int tenantId = SessionManager.CurrentTenantId.Value;
+            var destinationFunds = _cashFundService.GetFundsByTenant(tenantId)
+                .Where(f => f.FundId != selectedSourceFundId)
                 .ToList();
 
             cbDestFund.DataSource = destinationFunds;
@@ -105,46 +174,7 @@ namespace QuanLyThuChi_DoAn
             cbDestFund.SelectedIndex = -1;
         }
 
-        private void CbDestFund_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cbDestFund.SelectedValue == null || !int.TryParse(cbDestFund.SelectedValue.ToString(), out int selectedDestId))
-            {
-                lblBalanceDestFund.Text = "0 đ";
-                return;
-            }
-
-            var dest = _cashFundService.GetFundsByTenant(SessionManager.CurrentTenantId.Value)
-                .FirstOrDefault(f => f.FundId == selectedDestId);
-
-            lblBalanceDestFund.Text = dest != null ? $"{dest.Balance:N0} đ" : "0 đ";
-        }
-
-        private void UpdateBalanceLabels()
-        {
-            if (cbSourceFund.SelectedValue != null && int.TryParse(cbSourceFund.SelectedValue.ToString(), out int sourceId))
-            {
-                var source = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId)
-                    .FirstOrDefault(f => f.FundId == sourceId);
-                lblBalanceSourceFund.Text = source != null ? $"{source.Balance:N0} đ" : "0 đ";
-            }
-            else
-            {
-                lblBalanceSourceFund.Text = "0 đ";
-            }
-
-            if (cbDestFund.SelectedValue != null && int.TryParse(cbDestFund.SelectedValue.ToString(), out int destId))
-            {
-                var dest = _cashFundService.GetFundsByTenant(SessionManager.CurrentTenantId.Value)
-                    .FirstOrDefault(f => f.FundId == destId);
-                lblBalanceDestFund.Text = dest != null ? $"{dest.Balance:N0} đ" : "0 đ";
-            }
-            else
-            {
-                lblBalanceDestFund.Text = "0 đ";
-            }
-        }
-
-        private void btnTransfer_Click(object sender, EventArgs e)
+        private async void btnTransfer_Click(object? sender, EventArgs e)
         {
             // 1. Validate basic UI inputs
             if (cbSourceFund.SelectedItem == null || cbDestFund.SelectedItem == null)
@@ -173,94 +203,34 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
-            // 2. Load quỹ từ DB
-            var sourceFund = _context.CashFunds.FirstOrDefault(f => f.FundId == sourceFundId);
-            var destFund = _context.CashFunds.FirstOrDefault(f => f.FundId == destFundId);
-
-            if (sourceFund == null)
+            decimal bankFee = txtBankFee.Value;
+            if (bankFee < 0)
             {
-                MessageBox.Show("Không tìm thấy quỹ nguồn.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (destFund == null)
-            {
-                MessageBox.Show("Không tìm thấy quỹ đích.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (sourceFund.Balance < amount)
-            {
-                MessageBox.Show("Quỹ nguồn không đủ số dư.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Phí giao dịch không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
-                using var transaction = _context.Database.BeginTransaction();
+                btnTransfer.Enabled = false;
 
-                var now = DateTime.Now;
-                var description = txtNotes.Text.Trim();
+                InternalTransferResult result = await _transactionService.CreateInternalTransferAsync(
+                    sourceFundId,
+                    destFundId,
+                    amount,
+                    bankFee,
+                    txtNotes.Text.Trim());
 
-                var transOut = new Transaction
-                {
-                    TenantId = SessionManager.CurrentTenantId ?? 0,
-                    BranchId = (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
-                        ? SessionManager.CurrentBranchId.Value
-                        : sourceFund.BranchId,
-                    FundId = sourceFund.FundId,
-                    CategoryId = 98, // Dùng danh mục Rút tiền (OUT)
-                    TransType = "OUT",
-                    Amount = amount,
-                    TransDate = now,
-                    Description = description,
-                    RefNo = $"TRF-{now:yyyyMMddHHmmss}-{sourceFundId}-{destFundId}",
-                    CreatedBy = SessionManager.CurrentUserId,
-                    Status = "COMPLETED",
-                    IsActive = true
-                };
-
-                var destFundFromDb = _context.CashFunds.FirstOrDefault(f => f.FundId == destFundId);
-
-                if (destFundFromDb == null)
-                {
-                    MessageBox.Show("Không tìm thấy quỹ đích.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                var transIn = new Transaction
-                {
-                    TenantId = SessionManager.CurrentTenantId ?? 0,
-                    BranchId = destFundFromDb.BranchId,
-                    FundId = destFundFromDb.FundId,
-                    CategoryId = 99, // Dùng danh mục Nhận tiền (IN)
-                    TransType = "IN",
-                    Amount = amount,
-                    TransDate = now,
-                    Description = description,
-                    RefNo = $"TRF-{now:yyyyMMddHHmmss}-{sourceFundId}-{destFundId}",
-                    CreatedBy = SessionManager.CurrentUserId,
-                    Status = "COMPLETED",
-                    IsActive = true,
-                    TransferRefTransaction = transOut
-                };
-
-                sourceFund.Balance -= amount;
-                destFundFromDb.Balance += amount;
-
-                _context.Transactions.AddRange(new[] { transOut, transIn });
-                _context.CashFunds.Update(sourceFund);
-                _context.CashFunds.Update(destFundFromDb);
-
-                _context.SaveChanges();
-                transaction.Commit();
-
-                MessageBox.Show("Chuyển quỹ thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                cbSourceFund.SelectedIndex = -1;
-                cbDestFund.SelectedIndex = -1;
-                txtAmount.Value = 0;
-                txtNotes.Text = "";
+                MessageBox.Show(
+                    "Đã tạo lệnh chuyển quỹ thành công theo mô hình 2 bước.\n\n"
+                    + $"- Phiếu CHI quỹ nguồn: COMPLETED\n"
+                    + $"- Phiếu THU quỹ đích: PENDING (chờ chi nhánh đích xác nhận)\n"
+                    + $"- Số tiền chuyển: {FormatMoney(result.Amount)}\n"
+                    + $"- Phí giao dịch: {FormatMoney(result.BankFee)}\n"
+                    + $"- Mã tham chiếu: {result.TransferRefNo}",
+                    "Thành công",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
 
                 this.DialogResult = DialogResult.OK;
                 this.Close();
@@ -273,14 +243,67 @@ namespace QuanLyThuChi_DoAn
                     message += "\n" + ex.InnerException.Message;
                 }
                 MessageBox.Show($"Chuyển quỹ thất bại: {message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                try
-                {
-                    _context.Database.RollbackTransaction();
-                }
-                catch
-                {
-                }
             }
+            finally
+            {
+                btnTransfer.Enabled = true;
+            }
+        }
+
+        private void txtAmount_TextChanged(object? sender, EventArgs e)
+        {
+            ApplyLiveThousandsSeparator(txtAmount, ref _isFormattingAmountInput);
+        }
+
+        private void txtBankFee_TextChanged(object? sender, EventArgs e)
+        {
+            ApplyLiveThousandsSeparator(txtBankFee, ref _isFormattingBankFeeInput);
+        }
+
+        private void ApplyLiveThousandsSeparator(NumericUpDown control, ref bool isFormatting)
+        {
+            if (isFormatting || !control.Focused)
+            {
+                return;
+            }
+
+            try
+            {
+                isFormatting = true;
+
+                string digitsOnly = new string(control.Text.Where(char.IsDigit).ToArray());
+                if (digitsOnly.Length == 0)
+                {
+                    if (control.Value != 0)
+                    {
+                        control.Value = 0;
+                    }
+
+                    return;
+                }
+
+                if (!decimal.TryParse(digitsOnly, NumberStyles.None, CultureInfo.InvariantCulture, out decimal parsedValue))
+                {
+                    return;
+                }
+
+                parsedValue = Math.Min(control.Maximum, Math.Max(control.Minimum, parsedValue));
+                if (control.Value != parsedValue)
+                {
+                    control.Value = parsedValue;
+                }
+
+                control.Select(control.Text.Length, 0);
+            }
+            finally
+            {
+                isFormatting = false;
+            }
+        }
+
+        private static string FormatMoney(decimal value)
+        {
+            return value.ToString("N0", AppCulture.GetConfiguredCulture()) + " đ";
         }
     }
 
