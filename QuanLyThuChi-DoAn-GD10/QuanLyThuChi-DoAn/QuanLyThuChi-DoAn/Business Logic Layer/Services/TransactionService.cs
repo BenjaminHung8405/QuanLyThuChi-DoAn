@@ -93,6 +93,27 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .Where(t => t.BranchId == currentBranchId);
         }
 
+        /// <summary>
+        /// Lấy danh sách mức thuế còn hiệu lực theo tenant đang đăng nhập.
+        /// </summary>
+        public List<Tax> GetTaxesForCurrentSession()
+        {
+            if (!SessionManager.CurrentTenantId.HasValue)
+            {
+                return new List<Tax>();
+            }
+
+            int currentTenantId = SessionManager.CurrentTenantId.Value;
+
+            return _context.Taxes
+                .AsNoTracking()
+                .Where(t => t.TenantId == currentTenantId)
+                .Where(t => t.IsActive)
+                .OrderBy(t => t.Rate)
+                .ThenBy(t => t.TaxName)
+                .ToList();
+        }
+
         // 2. Thống kê tổng Thu / Chi
         public (decimal TotalIn, decimal TotalOut) GetSummary(int tenantId, DateTime fromDate, DateTime toDate)
         {
@@ -107,9 +128,92 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             return (totalIn, totalOut);
         }
 
-        // 3. Thêm mới giao dịch và tự động cập nhật số dư Quỹ
+        // 3. Thêm mới giao dịch (async) và tự động tính thuế/tổng tiền
+        public async Task<bool> AddTransactionAsync(Transaction trans)
+        {
+            if (trans == null)
+                throw new ArgumentNullException(nameof(trans));
+
+            ApplySessionScope(trans);
+            await ApplyTaxCalculationAsync(trans);
+
+            if (trans.Amount <= 0)
+                throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
+
+            if (trans.TenantId <= 0)
+                throw new ArgumentException("TenantId không hợp lệ.");
+
+            if (trans.BranchId <= 0)
+                throw new ArgumentException("BranchId không hợp lệ.");
+
+            var branch = await _context.Branches
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.BranchId == trans.BranchId
+                                       && b.TenantId == trans.TenantId
+                                       && b.IsActive);
+            if (branch == null)
+                throw new InvalidOperationException("Chi nhánh của giao dịch không hợp lệ.");
+
+            var fund = await _context.CashFunds.FirstOrDefaultAsync(f => f.FundId == trans.FundId
+                                                                       && f.TenantId == trans.TenantId
+                                                                       && f.BranchId == trans.BranchId
+                                                                       && f.IsActive);
+            if (fund == null)
+                throw new Exception("Không tìm thấy Quỹ tiền hợp lệ! Vui lòng kiểm tra lại.");
+
+            var category = await _context.TransactionCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CategoryId == trans.CategoryId
+                                       && c.TenantId == trans.TenantId
+                                       && c.BranchId == trans.BranchId
+                                       && c.IsActive);
+            if (category == null)
+                throw new InvalidOperationException("Danh mục giao dịch không hợp lệ cho chi nhánh hiện tại.");
+
+            if (trans.PartnerId.HasValue)
+            {
+                var partner = await _context.Partners
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.PartnerId == trans.PartnerId.Value
+                                           && p.TenantId == trans.TenantId
+                                           && p.BranchId == trans.BranchId
+                                           && p.IsActive);
+                if (partner == null)
+                    throw new InvalidOperationException("Đối tác không hợp lệ cho chi nhánh hiện tại.");
+            }
+
+            string transType = trans.TransType?.Trim().ToUpperInvariant() ?? string.Empty;
+            if (transType == "IN")
+            {
+                fund.Balance += trans.Amount;
+            }
+            else if (transType == "OUT")
+            {
+                if (fund.Balance < trans.Amount)
+                    throw new Exception($"Quỹ '{fund.FundName}' không đủ số dư để thực hiện khoản chi này!");
+
+                fund.Balance -= trans.Amount;
+            }
+            else
+            {
+                throw new Exception("Loại giao dịch không hợp lệ. Vui lòng chọn IN hoặc OUT.");
+            }
+
+            trans.TransType = transType;
+
+            _context.Transactions.Add(trans);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        // 4. Thêm mới giao dịch và tự động cập nhật số dư Quỹ
         public void CreateTransaction(Transaction transaction)
         {
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+
+            ApplySessionScope(transaction);
+            ApplyTaxCalculation(transaction);
+
             if (transaction.Amount <= 0)
                 throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
 
@@ -176,11 +280,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             _context.SaveChanges();
         }
 
-        // 4. Cập nhật giao dịch
+        // 5. Cập nhật giao dịch
         public void UpdateTransaction(Transaction transaction)
         {
-            if (transaction.Amount <= 0)
-                throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
 
             var existing = _context.Transactions.FirstOrDefault(t => t.TransId == transaction.TransId);
             if (existing == null)
@@ -216,11 +320,18 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     throw new InvalidOperationException("Đối tác không hợp lệ cho chi nhánh hiện tại.");
             }
 
+            transaction.TenantId = existing.TenantId;
+            transaction.BranchId = existing.BranchId;
+            ApplyTaxCalculation(transaction);
+
+            if (transaction.Amount <= 0)
+                throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
+
             _context.Transactions.Update(transaction);
             _context.SaveChanges();
         }
 
-        // 5. Xóa mềm giao dịch
+        // 6. Xóa mềm giao dịch
         public void DeleteTransaction(long transactionId, int tenantId)
         {
             int scopedTenantId = tenantId;
@@ -249,6 +360,106 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             transaction.Status = "DELETED";
             _context.Transactions.Update(transaction);
             _context.SaveChanges();
+        }
+
+        private void ApplyTaxCalculation(Transaction transaction)
+        {
+            NormalizeSubTotal(transaction);
+
+            if (transaction.TaxId.HasValue && transaction.TaxId.Value > 0)
+            {
+                var tax = _context.Taxes
+                    .AsNoTracking()
+                    .FirstOrDefault(t => t.TaxId == transaction.TaxId.Value
+                                      && t.TenantId == transaction.TenantId
+                                      && t.IsActive);
+
+                if (tax == null)
+                    throw new InvalidOperationException("Mức thuế không hợp lệ cho tenant hiện tại.");
+
+                ApplyTaxAmounts(transaction, tax.Rate);
+                return;
+            }
+
+            transaction.TaxAmount = 0;
+            transaction.Amount = transaction.SubTotal;
+        }
+
+        private async Task ApplyTaxCalculationAsync(Transaction transaction)
+        {
+            NormalizeSubTotal(transaction);
+
+            if (transaction.TaxId.HasValue && transaction.TaxId.Value > 0)
+            {
+                var tax = await _context.Taxes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.TaxId == transaction.TaxId.Value
+                                           && t.TenantId == transaction.TenantId
+                                           && t.IsActive);
+
+                if (tax == null)
+                    throw new InvalidOperationException("Mức thuế không hợp lệ cho tenant hiện tại.");
+
+                ApplyTaxAmounts(transaction, tax.Rate);
+                return;
+            }
+
+            transaction.TaxAmount = 0;
+            transaction.Amount = transaction.SubTotal;
+        }
+
+        private static void NormalizeSubTotal(Transaction transaction)
+        {
+            if (transaction.SubTotal <= 0 && transaction.Amount > 0)
+            {
+                // Backward-compatible: nếu UI cũ chỉ gửi Amount thì xem như SubTotal.
+                transaction.SubTotal = transaction.Amount;
+            }
+
+            if (transaction.SubTotal <= 0)
+                throw new ArgumentException("Tiền trước thuế phải lớn hơn 0.");
+        }
+
+        private static void ApplyTaxAmounts(Transaction transaction, decimal rate)
+        {
+            transaction.TaxAmount = Math.Round(
+                transaction.SubTotal * (rate / 100m),
+                0,
+                MidpointRounding.AwayFromZero);
+
+            transaction.Amount = transaction.SubTotal + transaction.TaxAmount;
+        }
+
+        private static void ApplySessionScope(Transaction transaction)
+        {
+            if (SessionManager.CurrentTenantId.HasValue)
+            {
+                int sessionTenantId = SessionManager.CurrentTenantId.Value;
+
+                if (transaction.TenantId <= 0)
+                {
+                    transaction.TenantId = sessionTenantId;
+                }
+                else if (!SessionManager.IsSuperAdmin && transaction.TenantId != sessionTenantId)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền tạo giao dịch ngoài tenant hiện tại.");
+                }
+            }
+
+            if (SessionManager.CurrentBranchId.HasValue)
+            {
+                int sessionBranchId = SessionManager.CurrentBranchId.Value;
+
+                if (transaction.BranchId <= 0)
+                {
+                    transaction.BranchId = sessionBranchId;
+                }
+                else if ((SessionManager.IsBranchManager || SessionManager.IsStaff)
+                         && transaction.BranchId != sessionBranchId)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền tạo giao dịch ngoài chi nhánh hiện tại.");
+                }
+            }
         }
     }
 }

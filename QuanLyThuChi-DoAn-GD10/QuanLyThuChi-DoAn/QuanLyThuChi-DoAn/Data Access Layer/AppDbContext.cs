@@ -7,7 +7,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
 {
     public class AppDbContext : DbContext
     {
-        // Khai báo 13 bảng vào EF Core
+        // Khai báo 14 bảng vào EF Core
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<Branch> Branches { get; set; }
         public DbSet<Role> Roles { get; set; }
@@ -17,6 +17,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
         public DbSet<CashFund> CashFunds { get; set; }
         public DbSet<Partner> Partners { get; set; }
         public DbSet<Debt> Debts { get; set; }
+        public DbSet<Tax> Taxes { get; set; }
         public DbSet<TransactionCategory> TransactionCategories { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<TransactionAttachment> TransactionAttachments { get; set; }

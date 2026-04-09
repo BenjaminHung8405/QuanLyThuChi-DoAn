@@ -777,7 +777,7 @@ namespace QuanLyThuChi_DoAn
 
                 if (current is ucTransaction ucTrans)
                 {
-                    ucTrans.LoadData();
+                    ucTrans.ReloadContextAndData();
                 }
                 else if (current is ucCashFund ucFund)
                 {

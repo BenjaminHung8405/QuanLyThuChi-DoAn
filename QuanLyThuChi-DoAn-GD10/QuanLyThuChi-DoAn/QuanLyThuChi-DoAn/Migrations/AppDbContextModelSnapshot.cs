@@ -368,6 +368,35 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.ToTable("RolePermissions");
                 });
 
+            modelBuilder.Entity("QuanLyThuChi_DoAn.Tax", b =>
+                {
+                    b.Property<int>("TaxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TaxId"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("decimal(5, 2)");
+
+                    b.Property<string>("TaxName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TaxId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Taxes");
+                });
+
             modelBuilder.Entity("QuanLyThuChi_DoAn.Tenant", b =>
                 {
                     b.Property<int>("TenantId")
@@ -457,6 +486,15 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<decimal>("SubTotal")
+                        .HasColumnType("decimal(18, 0)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18, 0)");
+
+                    b.Property<int?>("TaxId")
+                        .HasColumnType("int");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
@@ -484,6 +522,8 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.HasIndex("FundId");
 
                     b.HasIndex("PartnerId");
+
+                    b.HasIndex("TaxId");
 
                     b.HasIndex("TenantId");
 
@@ -699,6 +739,17 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("QuanLyThuChi_DoAn.Tax", b =>
+                {
+                    b.HasOne("QuanLyThuChi_DoAn.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("QuanLyThuChi_DoAn.Transaction", b =>
                 {
                     b.HasOne("QuanLyThuChi_DoAn.Branch", "Branch")
@@ -733,6 +784,10 @@ namespace QuanLyThuChi_DoAn.Migrations
                         .WithMany()
                         .HasForeignKey("PartnerId");
 
+                    b.HasOne("QuanLyThuChi_DoAn.Tax", "Tax")
+                        .WithMany("Transactions")
+                        .HasForeignKey("TaxId");
+
                     b.HasOne("QuanLyThuChi_DoAn.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
@@ -752,6 +807,8 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Navigation("Debt");
 
                     b.Navigation("Partner");
+
+                    b.Navigation("Tax");
 
                     b.Navigation("Tenant");
 
@@ -828,6 +885,11 @@ namespace QuanLyThuChi_DoAn.Migrations
             modelBuilder.Entity("QuanLyThuChi_DoAn.Role", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("QuanLyThuChi_DoAn.Tax", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.Transaction", b =>

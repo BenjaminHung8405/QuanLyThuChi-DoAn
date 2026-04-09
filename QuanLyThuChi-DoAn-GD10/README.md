@@ -25,3 +25,106 @@
     *   **Giải pháp:** Xây dựng cơ chế giao tiếp UserControl -> Form cha bằng Event (`BranchChangedEventArgs`). Khi lưu thành công, UserControl ném Event kèm `BranchId` vừa làm việc, `frmMain` bắt tín hiệu và nạp tải bất đồng bộ (refresh async) lại danh sách chi nhánh mà không gây treo giao diện.
 *   **Khó khăn 3 (Rủi ro thao tác nghiệp vụ trên dữ liệu đã cấu trúc - GroupBy):** Khi màn hình Công nợ chuyển sang "Tổng hợp đối tác", bộ dữ liệu trên Grid là số tổng giả lập, việc kích hoạt "Duyệt" hay "Thanh toán" sẽ gây lỗi cấu trúc mảng và sai dòng tiền.
     *   **Giải pháp:** Thiết lập cờ `IsSummaryViewMode`. Khi cờ này kích hoạt, bộ lọc (Filter) bên trên tự tinh giản, các lệnh nghiệp vụ được vô hiệu hóa tạm thời (Khóa Nút + Chặn dòng Event Click) và hành động Double-click được rẽ nhánh thành "Drill-down" (lọc chi tiết vào từng phiếu của chính đối tác đó) thay vì gọi Pop-up Thanh toán Từng Phiếu.
+
+Code DAL (Entity -> BLL -> GUI)
+
+Entity: thêm bảng Thuế ở Tax.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace QuanLyThuChi_DoAn
+{
+[Table("Taxes")]
+public class Tax
+{
+[Key]
+public int TaxId { get; set; }
+
+public int TenantId { get; set; }
+[ForeignKey("TenantId")]
+public virtual Tenant Tenant { get; set; }
+
+[Required]
+[StringLength(100)]
+public string TaxName { get; set; }
+
+[Column(TypeName = "decimal(5, 2)")]
+public decimal Rate { get; set; }
+
+public bool IsActive { get; set; } = true;
+
+public virtual ICollection<Transaction> Transactions { get; set; }
+}
+}
+
+Entity: nâng cấp Transaction ở Transaction.cs
+
+[Column(TypeName = "decimal(18, 0)")]
+public decimal SubTotal { get; set; }
+
+public int? TaxId { get; set; }
+[ForeignKey("TaxId")]
+public virtual Tax Tax { get; set; }
+
+[Column(TypeName = "decimal(18, 0)")]
+public decimal TaxAmount { get; set; }
+
+[Column(TypeName = "decimal(18, 0)")]
+public decimal Amount { get; set; }
+
+DAL Context: đăng ký DbSet Tax ở AppDbContext.cs
+
+public DbSet<Tax> Taxes { get; set; }
+
+Migration DAL:
+
+Tạo migration mới: 20260408184426_AddTaxesAndTransactionTaxBreakdown.cs
+Auto update snapshot/designer:
+AppDbContextModelSnapshot.cs
+20260408184426_AddTaxesAndTransactionTaxBreakdown.Designer.cs
+Có bổ sung migrate dữ liệu cũ trong Up:
+SubTotal = Amount
+TaxAmount = 0
+BLL: chưa thay đổi trong scope yêu cầu DAL.
+
+GUI: chưa thay đổi trong scope yêu cầu DAL.
+
+Kết quả chạy
+
+Đã chạy migrations add thành công.
+Đã chạy database update thành công, migration 20260408184426 đã được apply.
+Build thành công, có cảnh báo nullability cũ của dự án (không phải lỗi mới chặn build).
+File DB nhị phân đã thay đổi sau khi apply migration: CashFlowDB.mdf, CashFlowDB_log.ldf.
+Documentation Summary
+
+Mục tiêu:
+Nâng cấp tầng DAL để quản lý thuế linh hoạt theo danh mục thuế và bóc tách số tiền giao dịch thành tiền trước thuế, tiền thuế và tổng thanh toán.
+
+Task List:
+
+Tạo entity Tax và ánh xạ bảng Taxes.
+Bổ sung các cột SubTotal, TaxId, TaxAmount vào entity Transaction.
+Thiết lập quan hệ khóa ngoại Transaction -> Tax.
+Cập nhật AppDbContext với DbSet Taxes.
+Tạo migration AddTaxesAndTransactionTaxBreakdown.
+Bổ sung script chuyển đổi dữ liệu cũ trong migration (SubTotal lấy từ Amount).
+Apply migration lên database bằng EF Core.
+Thu hoạch cho Báo cáo:
+Thiết kế danh mục thuế giúp tránh hardcode 8%/10%, mở rộng linh hoạt theo chính sách mới.
+Chuẩn hóa dữ liệu Transaction theo cấu trúc kế toán rõ ràng hơn.
+Đảm bảo tương thích dữ liệu lịch sử nhờ bước backfill khi migration.
+Mô tả:
+Bảng Taxes gồm TaxId, TenantId, TaxName, Rate, IsActive; có FK về Tenants.
+Bảng Transactions thêm SubTotal (decimal 18,0), TaxAmount (decimal 18,0), TaxId (nullable FK sang Taxes).
+Amount vẫn giữ vai trò tổng tiền thanh toán cuối cùng.
+Migration tạo index cho TaxId ở Transactions và TenantId ở Taxes; thêm FK restrict theo convention hiện tại của hệ thống.
+Nhận xét:
+DAL đã tuân thủ mô hình multi-tenant của dự án (bảng mới có TenantId).
+Thiết kế mới phù hợp nghiệp vụ ERP, sẵn sàng cho các mức thuế khác nhau theo thời gian.
+Không phát sinh lỗi build; ảnh hưởng hiện tại tập trung ở tầng schema/data model.
+Khó khăn & Giải pháp:
+Khó khăn: dữ liệu Transactions cũ chỉ có Amount nên khi thêm SubTotal có nguy cơ mất nghĩa dữ liệu lịch sử.
+Giải pháp: thêm câu lệnh SQL trong migration để backfill SubTotal = Amount và TaxAmount = 0 cho dữ liệu hiện hữu trước khi đưa vào vận hành logic thuế mới.

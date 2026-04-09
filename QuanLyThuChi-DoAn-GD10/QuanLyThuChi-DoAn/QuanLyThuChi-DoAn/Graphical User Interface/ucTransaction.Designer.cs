@@ -55,8 +55,14 @@
             lblCategory = new Label();
             dtpTransactionDate = new DateTimePicker();
             lblDate = new Label();
-            txtAmount = new TextBox();
-            lblAmount = new Label();
+            txtTotalAmount = new TextBox();
+            lblTotalAmount = new Label();
+            txtTaxAmount = new TextBox();
+            lblTaxAmount = new Label();
+            cbTax = new ComboBox();
+            lblTax = new Label();
+            txtSubTotal = new TextBox();
+            lblSubTotal = new Label();
             pnlRadio = new Panel();
             radOut = new RadioButton();
             radIn = new RadioButton();
@@ -65,6 +71,7 @@
             lblTotalOut = new Label();
             pnlHeader = new Panel();
             tableLayoutPanel4 = new TableLayoutPanel();
+            lblBalance = new Label();
             panel1 = new Panel();
             label1 = new Label();
             btnRefresh = new FontAwesome.Sharp.IconButton();
@@ -77,7 +84,6 @@
             cboFilterCategory = new ComboBox();
             label3 = new Label();
             cboFilterPartner = new ComboBox();
-            lblBalance = new Label();
             pnlGrid.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
             tableLayoutPanel1.SuspendLayout();
@@ -204,7 +210,7 @@
             // 
             pnlButtons.Controls.Add(tableLayoutPanel3);
             pnlButtons.Dock = DockStyle.Bottom;
-            pnlButtons.Location = new Point(16, 463);
+            pnlButtons.Location = new Point(16, 655);
             pnlButtons.Name = "pnlButtons";
             pnlButtons.Size = new Size(353, 99);
             pnlButtons.TabIndex = 15;
@@ -311,8 +317,14 @@
             gbTransactionDetail.Controls.Add(lblCategory);
             gbTransactionDetail.Controls.Add(dtpTransactionDate);
             gbTransactionDetail.Controls.Add(lblDate);
-            gbTransactionDetail.Controls.Add(txtAmount);
-            gbTransactionDetail.Controls.Add(lblAmount);
+            gbTransactionDetail.Controls.Add(txtTotalAmount);
+            gbTransactionDetail.Controls.Add(lblTotalAmount);
+            gbTransactionDetail.Controls.Add(txtTaxAmount);
+            gbTransactionDetail.Controls.Add(lblTaxAmount);
+            gbTransactionDetail.Controls.Add(cbTax);
+            gbTransactionDetail.Controls.Add(lblTax);
+            gbTransactionDetail.Controls.Add(txtSubTotal);
+            gbTransactionDetail.Controls.Add(lblSubTotal);
             gbTransactionDetail.Controls.Add(pnlRadio);
             gbTransactionDetail.Controls.Add(lblType);
             gbTransactionDetail.Dock = DockStyle.Top;
@@ -320,7 +332,7 @@
             gbTransactionDetail.Location = new Point(16, 16);
             gbTransactionDetail.Name = "gbTransactionDetail";
             gbTransactionDetail.Padding = new Padding(16);
-            gbTransactionDetail.Size = new Size(353, 463);
+            gbTransactionDetail.Size = new Size(353, 655);
             gbTransactionDetail.TabIndex = 2;
             gbTransactionDetail.TabStop = false;
             gbTransactionDetail.Text = "Thông tin Giao dịch";
@@ -330,22 +342,22 @@
             txtNote.BorderStyle = BorderStyle.FixedSingle;
             txtNote.Dock = DockStyle.Top;
             txtNote.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            txtNote.Location = new Point(16, 409);
+            txtNote.Location = new Point(16, 580);
             txtNote.Multiline = true;
             txtNote.Name = "txtNote";
             txtNote.Size = new Size(321, 60);
-            txtNote.TabIndex = 15;
+            txtNote.TabIndex = 19;
             // 
             // lblNote
             // 
             lblNote.AutoSize = true;
             lblNote.Dock = DockStyle.Top;
             lblNote.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblNote.Location = new Point(16, 380);
+            lblNote.Location = new Point(16, 551);
             lblNote.Name = "lblNote";
             lblNote.Padding = new Padding(0, 5, 0, 5);
             lblNote.Size = new Size(58, 29);
-            lblNote.TabIndex = 14;
+            lblNote.TabIndex = 18;
             lblNote.Text = "Ghi chú";
             // 
             // cboFund
@@ -354,21 +366,21 @@
             cboFund.DropDownStyle = ComboBoxStyle.DropDownList;
             cboFund.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
             cboFund.FormattingEnabled = true;
-            cboFund.Location = new Point(16, 352);
+            cboFund.Location = new Point(16, 523);
             cboFund.Name = "cboFund";
             cboFund.Size = new Size(321, 28);
-            cboFund.TabIndex = 13;
+            cboFund.TabIndex = 17;
             // 
             // label2
             // 
             label2.AutoSize = true;
             label2.Dock = DockStyle.Top;
             label2.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label2.Location = new Point(16, 323);
+            label2.Location = new Point(16, 494);
             label2.Name = "label2";
             label2.Padding = new Padding(0, 5, 0, 5);
             label2.Size = new Size(129, 29);
-            label2.TabIndex = 12;
+            label2.TabIndex = 16;
             label2.Text = "Quỹ tiền/Tài khoản";
             // 
             // cboPartner
@@ -377,21 +389,21 @@
             cboPartner.DropDownStyle = ComboBoxStyle.DropDownList;
             cboPartner.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
             cboPartner.FormattingEnabled = true;
-            cboPartner.Location = new Point(16, 295);
+            cboPartner.Location = new Point(16, 466);
             cboPartner.Name = "cboPartner";
             cboPartner.Size = new Size(321, 28);
-            cboPartner.TabIndex = 9;
+            cboPartner.TabIndex = 15;
             // 
             // lblPartner
             // 
             lblPartner.AutoSize = true;
             lblPartner.Dock = DockStyle.Top;
             lblPartner.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblPartner.Location = new Point(16, 266);
+            lblPartner.Location = new Point(16, 437);
             lblPartner.Name = "lblPartner";
             lblPartner.Padding = new Padding(0, 5, 0, 5);
             lblPartner.Size = new Size(54, 29);
-            lblPartner.TabIndex = 8;
+            lblPartner.TabIndex = 14;
             lblPartner.Text = "Đối tác";
             // 
             // cboCategory
@@ -400,21 +412,21 @@
             cboCategory.DropDownStyle = ComboBoxStyle.DropDownList;
             cboCategory.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
             cboCategory.FormattingEnabled = true;
-            cboCategory.Location = new Point(16, 238);
+            cboCategory.Location = new Point(16, 409);
             cboCategory.Name = "cboCategory";
             cboCategory.Size = new Size(321, 28);
-            cboCategory.TabIndex = 7;
+            cboCategory.TabIndex = 13;
             // 
             // lblCategory
             // 
             lblCategory.AutoSize = true;
             lblCategory.Dock = DockStyle.Top;
             lblCategory.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblCategory.Location = new Point(16, 209);
+            lblCategory.Location = new Point(16, 380);
             lblCategory.Name = "lblCategory";
             lblCategory.Padding = new Padding(0, 5, 0, 5);
             lblCategory.Size = new Size(93, 29);
-            lblCategory.TabIndex = 6;
+            lblCategory.TabIndex = 12;
             lblCategory.Text = "Danh mục (*)";
             // 
             // dtpTransactionDate
@@ -423,45 +435,122 @@
             dtpTransactionDate.Dock = DockStyle.Top;
             dtpTransactionDate.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
             dtpTransactionDate.Format = DateTimePickerFormat.Custom;
-            dtpTransactionDate.Location = new Point(16, 182);
+            dtpTransactionDate.Location = new Point(16, 353);
             dtpTransactionDate.Name = "dtpTransactionDate";
             dtpTransactionDate.Size = new Size(321, 27);
-            dtpTransactionDate.TabIndex = 5;
+            dtpTransactionDate.TabIndex = 11;
             // 
             // lblDate
             // 
             lblDate.AutoSize = true;
             lblDate.Dock = DockStyle.Top;
             lblDate.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblDate.Location = new Point(16, 153);
+            lblDate.Location = new Point(16, 324);
             lblDate.Name = "lblDate";
             lblDate.Padding = new Padding(0, 5, 0, 5);
             lblDate.Size = new Size(124, 29);
-            lblDate.TabIndex = 4;
+            lblDate.TabIndex = 10;
             lblDate.Text = "Ngày lập phiếu (*)";
             // 
-            // txtAmount
+            // txtTotalAmount
             // 
-            txtAmount.BorderStyle = BorderStyle.FixedSingle;
-            txtAmount.Dock = DockStyle.Top;
-            txtAmount.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            txtAmount.Location = new Point(16, 126);
-            txtAmount.Name = "txtAmount";
-            txtAmount.Size = new Size(321, 27);
-            txtAmount.TabIndex = 3;
-            txtAmount.TextAlign = HorizontalAlignment.Right;
+            txtTotalAmount.BackColor = Color.WhiteSmoke;
+            txtTotalAmount.BorderStyle = BorderStyle.FixedSingle;
+            txtTotalAmount.Dock = DockStyle.Top;
+            txtTotalAmount.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            txtTotalAmount.ForeColor = Color.FromArgb(183, 28, 28);
+            txtTotalAmount.Location = new Point(16, 292);
+            txtTotalAmount.Name = "txtTotalAmount";
+            txtTotalAmount.ReadOnly = true;
+            txtTotalAmount.Size = new Size(321, 32);
+            txtTotalAmount.TabIndex = 9;
+            txtTotalAmount.TabStop = false;
+            txtTotalAmount.TextAlign = HorizontalAlignment.Right;
             // 
-            // lblAmount
+            // lblTotalAmount
             // 
-            lblAmount.AutoSize = true;
-            lblAmount.Dock = DockStyle.Top;
-            lblAmount.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblAmount.Location = new Point(16, 97);
-            lblAmount.Name = "lblAmount";
-            lblAmount.Padding = new Padding(0, 5, 0, 5);
-            lblAmount.Size = new Size(135, 29);
-            lblAmount.TabIndex = 2;
-            lblAmount.Text = "Số tiền giao dịch (*)";
+            lblTotalAmount.AutoSize = true;
+            lblTotalAmount.Dock = DockStyle.Top;
+            lblTotalAmount.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblTotalAmount.ForeColor = Color.FromArgb(183, 28, 28);
+            lblTotalAmount.Location = new Point(16, 266);
+            lblTotalAmount.Name = "lblTotalAmount";
+            lblTotalAmount.Padding = new Padding(0, 0, 0, 5);
+            lblTotalAmount.Size = new Size(168, 26);
+            lblTotalAmount.TabIndex = 8;
+            lblTotalAmount.Text = "TỔNG THANH TOÁN:";
+            // 
+            // txtTaxAmount
+            // 
+            txtTaxAmount.BackColor = Color.WhiteSmoke;
+            txtTaxAmount.BorderStyle = BorderStyle.FixedSingle;
+            txtTaxAmount.Dock = DockStyle.Top;
+            txtTaxAmount.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtTaxAmount.Location = new Point(16, 239);
+            txtTaxAmount.Name = "txtTaxAmount";
+            txtTaxAmount.ReadOnly = true;
+            txtTaxAmount.Size = new Size(321, 27);
+            txtTaxAmount.TabIndex = 7;
+            txtTaxAmount.TabStop = false;
+            txtTaxAmount.TextAlign = HorizontalAlignment.Right;
+            // 
+            // lblTaxAmount
+            // 
+            lblTaxAmount.AutoSize = true;
+            lblTaxAmount.Dock = DockStyle.Top;
+            lblTaxAmount.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblTaxAmount.Location = new Point(16, 210);
+            lblTaxAmount.Name = "lblTaxAmount";
+            lblTaxAmount.Padding = new Padding(0, 5, 0, 5);
+            lblTaxAmount.Size = new Size(71, 29);
+            lblTaxAmount.TabIndex = 6;
+            lblTaxAmount.Text = "Tiền thuế:";
+            // 
+            // cbTax
+            // 
+            cbTax.Dock = DockStyle.Top;
+            cbTax.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbTax.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            cbTax.FormattingEnabled = true;
+            cbTax.Location = new Point(16, 182);
+            cbTax.Name = "cbTax";
+            cbTax.Size = new Size(321, 28);
+            cbTax.TabIndex = 5;
+            // 
+            // lblTax
+            // 
+            lblTax.AutoSize = true;
+            lblTax.Dock = DockStyle.Top;
+            lblTax.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblTax.Location = new Point(16, 153);
+            lblTax.Name = "lblTax";
+            lblTax.Padding = new Padding(0, 5, 0, 5);
+            lblTax.Size = new Size(73, 29);
+            lblTax.TabIndex = 4;
+            lblTax.Text = "Thuế suất:";
+            // 
+            // txtSubTotal
+            // 
+            txtSubTotal.BorderStyle = BorderStyle.FixedSingle;
+            txtSubTotal.Dock = DockStyle.Top;
+            txtSubTotal.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtSubTotal.Location = new Point(16, 126);
+            txtSubTotal.Name = "txtSubTotal";
+            txtSubTotal.Size = new Size(321, 27);
+            txtSubTotal.TabIndex = 3;
+            txtSubTotal.TextAlign = HorizontalAlignment.Right;
+            // 
+            // lblSubTotal
+            // 
+            lblSubTotal.AutoSize = true;
+            lblSubTotal.Dock = DockStyle.Top;
+            lblSubTotal.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblSubTotal.Location = new Point(16, 97);
+            lblSubTotal.Name = "lblSubTotal";
+            lblSubTotal.Padding = new Padding(0, 5, 0, 5);
+            lblSubTotal.Size = new Size(139, 29);
+            lblSubTotal.TabIndex = 2;
+            lblSubTotal.Text = "Số tiền (Trước thuế):";
             // 
             // pnlRadio
             // 
@@ -560,6 +649,18 @@
             tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
             tableLayoutPanel4.Size = new Size(1136, 110);
             tableLayoutPanel4.TabIndex = 2;
+            // 
+            // lblBalance
+            // 
+            lblBalance.AutoSize = true;
+            lblBalance.Dock = DockStyle.Left;
+            lblBalance.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblBalance.ForeColor = Color.FromArgb(25, 103, 210);
+            lblBalance.Location = new Point(3, 72);
+            lblBalance.Name = "lblBalance";
+            lblBalance.Size = new Size(209, 38);
+            lblBalance.TabIndex = 5;
+            lblBalance.Text = "Số dư quỹ hiện tại: ... VNĐ";
             // 
             // panel1
             // 
@@ -713,18 +814,6 @@
             cboFilterPartner.Size = new Size(228, 28);
             cboFilterPartner.TabIndex = 10;
             // 
-            // lblBalance
-            // 
-            lblBalance.AutoSize = true;
-            lblBalance.Dock = DockStyle.Left;
-            lblBalance.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblBalance.ForeColor = Color.FromArgb(25, 103, 210);
-            lblBalance.Location = new Point(3, 72);
-            lblBalance.Name = "lblBalance";
-            lblBalance.Size = new Size(209, 38);
-            lblBalance.TabIndex = 5;
-            lblBalance.Text = "Số dư quỹ hiện tại: ... VNĐ";
-            // 
             // ucTransaction
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -786,8 +875,14 @@
         private Label lblCategory;
         private DateTimePicker dtpTransactionDate;
         private Label lblDate;
-        private TextBox txtAmount;
-        private Label lblAmount;
+        private TextBox txtTotalAmount;
+        private Label lblTotalAmount;
+        private TextBox txtTaxAmount;
+        private Label lblTaxAmount;
+        private ComboBox cbTax;
+        private Label lblTax;
+        private TextBox txtSubTotal;
+        private Label lblSubTotal;
         private Panel pnlRadio;
         private RadioButton radOut;
         private RadioButton radIn;

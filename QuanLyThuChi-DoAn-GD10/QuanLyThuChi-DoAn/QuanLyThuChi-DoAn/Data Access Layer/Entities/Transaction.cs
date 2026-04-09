@@ -40,6 +40,16 @@ namespace QuanLyThuChi_DoAn
         public DateTime TransDate { get; set; } = DateTime.Now;
 
         [Column(TypeName = "decimal(18, 0)")]
+        public decimal SubTotal { get; set; }
+
+        public int? TaxId { get; set; }
+        [ForeignKey("TaxId")]
+        public virtual Tax Tax { get; set; }
+
+        [Column(TypeName = "decimal(18, 0)")]
+        public decimal TaxAmount { get; set; }
+
+        [Column(TypeName = "decimal(18, 0)")]
         public decimal Amount { get; set; }
 
         [StringLength(500)]

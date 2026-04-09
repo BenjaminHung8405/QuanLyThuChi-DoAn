@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,8 +20,10 @@ namespace QuanLyThuChi_DoAn
         private readonly CashFundService _cashFundService;
         private readonly CategoryService _categoryService;
         private readonly PartnerService _partnerService;
+        private readonly TaxService _taxService;
         private bool _isAddMode = false;
         private object _selectedTransaction = null;
+        private bool _isFormattingSubTotal = false;
 
         public ucTransaction()
         {
@@ -30,9 +33,10 @@ namespace QuanLyThuChi_DoAn
             _cashFundService = new CashFundService(context);
             _categoryService = new CategoryService(context);
             _partnerService = new PartnerService(context);
+            _taxService = new TaxService(context);
         }
 
-        private void ucTransaction_Load(object sender, EventArgs e)
+        private async void ucTransaction_Load(object sender, EventArgs e)
         {
             try
             {
@@ -56,6 +60,9 @@ namespace QuanLyThuChi_DoAn
 
                 // 4.1. Load dropdown master data including Funds 
                 LoadMasterData();
+
+                // 4.1.1. Load taxes into cbTax from database
+                await LoadTaxesAsync();
 
                 // 4.2. Load filter dropdowns (category + partner) with "Tất cả" item
                 LoadFilterControls();
@@ -81,6 +88,11 @@ namespace QuanLyThuChi_DoAn
             radIn.CheckedChanged += (s, e) => OnTransactionTypeChanged();
             radOut.CheckedChanged += (s, e) => OnTransactionTypeChanged();
 
+            // Auto-calculate tax and total
+            txtSubTotal.TextChanged += txtSubTotal_TextChanged;
+            txtSubTotal.Leave += (s, e) => FormatSubTotalInput();
+            cbTax.SelectedIndexChanged += cbTax_SelectedIndexChanged;
+
             // Filter and refresh buttons
             btnRefresh.Click += (s, e) =>
             {
@@ -93,7 +105,7 @@ namespace QuanLyThuChi_DoAn
 
             // CRUD buttons
             btnNew.Click += (s, e) => OnBtnNewClicked();
-            btnSave.Click += (s, e) => OnBtnSaveClicked();
+            btnSave.Click += btnSave_Click;
             btnCancel.Click += (s, e) => OnBtnCancelClicked();
             btnDelete.Click += (s, e) => OnBtnDeleteClicked();
 
@@ -281,6 +293,19 @@ namespace QuanLyThuChi_DoAn
             RefreshDataGrid();
         }
 
+        public void ReloadContextAndData()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(ReloadContextAndData));
+                return;
+            }
+
+            LoadMasterData();
+            LoadFilterControls();
+            RefreshDataGrid();
+        }
+
         public void LoadData(int categoryId = 0, int partnerId = 0)
         {
             // 1. Base query
@@ -392,8 +417,19 @@ namespace QuanLyThuChi_DoAn
 
                 // Populate form fields from selected transaction
                 dtpTransactionDate.Value = selected.TransDate;
-                txtAmount.Text = selected.Amount.ToString("N0");
+                txtSubTotal.Text = (selected.SubTotal > 0 ? selected.SubTotal : selected.Amount).ToString("N0");
                 txtNote.Text = selected.Description;
+
+                if (selected.TaxId.HasValue && selected.TaxId.Value > 0)
+                {
+                    cbTax.SelectedValue = selected.TaxId.Value;
+                }
+                else if (cbTax.Items.Count > 0)
+                {
+                    cbTax.SelectedIndex = 0;
+                }
+
+                UpdateTaxAndTotalPreview();
 
                 string tx = selected.TransType?.Trim().ToUpperInvariant();
                 radIn.Checked = tx == "IN";
@@ -448,14 +484,19 @@ namespace QuanLyThuChi_DoAn
             SetInputFieldsEnabled(true);
             _isAddMode = true;
             _selectedTransaction = null;
-            txtAmount.Focus();
+            txtSubTotal.Focus();
+        }
+
+        private async void btnSave_Click(object? sender, EventArgs e)
+        {
+            await SaveTransactionAsync();
         }
 
         /// <summary>
         /// Handle "Save" button click
         /// Updated for new schema with TransType, Description, RefNo, CreatedBy, Status, FundId
         /// </summary>
-        private void OnBtnSaveClicked()
+        private async Task SaveTransactionAsync()
         {
             // Gọi hàm kiểm tra trước khi làm bất cứ việc gì khác
             if (!ValidateInput()) return;
@@ -468,6 +509,8 @@ namespace QuanLyThuChi_DoAn
 
             try
             {
+                btnSave.Enabled = false;
+
                 if (!SessionManager.CurrentTenantId.HasValue)
                 {
                     MessageBox.Show("Không có tenant ngữ cảnh. Vui lòng đăng nhập lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -483,6 +526,16 @@ namespace QuanLyThuChi_DoAn
                 string typeValue = radIn.Checked ? "IN" : "OUT";
                 int categoryId = (int)cboCategory.SelectedValue;
                 int? partnerId = (cboPartner.SelectedValue == null || (int)cboPartner.SelectedValue == 0) ? (int?)null : (int)cboPartner.SelectedValue;
+                int? taxId = GetSelectedTaxId();
+
+                if (!TryParseVndAmount(txtSubTotal.Text, out decimal subTotal))
+                {
+                    MessageBox.Show("Số tiền trước thuế không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    txtSubTotal.Focus();
+                    return;
+                }
+
+                bool isSuccess = false;
 
                 if (_isAddMode)
                 {
@@ -498,7 +551,9 @@ namespace QuanLyThuChi_DoAn
                         CategoryId = categoryId,
                         PartnerId = partnerId,
                         TransDate = dtpTransactionDate.Value,
-                        Amount = decimal.Parse(txtAmount.Text.Trim()),
+                        SubTotal = subTotal,
+                        TaxId = taxId,
+                        Amount = subTotal,
                         Description = txtNote.Text.Trim(),
                         TransType = typeValue,
                         RefNo = $"TR-{DateTime.Now:yyyyMMddHHmmss}",
@@ -506,14 +561,15 @@ namespace QuanLyThuChi_DoAn
                         IsActive = true // Luôn bật IsActive khi tạo mới
                     };
 
-                    _transactionService.CreateTransaction(newTrans);
-                    MessageBox.Show("Lập phiếu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    isSuccess = await _transactionService.AddTransactionAsync(newTrans);
                 }
                 else if (_selectedTransaction != null)
                 {
                     var existing = (Transaction)_selectedTransaction;
                     // Cập nhật các trường cho phép sửa
-                    existing.Amount = decimal.Parse(txtAmount.Text.Trim());
+                    existing.SubTotal = subTotal;
+                    existing.TaxId = taxId;
+                    existing.Amount = subTotal;
                     existing.Description = txtNote.Text.Trim();
                     existing.CategoryId = categoryId;
                     existing.PartnerId = partnerId;
@@ -521,8 +577,16 @@ namespace QuanLyThuChi_DoAn
                     existing.TransType = typeValue;
 
                     _transactionService.UpdateTransaction(existing);
-                    MessageBox.Show("Cập nhật thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    isSuccess = true;
                 }
+
+                if (!isSuccess)
+                {
+                    MessageBox.Show("Không thể lưu phiếu. Vui lòng thử lại.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                MessageBox.Show(_isAddMode ? "Lập phiếu thành công!" : "Cập nhật thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 ResetForm();
                 SetInputFieldsEnabled(false);
@@ -531,6 +595,14 @@ namespace QuanLyThuChi_DoAn
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi hệ thống: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Chỉ mở lại nút khi form đang ở trạng thái nhập/sửa.
+                if (txtSubTotal.Enabled)
+                {
+                    btnSave.Enabled = true;
+                }
             }
         }
 
@@ -590,13 +662,18 @@ namespace QuanLyThuChi_DoAn
         /// </summary>
         private void ResetForm()
         {
-            txtAmount.Text = "";
+            txtSubTotal.Text = "";
+            txtTaxAmount.Text = "0";
+            txtTotalAmount.Text = "0";
             txtNote.Text = "";
             dtpTransactionDate.Value = DateTime.Today;
             radIn.Checked = true;
             if (cboPartner.Items.Count > 0) cboPartner.SelectedIndex = 0;
             if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = -1;
+            if (cbTax.Items.Count > 0) cbTax.SelectedIndex = 0;
             _selectedTransaction = null;
+
+            UpdateTaxAndTotalPreview();
 
             ApplyPermissionRules();
         }
@@ -608,7 +685,8 @@ namespace QuanLyThuChi_DoAn
         {
             radIn.Enabled = enabled;
             radOut.Enabled = enabled;
-            txtAmount.Enabled = enabled;
+            txtSubTotal.Enabled = enabled;
+            cbTax.Enabled = enabled;
             dtpTransactionDate.Enabled = enabled;
             cboCategory.Enabled = enabled;
             cboPartner.Enabled = enabled;
@@ -645,10 +723,10 @@ namespace QuanLyThuChi_DoAn
         private bool ValidateInput()
         {
             // 1. Kiểm tra số tiền (Amount)
-            if (!decimal.TryParse(txtAmount.Text.Trim(), out decimal amount) || amount <= 0)
+            if (!TryParseVndAmount(txtSubTotal.Text.Trim(), out decimal amount) || amount <= 0)
             {
-                MessageBox.Show("Số tiền không hợp lệ. Vui lòng nhập số dương lớn hơn 0!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtAmount.Focus();
+                MessageBox.Show("Số tiền trước thuế không hợp lệ. Vui lòng nhập số dương lớn hơn 0!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtSubTotal.Focus();
                 return false;
             }
 
@@ -706,9 +784,12 @@ namespace QuanLyThuChi_DoAn
         {
             try
             {
-                if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+                if (!SessionManager.CurrentTenantId.HasValue
+                    || !SessionManager.CurrentBranchId.HasValue
+                    || SessionManager.CurrentBranchId.Value <= 0)
                 {
-                    // Không có ngữ cảnh tenant/branch đầy đủ
+                    cboFund.DataSource = null;
+                    cboFund.Items.Clear();
                     return;
                 }
 
@@ -736,11 +817,174 @@ namespace QuanLyThuChi_DoAn
                 {
                     cboFund.SelectedIndex = 0;
                 }
+                else
+                {
+                    cboFund.SelectedIndex = -1;
+                }
+
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi load dữ liệu Master: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async Task LoadTaxesAsync()
+        {
+            try
+            {
+                var taxes = await _taxService.GetActiveTaxesAsync();
+                taxes.Insert(0, new Tax
+                {
+                    TaxId = 0,
+                    TaxName = "Không áp thuế",
+                    Rate = 0,
+                    IsActive = true,
+                    TenantId = SessionManager.CurrentTenantId ?? 0
+                });
+
+                cbTax.DataSource = taxes;
+                cbTax.DisplayMember = nameof(Tax.TaxName);
+                cbTax.ValueMember = nameof(Tax.TaxId);
+                cbTax.SelectedIndex = 0;
+
+                UpdateTaxAndTotalPreview();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi nạp danh mục Thuế: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private int? GetSelectedTaxId()
+        {
+            if (cbTax.SelectedValue == null)
+            {
+                return null;
+            }
+
+            if (int.TryParse(cbTax.SelectedValue.ToString(), out int selectedTaxId) && selectedTaxId > 0)
+            {
+                return selectedTaxId;
+            }
+
+            return null;
+        }
+
+        private decimal GetSelectedTaxRate()
+        {
+            if (cbTax.SelectedItem is Tax selectedTax)
+            {
+                return selectedTax.Rate;
+            }
+
+            return 0;
+        }
+
+        // Sự kiện khi Kế toán gõ tiền vào ô Tiền trước thuế
+        private void txtSubTotal_TextChanged(object? sender, EventArgs e)
+        {
+            // Định dạng phân tách hàng nghìn ngay khi nhập
+            FormatCurrency(txtSubTotal);
+
+            // Gọi hàm tính toán trung tâm
+            CalculateTotal();
+        }
+
+        // Sự kiện khi thay đổi thuế suất
+        private void cbTax_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            CalculateTotal();
+        }
+
+        // HÀM TÍNH TOÁN TRUNG TÂM
+        private void CalculateTotal()
+        {
+            if (!TryParseVndAmount(txtSubTotal.Text, out decimal subTotal) || subTotal <= 0)
+            {
+                txtTaxAmount.Text = "0";
+                txtTotalAmount.Text = "0";
+                return;
+            }
+
+            decimal taxRate = GetSelectedTaxRate();
+            decimal taxAmount = Math.Round(subTotal * (taxRate / 100m), 0, MidpointRounding.AwayFromZero);
+            decimal totalAmount = subTotal + taxAmount;
+
+            txtTaxAmount.Text = taxAmount.ToString("N0");
+            txtTotalAmount.Text = totalAmount.ToString("N0");
+        }
+
+        private void UpdateTaxAndTotalPreview()
+        {
+            CalculateTotal();
+        }
+
+        private void FormatCurrency(TextBox textBox)
+        {
+            if (_isFormattingSubTotal || textBox == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                return;
+            }
+
+            if (!TryParseVndAmount(textBox.Text, out decimal amount))
+            {
+                return;
+            }
+
+            string formatted = amount.ToString("N0");
+            if (textBox.Text == formatted)
+            {
+                return;
+            }
+
+            int oldSelectionStart = textBox.SelectionStart;
+            int oldLength = textBox.Text.Length;
+
+            _isFormattingSubTotal = true;
+            try
+            {
+                textBox.Text = formatted;
+
+                int newSelectionStart = oldSelectionStart + (formatted.Length - oldLength);
+                textBox.SelectionStart = Math.Max(0, Math.Min(textBox.Text.Length, newSelectionStart));
+            }
+            finally
+            {
+                _isFormattingSubTotal = false;
+            }
+        }
+
+        private void FormatSubTotalInput()
+        {
+            FormatCurrency(txtSubTotal);
+            CalculateTotal();
+        }
+
+        private static bool TryParseVndAmount(string input, out decimal amount)
+        {
+            amount = 0;
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return false;
+            }
+
+            string normalized = input.Trim()
+                .Replace(".", string.Empty)
+                .Replace(",", string.Empty)
+                .Replace(" ", string.Empty);
+
+            return decimal.TryParse(
+                normalized,
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out amount);
         }
 
         private void ApplyPermissionRules()
