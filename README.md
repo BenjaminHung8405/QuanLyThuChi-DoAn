@@ -11,11 +11,11 @@
 
 Dự án này là một ứng dụng Desktop chuyên sâu dành cho mô hình kinh doanh chuỗi (chuỗi cửa hàng, nhà hàng, hệ thống bán lẻ...). Hệ thống sở hữu khả năng quản lý tài chính độc lập cho từng chi nhánh và quỹ tiền, giám sát chặt chẽ công nợ theo thời gian thực và lưu vết biến động (Audit). Mọi luồng dữ liệu đều được cách ly chặt chẽ theo `TenantId` và `BranchId`.
 
-Dưới đây là tiến trình hoàn thiện qua **10 Giai đoạn (Sprints)** của dự án.
+Dưới đây là tiến trình hoàn thiện qua **11 Giai đoạn (Sprints)** của dự án.
 
 ---
 
-## 🚀 Lộ trình 10 Giai đoạn Phát triển (Sprints)
+## 🚀 Lộ trình 11 Giai đoạn Phát triển (Sprints)
 
 ### 🎯 Giai đoạn 1: Khởi tạo Kiến trúc & Thiết kế Database
 * **Mục tiêu:** Xây dựng cơ sở dữ liệu cốt lõi hỗ trợ mô hình Multi-tenant & Multi-branch.
@@ -58,5 +58,13 @@ Dưới đây là tiến trình hoàn thiện qua **10 Giai đoạn (Sprints)** 
 * **Mục tiêu:** Chống drift Schema khi sửa cấu trúc User/Roles, hoàn thiện các "cách xem" Sổ quy chuẩn.
 * **Chi tiết:** Cơ chế Drill-down và "Toggle View": Bấm mở chi tiết từng phiếu, chuyển đổi giữa kiểu danh sách và loại dòng tiền tổng đối tác, có Running Balance Tính số dư lũy kế trực tiếp trên giao diện Report. Cơ chế phát sự kiện Event giữa `UserControl` và `Form` đè. Thay cấu hình Roles hard-code thành cấu trúc CSDL cấp ưu tiên (`PriorityLevel`). Năng lực SuperAdmin tùy chỉnh Tenant Admin tuyệt mật.
 
+### 🎯 Giai đoạn 11: Quản trị Thuế, Lưu vết hệ thống (Audit Logging) & Cải tiến Dashboard
+* **Mục tiêu:** Kiểm soát và truy vết mọi thay đổi dữ liệu (Audit), bổ sung module Thuế & Tối ưu Dashboard.
+* **Chi tiết:** 
+  * **Hệ thống Lưu vết (Audit Logging):** Xây dựng `AuditLogService` và giao diện `ucAuditLogViewer` để ghi nhận mọi hành động (thêm, sửa, xóa, hủy giao dịch) theo `UserId`, giúp theo dõi biến động dữ liệu theo thời gian thực.
+  * **Hủy Giao dịch & Ghi nhận lý do:** Bổ sung tính năng hủy giao dịch thay vì xóa cứng (`frmInputReason`). Lưu lý do hủy vào chi tiết giao dịch và Audit.
+  * **Quản lý Thuế:** Phát triển module thuế hoàn chỉnh (`TaxService`, `ucTaxManagement`, `frmAddEditTax`), hỗ trợ tính toán thuế áp dụng trên các khoản thu/chi.
+  * **Cải tiến Dashboard:** Bổ sung các chỉ số tổng quan (Financial overview metrics) trên `ucDashboard`, cung cấp cái nhìn toàn diện hơn về dòng tiền hiện tại.
+
 ---
-*Cập nhật tự động nội dung tổng hợp từ 10 giai đoạn phát triển.*
+*Cập nhật tự động nội dung tổng hợp từ 11 giai đoạn phát triển.*
