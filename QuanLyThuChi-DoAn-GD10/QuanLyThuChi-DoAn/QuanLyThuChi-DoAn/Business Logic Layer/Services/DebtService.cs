@@ -197,6 +197,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         {
             try
             {
+                DateTime createdAt = DateTime.Now;
+
                 var newDebt = new Debt
                 {
                     TenantId = SessionManager.CurrentTenantId ?? 0,
@@ -205,10 +207,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     DebtType = string.IsNullOrWhiteSpace(debtType) ? "PAYABLE" : debtType.ToUpperInvariant(),
                     TotalAmount = totalAmount,
                     PaidAmount = 0,
-                    DueDate = dueDate,
+                    DueDate = createdAt.Date,
                     Status = "NEW",
                     Notes = notes ?? string.Empty,
-                    CreatedDate = DateTime.Now
+                    CreatedDate = createdAt
                 };
 
                 _context.Debts.Add(newDebt);

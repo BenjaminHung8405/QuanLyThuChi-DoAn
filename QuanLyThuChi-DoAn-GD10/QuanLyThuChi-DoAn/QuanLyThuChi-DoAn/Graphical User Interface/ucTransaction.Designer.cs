@@ -61,7 +61,7 @@
             lblTaxAmount = new Label();
             cbTax = new ComboBox();
             lblTax = new Label();
-            txtSubTotal = new TextBox();
+            txtSubTotal = new NumericUpDown();
             lblSubTotal = new Label();
             pnlRadio = new Panel();
             radOut = new RadioButton();
@@ -96,6 +96,7 @@
             tableLayoutPanel4.SuspendLayout();
             panel1.SuspendLayout();
             pnlTotal.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)txtSubTotal).BeginInit();
             SuspendLayout();
             // 
             // pnlGrid
@@ -249,7 +250,7 @@
             btnDelete.Padding = new Padding(8, 0, 0, 0);
             btnDelete.Size = new Size(171, 44);
             btnDelete.TabIndex = 3;
-            btnDelete.Text = "Xóa";
+            btnDelete.Text = "Hủy Phiếu";
             btnDelete.UseVisualStyleBackColor = false;
             // 
             // btnSave
@@ -534,11 +535,14 @@
             txtSubTotal.BorderStyle = BorderStyle.FixedSingle;
             txtSubTotal.Dock = DockStyle.Top;
             txtSubTotal.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtSubTotal.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
             txtSubTotal.Location = new Point(16, 126);
+            txtSubTotal.Maximum = decimal.MaxValue;
             txtSubTotal.Name = "txtSubTotal";
             txtSubTotal.Size = new Size(321, 27);
             txtSubTotal.TabIndex = 3;
             txtSubTotal.TextAlign = HorizontalAlignment.Right;
+            txtSubTotal.ThousandsSeparator = true;
             // 
             // lblSubTotal
             // 
@@ -842,6 +846,7 @@
             panel1.PerformLayout();
             pnlTotal.ResumeLayout(false);
             pnlTotal.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)txtSubTotal).EndInit();
             ResumeLayout(false);
         }
 
@@ -881,7 +886,7 @@
         private Label lblTaxAmount;
         private ComboBox cbTax;
         private Label lblTax;
-        private TextBox txtSubTotal;
+        private NumericUpDown txtSubTotal;
         private Label lblSubTotal;
         private Panel pnlRadio;
         private RadioButton radOut;

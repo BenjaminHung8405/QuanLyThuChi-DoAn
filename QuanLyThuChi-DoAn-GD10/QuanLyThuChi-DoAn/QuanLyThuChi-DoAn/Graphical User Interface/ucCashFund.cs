@@ -56,7 +56,7 @@ namespace QuanLyThuChi_DoAn
         {
             txtFundName.Text = "";
             txtAccountNumber.Text = "";
-            txtBalance.Text = "";
+            txtBalance.Value = 0;
             _selectedFund = null;
             _isAddMode = false;
             SetInputFieldsEnabled(false);
@@ -200,7 +200,7 @@ namespace QuanLyThuChi_DoAn
             _selectedFund = null;
             txtFundName.Text = "";
             txtAccountNumber.Text = "";
-            txtBalance.Text = "";
+            txtBalance.Value = 0;
             SetInputFieldsEnabled(true);
             txtFundName.Focus();
         }
@@ -214,15 +214,7 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
-            if (!decimal.TryParse(txtBalance.Text.Trim(), out decimal initialBalance))
-            {
-                if (_isAddMode)
-                {
-                    MessageBox.Show("Số dư ban đầu không hợp lệ.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    txtBalance.Focus();
-                    return;
-                }
-            }
+            decimal initialBalance = txtBalance.Value;
 
             if (_isAddMode)
             {
@@ -340,7 +332,7 @@ namespace QuanLyThuChi_DoAn
 
             txtFundName.Text = row.FundName;
             txtAccountNumber.Text = row.AccountNumber;
-            txtBalance.Text = row.Balance.ToString("N0");
+            txtBalance.Value = Math.Min(txtBalance.Maximum, Math.Max(txtBalance.Minimum, row.Balance));
 
             // Enable sync/audit only when there is a selected fund
             btnSyncSelected.Enabled = true;

@@ -37,6 +37,9 @@
     <Compile Update="Graphical User Interface\ucTaxManagement.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Graphical User Interface\ucAuditLogViewer.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Properties\Settings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <AutoGen>True</AutoGen>

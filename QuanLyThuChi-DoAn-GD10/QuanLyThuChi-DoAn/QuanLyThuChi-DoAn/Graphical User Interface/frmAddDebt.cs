@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Globalization;
 using System.Windows.Forms;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.BLL.Services;
@@ -13,7 +12,6 @@ namespace QuanLyThuChi_DoAn
         private readonly AppDbContext _context;
         private readonly PartnerService _partnerService;
         private readonly DebtService _debtService;
-        private bool _isFormattingAmount;
 
         private sealed class DebtTypeOption
         {
@@ -31,6 +29,7 @@ namespace QuanLyThuChi_DoAn
 
             LoadPartners();
             InitDebtTypeComboBox();
+            InitDebtCreatedDateField();
         }
 
         private void frmAddDebt_Load(object sender, EventArgs e)
@@ -38,12 +37,21 @@ namespace QuanLyThuChi_DoAn
             try
             {
                 ApplyHeaderStyleByDebtType();
-                dtpDueDate.Checked = false;
+                dtpDueDate.Value = DateTime.Now;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi khởi tạo form: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void InitDebtCreatedDateField()
+        {
+            // Ngày lập công nợ được hệ thống tự động gán theo ngày hiện tại.
+            lblDueDate.Text = "Ngày lập công nợ (*)";
+            dtpDueDate.ShowCheckBox = false;
+            dtpDueDate.Enabled = false;
+            dtpDueDate.Value = DateTime.Now;
         }
 
         private void frmAddDebt_Shown(object sender, EventArgs e)
@@ -103,36 +111,6 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
-        private void txtTotalAmount_TextChanged(object sender, EventArgs e)
-        {
-            if (_isFormattingAmount)
-                return;
-
-            try
-            {
-                _isFormattingAmount = true;
-
-                string raw = txtTotalAmount.Text.Replace(",", string.Empty).Replace(".", string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(raw))
-                {
-                    txtTotalAmount.Text = string.Empty;
-                    return;
-                }
-
-                if (!decimal.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out decimal value))
-                {
-                    return;
-                }
-
-                txtTotalAmount.Text = value.ToString("N0");
-                txtTotalAmount.SelectionStart = txtTotalAmount.Text.Length;
-            }
-            finally
-            {
-                _isFormattingAmount = false;
-            }
-        }
-
         private void btnSave_Click(object sender, EventArgs e)
         {
             // 1. Validate dữ liệu
@@ -142,9 +120,8 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
-            decimal totalAmount;
-            var amountRaw = txtTotalAmount.Text.Replace(",", string.Empty).Replace(".", string.Empty).Trim();
-            if (!decimal.TryParse(amountRaw, NumberStyles.None, CultureInfo.InvariantCulture, out totalAmount) || totalAmount <= 0)
+            decimal totalAmount = txtTotalAmount.Value;
+            if (totalAmount <= 0)
             {
                 MessageBox.Show("Số tiền nợ phải lớn hơn 0!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -153,7 +130,7 @@ namespace QuanLyThuChi_DoAn
             // 2. Lấy dữ liệu
             int partnerId = (int)cboPartner.SelectedValue;
             string debtType = (cboDebtType.SelectedItem as DebtTypeOption)?.Value ?? "RECEIVABLE";
-            DateTime? dueDate = dtpDueDate.Checked ? dtpDueDate.Value.Date : (DateTime?)null;
+            DateTime? dueDate = DateTime.Now.Date;
             string notes = txtNotes.Text.Trim();
 
             // 3. Gọi Service lưu vào DB
@@ -197,8 +174,8 @@ namespace QuanLyThuChi_DoAn
                 return false;
             }
 
-            string amountText = txtTotalAmount.Text.Replace(",", string.Empty).Replace(".", string.Empty).Trim();
-            if (!decimal.TryParse(amountText, NumberStyles.None, CultureInfo.InvariantCulture, out totalAmount) || totalAmount <= 0)
+            totalAmount = txtTotalAmount.Value;
+            if (totalAmount <= 0)
             {
                 MessageBox.Show("Số tiền nợ không hợp lệ. Vui lòng nhập số dương lớn hơn 0.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtTotalAmount.Focus();

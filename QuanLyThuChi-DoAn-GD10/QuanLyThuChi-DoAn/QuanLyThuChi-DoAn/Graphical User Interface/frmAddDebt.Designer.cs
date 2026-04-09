@@ -41,7 +41,7 @@ namespace QuanLyThuChi_DoAn
             lblDebtType = new Label();
             cboDebtType = new ComboBox();
             lblTotalAmount = new Label();
-            txtTotalAmount = new TextBox();
+            txtTotalAmount = new NumericUpDown();
             lblDueDate = new Label();
             dtpDueDate = new DateTimePicker();
             lblNotes = new Label();
@@ -50,6 +50,7 @@ namespace QuanLyThuChi_DoAn
             pnlFooter.SuspendLayout();
             pnlMain.SuspendLayout();
             tableInput.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)txtTotalAmount).BeginInit();
             SuspendLayout();
             // 
             // pnlHeader
@@ -219,12 +220,14 @@ namespace QuanLyThuChi_DoAn
             // 
             txtTotalAmount.Anchor = AnchorStyles.Left | AnchorStyles.Right;
             txtTotalAmount.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            txtTotalAmount.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
             txtTotalAmount.Location = new Point(148, 150);
+            txtTotalAmount.Maximum = decimal.MaxValue;
             txtTotalAmount.Name = "txtTotalAmount";
             txtTotalAmount.Size = new Size(409, 29);
             txtTotalAmount.TabIndex = 2;
             txtTotalAmount.TextAlign = HorizontalAlignment.Right;
-            txtTotalAmount.TextChanged += txtTotalAmount_TextChanged;
+            txtTotalAmount.ThousandsSeparator = true;
             // 
             // lblDueDate
             // 
@@ -293,6 +296,7 @@ namespace QuanLyThuChi_DoAn
             pnlMain.ResumeLayout(false);
             tableInput.ResumeLayout(false);
             tableInput.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)txtTotalAmount).EndInit();
             ResumeLayout(false);
         }
 
@@ -311,7 +315,7 @@ namespace QuanLyThuChi_DoAn
         private Label lblDebtType;
         private ComboBox cboDebtType;
         private Label lblTotalAmount;
-        private TextBox txtTotalAmount;
+        private NumericUpDown txtTotalAmount;
         private Label lblDueDate;
         private DateTimePicker dtpDueDate;
         private Label lblNotes;

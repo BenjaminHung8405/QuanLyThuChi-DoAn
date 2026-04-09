@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,6 +10,7 @@ using System.Windows.Forms;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.BLL.Services;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
+using QuanLyThuChi_DoAn.Graphical_User_Interface;
 
 namespace QuanLyThuChi_DoAn
 {
@@ -23,7 +23,6 @@ namespace QuanLyThuChi_DoAn
         private readonly TaxService _taxService;
         private bool _isAddMode = false;
         private object _selectedTransaction = null;
-        private bool _isFormattingSubTotal = false;
 
         public ucTransaction()
         {
@@ -45,7 +44,8 @@ namespace QuanLyThuChi_DoAn
                 dtpFromDate.Value = new DateTime(today.Year, today.Month, 1); // ✅ FROM = first day
                 dtpToDate.Value = new DateTime(today.Year, today.Month, DateTime.DaysInMonth(today.Year, today.Month)); // ✅ TO = last day
 
-                dtpTransactionDate.Value = today;
+                dtpTransactionDate.Value = DateTime.Now;
+                dtpTransactionDate.Enabled = false;
                 radIn.Checked = true; // Default to Income
 
                 // 2. Setup DataGridView columns for Transaction model
@@ -89,8 +89,7 @@ namespace QuanLyThuChi_DoAn
             radOut.CheckedChanged += (s, e) => OnTransactionTypeChanged();
 
             // Auto-calculate tax and total
-            txtSubTotal.TextChanged += txtSubTotal_TextChanged;
-            txtSubTotal.Leave += (s, e) => FormatSubTotalInput();
+            txtSubTotal.ValueChanged += txtSubTotal_ValueChanged;
             cbTax.SelectedIndexChanged += cbTax_SelectedIndexChanged;
 
             // Filter and refresh buttons
@@ -107,7 +106,7 @@ namespace QuanLyThuChi_DoAn
             btnNew.Click += (s, e) => OnBtnNewClicked();
             btnSave.Click += btnSave_Click;
             btnCancel.Click += (s, e) => OnBtnCancelClicked();
-            btnDelete.Click += (s, e) => OnBtnDeleteClicked();
+            btnDelete.Click += btnDelete_Click;
 
             // Grid selection
             dgvTransactions.CellClick += (s, e) =>
@@ -366,6 +365,12 @@ namespace QuanLyThuChi_DoAn
             }));
         }
 
+        private Task LoadDataAsync()
+        {
+            RefreshDataGrid();
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Format grid cells (color, currency format, etc.)
         /// Updated for new column names: TransType, Description, Amount
@@ -417,7 +422,8 @@ namespace QuanLyThuChi_DoAn
 
                 // Populate form fields from selected transaction
                 dtpTransactionDate.Value = selected.TransDate;
-                txtSubTotal.Text = (selected.SubTotal > 0 ? selected.SubTotal : selected.Amount).ToString("N0");
+                decimal subTotalValue = selected.SubTotal > 0 ? selected.SubTotal : selected.Amount;
+                txtSubTotal.Value = Math.Min(txtSubTotal.Maximum, Math.Max(txtSubTotal.Minimum, subTotalValue));
                 txtNote.Text = selected.Description;
 
                 if (selected.TaxId.HasValue && selected.TaxId.Value > 0)
@@ -528,7 +534,8 @@ namespace QuanLyThuChi_DoAn
                 int? partnerId = (cboPartner.SelectedValue == null || (int)cboPartner.SelectedValue == 0) ? (int?)null : (int)cboPartner.SelectedValue;
                 int? taxId = GetSelectedTaxId();
 
-                if (!TryParseVndAmount(txtSubTotal.Text, out decimal subTotal))
+                decimal subTotal = txtSubTotal.Value;
+                if (subTotal <= 0)
                 {
                     MessageBox.Show("Số tiền trước thuế không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     txtSubTotal.Focus();
@@ -550,7 +557,7 @@ namespace QuanLyThuChi_DoAn
                         FundId = (int)cboFund.SelectedValue,
                         CategoryId = categoryId,
                         PartnerId = partnerId,
-                        TransDate = dtpTransactionDate.Value,
+                        TransDate = DateTime.Now,
                         SubTotal = subTotal,
                         TaxId = taxId,
                         Amount = subTotal,
@@ -573,7 +580,6 @@ namespace QuanLyThuChi_DoAn
                     existing.Description = txtNote.Text.Trim();
                     existing.CategoryId = categoryId;
                     existing.PartnerId = partnerId;
-                    existing.TransDate = dtpTransactionDate.Value;
                     existing.TransType = typeValue;
 
                     _transactionService.UpdateTransaction(existing);
@@ -616,43 +622,110 @@ namespace QuanLyThuChi_DoAn
             _isAddMode = false;
         }
 
-        /// <summary>
-        /// Handle "Delete" button click (soft delete via Status field)
-        /// </summary>
-        private void OnBtnDeleteClicked()
+        private async void btnDelete_Click(object? sender, EventArgs e)
         {
-            if (_selectedTransaction == null) return;
-
-            if (SessionManager.RoleName == "Staff")
+            // 1. Kiểm tra xem người dùng đã chọn phiếu nào chưa
+            if (dgvTransactions.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Bạn không có quyền xóa giao dịch.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn một phiếu giao dịch để hủy!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (MessageBox.Show("Bạn có chắc muốn xóa giao dịch này?", "Xác nhận",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                try
-                {
-                    var tx = (Transaction)_selectedTransaction;
-                    if (SessionManager.RoleName == "Admin")
-                    {
-                        // Xóa vĩnh viễn
-                        _transactionService.DeleteTransaction(tx.TransId, tx.TenantId);
-                    }
-                    else
-                    {
-                        // Soft delete
-                        _transactionService.DeleteTransaction(tx.TransId, tx.TenantId);
-                    }
+            // 2. Lấy ID của phiếu đang chọn
+            var selectedRow = dgvTransactions.SelectedRows[0];
+            long transId = 0;
 
-                    ResetForm();
-                    SetInputFieldsEnabled(false);
-                    RefreshDataGrid();
-                }
-                catch (Exception ex)
+            if (selectedRow.DataBoundItem is Transaction selectedTransaction)
+            {
+                transId = selectedTransaction.TransId;
+            }
+            else
+            {
+                if (dgvTransactions.Columns.Contains("TransactionId")
+                    && selectedRow.Cells["TransactionId"].Value != null
+                    && long.TryParse(selectedRow.Cells["TransactionId"].Value.ToString(), out var idFromTransactionId))
                 {
-                    MessageBox.Show($"Lỗi xóa: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    transId = idFromTransactionId;
+                }
+                else if (dgvTransactions.Columns.Contains("colTransId")
+                    && selectedRow.Cells["colTransId"].Value != null
+                    && long.TryParse(selectedRow.Cells["colTransId"].Value.ToString(), out var idFromColTransId))
+                {
+                    transId = idFromColTransId;
+                }
+            }
+
+            if (transId <= 0)
+            {
+                MessageBox.Show("Không xác định được mã giao dịch để hủy.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // (Tùy chọn) Kiểm tra xem phiếu này đã bị hủy chưa
+            if (selectedRow.DataBoundItem is Transaction selectedTx)
+            {
+                if (!selectedTx.IsActive)
+                {
+                    MessageBox.Show("Phiếu này đã bị hủy từ trước, không thể hủy thêm!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+            }
+            else if (dgvTransactions.Columns.Contains("IsActive") && selectedRow.Cells["IsActive"].Value != null)
+            {
+                bool isActive = Convert.ToBoolean(selectedRow.Cells["IsActive"].Value);
+                if (!isActive)
+                {
+                    MessageBox.Show("Phiếu này đã bị hủy từ trước, không thể hủy thêm!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+            }
+
+            // 3. Cảnh báo xác nhận lần 1
+            var confirm = MessageBox.Show(
+                "Bạn có chắc chắn muốn HỦY tờ phiếu này không?\nHành động này sẽ được lưu vào Nhật ký hệ thống (Audit Log).",
+                "Xác nhận Hủy Phiếu",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirm == DialogResult.Yes)
+            {
+                // 4. Mở Form bắt buộc nhập lý do
+                using (var frmReason = new frmInputReason())
+                {
+                    if (frmReason.ShowDialog() == DialogResult.OK)
+                    {
+                        bool previousDeleteEnabled = btnDelete.Enabled;
+                        try
+                        {
+                            btnDelete.Enabled = false;
+
+                            // Lấy lý do Kế toán vừa gõ
+                            string reason = frmReason.CancelReason;
+
+                            // 5. Gọi Service "2 trong 1" (Vừa Xóa mềm, vừa Ghi Log)
+                            bool isSuccess = await _transactionService.CancelTransactionAsync(transId, reason);
+
+                            if (isSuccess)
+                            {
+                                MessageBox.Show("Đã hủy phiếu thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                // 6. Load lại lưới dữ liệu
+                                await LoadDataAsync();
+                            }
+                            else
+                            {
+                                MessageBox.Show("Không thể hủy phiếu. Vui lòng thử lại.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Lỗi khi hủy phiếu: " + ex.Message, "Lỗi Hệ Thống", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        finally
+                        {
+                            btnDelete.Enabled = previousDeleteEnabled;
+                        }
+                    }
                 }
             }
         }
@@ -662,11 +735,11 @@ namespace QuanLyThuChi_DoAn
         /// </summary>
         private void ResetForm()
         {
-            txtSubTotal.Text = "";
+            txtSubTotal.Value = 0;
             txtTaxAmount.Text = "0";
             txtTotalAmount.Text = "0";
             txtNote.Text = "";
-            dtpTransactionDate.Value = DateTime.Today;
+            dtpTransactionDate.Value = DateTime.Now;
             radIn.Checked = true;
             if (cboPartner.Items.Count > 0) cboPartner.SelectedIndex = 0;
             if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = -1;
@@ -687,7 +760,7 @@ namespace QuanLyThuChi_DoAn
             radOut.Enabled = enabled;
             txtSubTotal.Enabled = enabled;
             cbTax.Enabled = enabled;
-            dtpTransactionDate.Enabled = enabled;
+            dtpTransactionDate.Enabled = false;
             cboCategory.Enabled = enabled;
             cboPartner.Enabled = enabled;
             txtNote.Enabled = enabled;
@@ -706,15 +779,7 @@ namespace QuanLyThuChi_DoAn
             btnDelete.Enabled = _selectedTransaction != null && enabled && SessionManager.RoleName != "Staff";
             btnSave.Text = enabled ? (_isAddMode ? "Lập Phiếu" : "Cập nhật") : "Lưu";
 
-            // Admin có quyền xóa vĩnh viễn mới hiển thị btnDelete (gắn chức năng riêng khi cần)
-            if (SessionManager.RoleName != "Admin")
-            {
-                btnDelete.Text = "Xóa";
-            }
-            else
-            {
-                btnDelete.Text = "Xóa vĩnh viễn";
-            }
+            btnDelete.Text = "Hủy Phiếu";
         }
 
         /// <summary>
@@ -723,7 +788,8 @@ namespace QuanLyThuChi_DoAn
         private bool ValidateInput()
         {
             // 1. Kiểm tra số tiền (Amount)
-            if (!TryParseVndAmount(txtSubTotal.Text.Trim(), out decimal amount) || amount <= 0)
+            decimal amount = txtSubTotal.Value;
+            if (amount <= 0)
             {
                 MessageBox.Show("Số tiền trước thuế không hợp lệ. Vui lòng nhập số dương lớn hơn 0!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtSubTotal.Focus();
@@ -746,15 +812,7 @@ namespace QuanLyThuChi_DoAn
                 return false;
             }
 
-            // 3. Kiểm tra Ngày tháng (TransDate)
-            // Không cho phép lưu giao dịch quá xa trong tương lai (ví dụ > 1 năm)
-            if (dtpTransactionDate.Value > DateTime.Now.AddYears(1))
-            {
-                MessageBox.Show("Ngày giao dịch không hợp lệ (vượt quá 1 năm tới)!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
-
-            // 4. Kiểm tra Chi nhánh (BranchId) - Rất quan trọng cho Task của bạn
+            // 3. Kiểm tra Chi nhánh (BranchId) - Rất quan trọng cho Task của bạn
             // Giả sử SessionManager đã lưu BranchId khi user đăng nhập vào Chi nhánh
             if (SessionManager.BranchId == null || SessionManager.BranchId <= 0)
             {
@@ -881,13 +939,9 @@ namespace QuanLyThuChi_DoAn
             return 0;
         }
 
-        // Sự kiện khi Kế toán gõ tiền vào ô Tiền trước thuế
-        private void txtSubTotal_TextChanged(object? sender, EventArgs e)
+        // Sự kiện khi Kế toán thay đổi số tiền trước thuế
+        private void txtSubTotal_ValueChanged(object? sender, EventArgs e)
         {
-            // Định dạng phân tách hàng nghìn ngay khi nhập
-            FormatCurrency(txtSubTotal);
-
-            // Gọi hàm tính toán trung tâm
             CalculateTotal();
         }
 
@@ -900,7 +954,8 @@ namespace QuanLyThuChi_DoAn
         // HÀM TÍNH TOÁN TRUNG TÂM
         private void CalculateTotal()
         {
-            if (!TryParseVndAmount(txtSubTotal.Text, out decimal subTotal) || subTotal <= 0)
+            decimal subTotal = txtSubTotal.Value;
+            if (subTotal <= 0)
             {
                 txtTaxAmount.Text = "0";
                 txtTotalAmount.Text = "0";
@@ -918,73 +973,6 @@ namespace QuanLyThuChi_DoAn
         private void UpdateTaxAndTotalPreview()
         {
             CalculateTotal();
-        }
-
-        private void FormatCurrency(TextBox textBox)
-        {
-            if (_isFormattingSubTotal || textBox == null)
-            {
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(textBox.Text))
-            {
-                return;
-            }
-
-            if (!TryParseVndAmount(textBox.Text, out decimal amount))
-            {
-                return;
-            }
-
-            string formatted = amount.ToString("N0");
-            if (textBox.Text == formatted)
-            {
-                return;
-            }
-
-            int oldSelectionStart = textBox.SelectionStart;
-            int oldLength = textBox.Text.Length;
-
-            _isFormattingSubTotal = true;
-            try
-            {
-                textBox.Text = formatted;
-
-                int newSelectionStart = oldSelectionStart + (formatted.Length - oldLength);
-                textBox.SelectionStart = Math.Max(0, Math.Min(textBox.Text.Length, newSelectionStart));
-            }
-            finally
-            {
-                _isFormattingSubTotal = false;
-            }
-        }
-
-        private void FormatSubTotalInput()
-        {
-            FormatCurrency(txtSubTotal);
-            CalculateTotal();
-        }
-
-        private static bool TryParseVndAmount(string input, out decimal amount)
-        {
-            amount = 0;
-
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                return false;
-            }
-
-            string normalized = input.Trim()
-                .Replace(".", string.Empty)
-                .Replace(",", string.Empty)
-                .Replace(" ", string.Empty);
-
-            return decimal.TryParse(
-                normalized,
-                NumberStyles.Number,
-                CultureInfo.InvariantCulture,
-                out amount);
         }
 
         private void ApplyPermissionRules()

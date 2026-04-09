@@ -50,7 +50,7 @@
             btnCancel = new FontAwesome.Sharp.IconButton();
             btnNew = new FontAwesome.Sharp.IconButton();
             panel7 = new Panel();
-            txtInitialDebt = new TextBox();
+            txtInitialDebt = new NumericUpDown();
             label6 = new Label();
             tableLayoutPanel2 = new TableLayoutPanel();
             panel6 = new Panel();
@@ -74,6 +74,7 @@
             tableLayoutPanel2.SuspendLayout();
             panel6.SuspendLayout();
             panel5.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)txtInitialDebt).BeginInit();
             SuspendLayout();
             // 
             // panel1
@@ -356,11 +357,14 @@
             // 
             txtInitialDebt.BorderStyle = BorderStyle.FixedSingle;
             txtInitialDebt.Dock = DockStyle.Top;
+            txtInitialDebt.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
             txtInitialDebt.Location = new Point(16, 289);
+            txtInitialDebt.Maximum = decimal.MaxValue;
             txtInitialDebt.Name = "txtInitialDebt";
             txtInitialDebt.Size = new Size(398, 29);
             txtInitialDebt.TabIndex = 7;
             txtInitialDebt.TextAlign = HorizontalAlignment.Right;
+            txtInitialDebt.ThousandsSeparator = true;
             // 
             // label6
             // 
@@ -518,6 +522,7 @@
             panel6.PerformLayout();
             panel5.ResumeLayout(false);
             panel5.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)txtInitialDebt).EndInit();
             ResumeLayout(false);
         }
 
@@ -537,7 +542,7 @@
         private TextBox txtAddress;
         private Label label3;
         private TextBox txtPartnerName;
-        private TextBox txtInitialDebt;
+        private NumericUpDown txtInitialDebt;
         private Label label6;
         private TableLayoutPanel tableLayoutPanel2;
         private Panel panel6;

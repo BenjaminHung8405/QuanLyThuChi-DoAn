@@ -46,7 +46,7 @@
             label6 = new Label();
             dateTimePicker1 = new DateTimePicker();
             label5 = new Label();
-            txtAmount = new TextBox();
+            txtAmount = new NumericUpDown();
             label4 = new Label();
             panel5 = new Panel();
             btnTransfer = new FontAwesome.Sharp.IconButton();
@@ -56,6 +56,7 @@
             panel2.SuspendLayout();
             panel4.SuspendLayout();
             panel5.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)txtAmount).BeginInit();
             SuspendLayout();
             // 
             // panel1
@@ -279,11 +280,14 @@
             // 
             txtAmount.BorderStyle = BorderStyle.FixedSingle;
             txtAmount.Dock = DockStyle.Top;
+            txtAmount.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
             txtAmount.Location = new Point(16, 53);
+            txtAmount.Maximum = decimal.MaxValue;
             txtAmount.Name = "txtAmount";
             txtAmount.Size = new Size(212, 23);
             txtAmount.TabIndex = 7;
             txtAmount.TextAlign = HorizontalAlignment.Right;
+            txtAmount.ThousandsSeparator = true;
             // 
             // label4
             // 
@@ -349,6 +353,7 @@
             panel4.ResumeLayout(false);
             panel4.PerformLayout();
             panel5.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)txtAmount).EndInit();
             ResumeLayout(false);
         }
 
@@ -372,7 +377,7 @@
         private Label label6;
         private DateTimePicker dateTimePicker1;
         private Label label5;
-        private TextBox txtAmount;
+        private NumericUpDown txtAmount;
         private Label lblBalanceSourceFund;
         private Label label7;
         private Label lblBalanceDestFund;

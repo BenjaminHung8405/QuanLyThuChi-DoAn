@@ -129,7 +129,7 @@ namespace QuanLyThuChi_DoAn
             txtPhone.Text = _selectedPartner.Phone ?? "";
             txtAddress.Text = _selectedPartner.Address ?? "";
             cboType.SelectedItem = MapDbValueToDisplayType(_selectedPartner.Type);
-            txtInitialDebt.Text = _selectedPartner.InitialDebt.ToString();
+            txtInitialDebt.Value = Math.Min(txtInitialDebt.Maximum, Math.Max(txtInitialDebt.Minimum, _selectedPartner.InitialDebt));
 
             // ✅ CHANGE: Enable input fields for edit (Auto-Edit on Select)
             SetInputFieldsEnabled(true);
@@ -170,13 +170,8 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
-            // ✅ Criterion 4: Validate InitialDebt is valid decimal
-            if (!decimal.TryParse(txtInitialDebt.Text, out decimal initialDebt))
-            {
-                MessageBox.Show("Nợ ban đầu phải là số hợp lệ!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtInitialDebt.Focus();
-                return;
-            }
+            // ✅ Criterion 4: NumericUpDown already constrains initial debt to numeric input
+            decimal initialDebt = txtInitialDebt.Value;
 
             try
             {
@@ -315,7 +310,7 @@ namespace QuanLyThuChi_DoAn
             txtPhone.Text = "";
             txtAddress.Text = "";
             cboType.SelectedIndex = 0;
-            txtInitialDebt.Text = "0";
+            txtInitialDebt.Value = 0;
             txtSearch.Text = "";
             cboFilterType.SelectedIndex = 0;
             _selectedPartner = null;

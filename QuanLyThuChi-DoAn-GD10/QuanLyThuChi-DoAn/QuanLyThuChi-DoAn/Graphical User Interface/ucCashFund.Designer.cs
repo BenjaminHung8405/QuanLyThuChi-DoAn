@@ -56,7 +56,7 @@
             btnCancel = new FontAwesome.Sharp.IconButton();
             btnNew = new FontAwesome.Sharp.IconButton();
             gbCashFundDetail = new GroupBox();
-            txtBalance = new TextBox();
+            txtBalance = new NumericUpDown();
             label3 = new Label();
             txtAccountNumber = new TextBox();
             label2 = new Label();
@@ -73,6 +73,7 @@
             pnlButtons.SuspendLayout();
             tableLayoutPanel3.SuspendLayout();
             gbCashFundDetail.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)txtBalance).BeginInit();
             SuspendLayout();
             // 
             // topPanel
@@ -395,10 +396,14 @@
             // 
             txtBalance.BorderStyle = BorderStyle.FixedSingle;
             txtBalance.Dock = DockStyle.Top;
+            txtBalance.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
             txtBalance.Location = new Point(16, 257);
+            txtBalance.Maximum = decimal.MaxValue;
             txtBalance.Name = "txtBalance";
             txtBalance.Size = new Size(293, 29);
             txtBalance.TabIndex = 6;
+            txtBalance.TextAlign = HorizontalAlignment.Right;
+            txtBalance.ThousandsSeparator = true;
             // 
             // label3
             // 
@@ -495,6 +500,7 @@
             tableLayoutPanel3.ResumeLayout(false);
             gbCashFundDetail.ResumeLayout(false);
             gbCashFundDetail.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)txtBalance).EndInit();
             ResumeLayout(false);
         }
 
@@ -515,7 +521,7 @@
         private FontAwesome.Sharp.IconButton btnCancel;
         private FontAwesome.Sharp.IconButton btnNew;
         private GroupBox gbCashFundDetail;
-        private TextBox txtBalance;
+        private NumericUpDown txtBalance;
         private Label label3;
         private TextBox txtAccountNumber;
         private Label label2;

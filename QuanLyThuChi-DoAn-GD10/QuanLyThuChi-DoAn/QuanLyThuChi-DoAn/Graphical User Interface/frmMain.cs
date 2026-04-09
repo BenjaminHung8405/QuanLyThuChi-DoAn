@@ -30,6 +30,7 @@ namespace QuanLyThuChi_DoAn
                 mnuManageUsers.Click += mnuManageUsers_Click;
                 mnuBranchConfig.Click += mnuBranchConfig_Click;
                 mnuTaxes.Click += mnuTaxes_Click;
+                mnuAuditLogs.Click += mnuAuditLogViewer_Click;
             }
             catch
             {
@@ -117,6 +118,7 @@ namespace QuanLyThuChi_DoAn
             mnuReconciliation.Visible = SessionManager.CanViewSummaryReports;
             mnuInternalTransfer.Visible = SessionManager.CanTransferInterBranch;
             mnuDebtManagement.Visible = SessionManager.CanApproveDebt;
+            mnuAuditLogs.Visible = SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin;
 
             string currentRoleCode = (SessionManager.CurrentRoleCode ?? string.Empty).Trim().ToUpperInvariant();
             if (currentRoleCode == "STAFF")
@@ -319,6 +321,24 @@ namespace QuanLyThuChi_DoAn
             {
                 MessageBox.Show($"Lỗi khi mở màn hình Quản lý chi nhánh: {ex.Message}", "Lỗi hệ thống",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void mnuAuditLogViewer_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+                {
+                    MessageBox.Show("Bạn không có quyền xem Nhật ký hệ thống.", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                ShowUserControl(new ucAuditLogViewer());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Nhật ký hệ thống: {ex.Message}", "Lỗi hệ thống", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

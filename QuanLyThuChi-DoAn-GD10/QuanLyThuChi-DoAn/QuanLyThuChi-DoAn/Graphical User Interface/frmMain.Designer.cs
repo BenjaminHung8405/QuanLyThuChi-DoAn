@@ -30,6 +30,7 @@
         {
             menuStrip1 = new MenuStrip();
             mnuSystem = new ToolStripMenuItem();
+            mnuAuditLogs = new ToolStripMenuItem();
             mnuManageUsers = new ToolStripMenuItem();
             mnuBranchConfig = new ToolStripMenuItem();
             mnuLogout = new ToolStripMenuItem();
@@ -37,6 +38,7 @@
             mnuPartners = new ToolStripMenuItem();
             mnuCashFunds = new ToolStripMenuItem();
             mnuTransactionCategory = new ToolStripMenuItem();
+            mnuTaxes = new ToolStripMenuItem();
             mnuOperations = new ToolStripMenuItem();
             mnuTransaction = new ToolStripMenuItem();
             mnuDebtManagement = new ToolStripMenuItem();
@@ -54,7 +56,6 @@
             pnlContent = new Panel();
             panelLoadingOverlay = new Panel();
             loadingLabel = new Label();
-            mnuTaxes = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
@@ -76,11 +77,17 @@
             // 
             // mnuSystem
             // 
-            mnuSystem.DropDownItems.AddRange(new ToolStripItem[] { mnuManageUsers, mnuBranchConfig, mnuLogout });
+            mnuSystem.DropDownItems.AddRange(new ToolStripItem[] { mnuAuditLogs, mnuManageUsers, mnuBranchConfig, mnuLogout });
             mnuSystem.Name = "mnuSystem";
             mnuSystem.ShortcutKeys = Keys.Alt | Keys.S;
             mnuSystem.Size = new Size(69, 20);
             mnuSystem.Text = "Hệ thống";
+            // 
+            // mnuAuditLogs
+            // 
+            mnuAuditLogs.Name = "mnuAuditLogs";
+            mnuAuditLogs.Size = new Size(180, 22);
+            mnuAuditLogs.Text = "Nhật ký hệ thống";
             // 
             // mnuManageUsers
             // 
@@ -129,6 +136,12 @@
             mnuTransactionCategory.Size = new Size(240, 22);
             mnuTransactionCategory.Text = "Loại thu chi";
             mnuTransactionCategory.Click += mnuTransactionCategory_Click;
+            // 
+            // mnuTaxes
+            // 
+            mnuTaxes.Name = "mnuTaxes";
+            mnuTaxes.Size = new Size(240, 22);
+            mnuTaxes.Text = "Thuế suất";
             // 
             // mnuOperations
             // 
@@ -264,12 +277,6 @@
             loadingLabel.TabIndex = 0;
             loadingLabel.Text = "Đang tải dữ liệu...";
             // 
-            // mnuTaxes
-            // 
-            mnuTaxes.Name = "mnuTaxes";
-            mnuTaxes.Size = new Size(240, 22);
-            mnuTaxes.Text = "Thuế suất";
-            // 
             // frmMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -330,5 +337,6 @@
         private ToolStripMenuItem mnuDashboard;
         private ToolStripMenuItem mnuReconciliation;
         private ToolStripMenuItem mnuTaxes;
+        private ToolStripMenuItem mnuAuditLogs;
     }
 }

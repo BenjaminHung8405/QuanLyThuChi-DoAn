@@ -157,6 +157,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             ApplySessionScope(trans);
             await ApplyTaxCalculationAsync(trans);
+            trans.TransDate = DateTime.Now;
 
             if (trans.Amount <= 0)
                 throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
@@ -234,6 +235,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             ApplySessionScope(transaction);
             ApplyTaxCalculation(transaction);
+            transaction.TransDate = DateTime.Now;
 
             if (transaction.Amount <= 0)
                 throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
@@ -343,6 +345,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             transaction.TenantId = existing.TenantId;
             transaction.BranchId = existing.BranchId;
+            transaction.TransDate = existing.TransDate;
             ApplyTaxCalculation(transaction);
 
             if (transaction.Amount <= 0)

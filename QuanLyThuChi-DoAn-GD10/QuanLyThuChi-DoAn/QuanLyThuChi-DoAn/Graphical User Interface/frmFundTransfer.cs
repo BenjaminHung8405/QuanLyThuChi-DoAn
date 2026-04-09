@@ -166,7 +166,8 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
-            if (!decimal.TryParse(txtAmount.Text.Trim(), out decimal amount) || amount <= 0)
+            decimal amount = txtAmount.Value;
+            if (amount <= 0)
             {
                 MessageBox.Show("Số tiền phải là số dương lớn hơn 0.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -258,7 +259,7 @@ namespace QuanLyThuChi_DoAn
 
                 cbSourceFund.SelectedIndex = -1;
                 cbDestFund.SelectedIndex = -1;
-                txtAmount.Text = "";
+                txtAmount.Value = 0;
                 txtNotes.Text = "";
 
                 this.DialogResult = DialogResult.OK;
