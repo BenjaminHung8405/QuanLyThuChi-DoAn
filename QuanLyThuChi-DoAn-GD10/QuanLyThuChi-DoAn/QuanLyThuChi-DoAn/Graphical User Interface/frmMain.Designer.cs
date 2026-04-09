@@ -54,6 +54,7 @@
             pnlContent = new Panel();
             panelLoadingOverlay = new Panel();
             loadingLabel = new Label();
+            mnuTaxes = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
@@ -102,7 +103,7 @@
             // 
             // mnuCatalog
             // 
-            mnuCatalog.DropDownItems.AddRange(new ToolStripItem[] { mnuPartners, mnuCashFunds, mnuTransactionCategory });
+            mnuCatalog.DropDownItems.AddRange(new ToolStripItem[] { mnuPartners, mnuCashFunds, mnuTransactionCategory, mnuTaxes });
             mnuCatalog.Name = "mnuCatalog";
             mnuCatalog.ShortcutKeys = Keys.Alt | Keys.D;
             mnuCatalog.Size = new Size(74, 20);
@@ -168,7 +169,7 @@
             // mnuDashboard
             // 
             mnuDashboard.Name = "mnuDashboard";
-            mnuDashboard.Size = new Size(206, 22);
+            mnuDashboard.Size = new Size(291, 22);
             mnuDashboard.Text = "Tổng quan thống kê";
             // 
             // mnuCashLedger
@@ -181,7 +182,7 @@
             // mnuReconciliation
             // 
             mnuReconciliation.Name = "mnuReconciliation";
-            mnuReconciliation.Size = new Size(206, 22);
+            mnuReconciliation.Size = new Size(291, 22);
             mnuReconciliation.Text = "Đối soát chuỗi chi nhánh";
             // 
             // toolStrip1
@@ -263,6 +264,12 @@
             loadingLabel.TabIndex = 0;
             loadingLabel.Text = "Đang tải dữ liệu...";
             // 
+            // mnuTaxes
+            // 
+            mnuTaxes.Name = "mnuTaxes";
+            mnuTaxes.Size = new Size(240, 22);
+            mnuTaxes.Text = "Thuế suất";
+            // 
             // frmMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -322,5 +329,6 @@
         private Label loadingLabel;
         private ToolStripMenuItem mnuDashboard;
         private ToolStripMenuItem mnuReconciliation;
+        private ToolStripMenuItem mnuTaxes;
     }
 }

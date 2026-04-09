@@ -18,20 +18,31 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         public List<CashFund> GetFundsByBranch(int tenantId, int branchId, int roleId)
         {
+            bool isAdminScope = roleId == (int)UserRole.SuperAdmin || roleId == (int)UserRole.TenantAdmin;
+            bool isBranchScope = roleId == (int)UserRole.BranchManager || roleId == (int)UserRole.Staff;
+
+            if (!isAdminScope && !isBranchScope)
+            {
+                return new List<CashFund>();
+            }
+
             var query = _context.CashFunds
-                .Where(f => f.TenantId == tenantId && f.BranchId == branchId && f.IsActive);
+                .Include(f => f.Branch)
+                .Where(f => f.TenantId == tenantId && f.IsActive);
 
-            if (roleId == (int)UserRole.SuperAdmin || roleId == (int)UserRole.TenantAdmin)
+            if (branchId > 0)
             {
-                return query.ToList();
+                query = query.Where(f => f.BranchId == branchId);
+            }
+            else if (!isAdminScope)
+            {
+                // BranchManager/Staff không được phép xem "tất cả chi nhánh".
+                return new List<CashFund>();
             }
 
-            if (roleId == (int)UserRole.BranchManager || roleId == (int)UserRole.Staff)
-            {
-                return query.ToList();
-            }
-
-            return new List<CashFund>();
+            return query
+                .OrderBy(f => f.FundName)
+                .ToList();
         }
 
         public List<CashFund> GetFundsForCurrentSession(int roleId)

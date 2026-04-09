@@ -42,22 +42,31 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public List<Transaction> GetTransactionsForCurrentSession(DateTime fromDate, DateTime toDate, string keyword = "")
         {
-            if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+            if (!SessionManager.CurrentTenantId.HasValue)
             {
                 return new List<Transaction>();
             }
 
             int currentTenantId = SessionManager.CurrentTenantId.Value;
-            int currentBranchId = SessionManager.CurrentBranchId.Value;
+            int currentBranchId = SessionManager.CurrentBranchId ?? 0;
 
             var query = _context.Transactions
                 .Include(t => t.Category)
                 .Include(t => t.Partner)
                 .Where(t => t.TenantId == currentTenantId)
-                .Where(t => t.BranchId == currentBranchId)
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED")
                 .Where(t => t.IsActive == true);
+
+            if (currentBranchId > 0)
+            {
+                query = query.Where(t => t.BranchId == currentBranchId);
+            }
+            else if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+            {
+                // Role theo chi nhánh bắt buộc phải có branch cụ thể.
+                return new List<Transaction>();
+            }
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
@@ -77,20 +86,31 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public IQueryable<Transaction> GetTransactionsQueryForCurrentSession()
         {
-            if (!SessionManager.CurrentTenantId.HasValue || !SessionManager.CurrentBranchId.HasValue)
+            if (!SessionManager.CurrentTenantId.HasValue)
             {
                 return Enumerable.Empty<Transaction>().AsQueryable();
             }
 
             int currentTenantId = SessionManager.CurrentTenantId.Value;
-            int currentBranchId = SessionManager.CurrentBranchId.Value;
+            int currentBranchId = SessionManager.CurrentBranchId ?? 0;
 
-            return _context.Transactions
+            var query = _context.Transactions
                 .Include(t => t.Category)
                 .Include(t => t.Partner)
                 .Where(t => t.IsActive == true && t.Status == "COMPLETED")
-                .Where(t => t.TenantId == currentTenantId)
-                .Where(t => t.BranchId == currentBranchId);
+                .Where(t => t.TenantId == currentTenantId);
+
+            if (currentBranchId > 0)
+            {
+                query = query.Where(t => t.BranchId == currentBranchId);
+            }
+            else if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+            {
+                // Role theo chi nhánh bắt buộc phải có branch cụ thể.
+                return Enumerable.Empty<Transaction>().AsQueryable();
+            }
+
+            return query;
         }
 
         /// <summary>

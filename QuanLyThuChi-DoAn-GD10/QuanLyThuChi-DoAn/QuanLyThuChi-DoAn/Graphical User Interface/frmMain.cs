@@ -29,6 +29,7 @@ namespace QuanLyThuChi_DoAn
                 mnuReconciliation.Click += mnuReconciliation_Click;
                 mnuManageUsers.Click += mnuManageUsers_Click;
                 mnuBranchConfig.Click += mnuBranchConfig_Click;
+                mnuTaxes.Click += mnuTaxes_Click;
             }
             catch
             {
@@ -111,6 +112,7 @@ namespace QuanLyThuChi_DoAn
             mnuManageUsers.Visible = SessionManager.CanManageUsers;
             mnuBranchConfig.Visible = SessionManager.CanManageBranches;
             mnuCashFunds.Visible = true;
+            mnuTaxes.Visible = SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin;
             mnuDashboard.Visible = SessionManager.CanViewSummaryReports;
             mnuReconciliation.Visible = SessionManager.CanViewSummaryReports;
             mnuInternalTransfer.Visible = SessionManager.CanTransferInterBranch;
@@ -249,6 +251,19 @@ namespace QuanLyThuChi_DoAn
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi khi mở màn hình Quỹ tiền: {ex.Message}", "Lỗi hệ thống",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void mnuTaxes_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                ShowUserControl(new ucTaxManagement());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mở màn hình Thuế suất: {ex.Message}", "Lỗi hệ thống",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

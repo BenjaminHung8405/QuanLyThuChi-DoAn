@@ -204,7 +204,9 @@ namespace QuanLyThuChi_DoAn
                 var transOut = new Transaction
                 {
                     TenantId = SessionManager.CurrentTenantId ?? 0,
-                    BranchId = SessionManager.CurrentBranchId ?? sourceFund.BranchId,
+                    BranchId = (SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+                        ? SessionManager.CurrentBranchId.Value
+                        : sourceFund.BranchId,
                     FundId = sourceFund.FundId,
                     CategoryId = 98, // Dùng danh mục Rút tiền (OUT)
                     TransType = "OUT",

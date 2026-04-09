@@ -28,8 +28,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Graphical User Interface\frmAddEditTax.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Graphical User Interface\frmEditUser.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Graphical User Interface\ucTaxManagement.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="Properties\Settings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
