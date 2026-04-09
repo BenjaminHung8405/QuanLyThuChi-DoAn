@@ -37,19 +37,24 @@
             pnlFilterSpacer = new Panel();
             btnThongKe = new Button();
             tlpKpi = new TableLayoutPanel();
-            pnlCardIncome = new Panel();
-            lblTotalIncome = new Label();
-            lblTitleIncome = new Label();
-            pnlCardExpense = new Panel();
-            lblTotalExpense = new Label();
-            lblTitleExpense = new Label();
-            pnlCardBalance = new Panel();
-            lblBalance = new Label();
-            lblTitleBalance = new Label();
-            pnlCardDebt = new Panel();
-            lblTotalPayable = new Label();
-            lblTotalReceivable = new Label();
-            lblTitleDebt = new Label();
+            pnlCardNetIncome = new Panel();
+            lblOutputVAT = new Label();
+            lblNetIncome = new Label();
+            lblTitleNetIncome = new Label();
+            pnlNetIncomeAccent = new Panel();
+            pnlCardNetExpense = new Panel();
+            lblInputVAT = new Label();
+            lblNetExpense = new Label();
+            lblTitleNetExpense = new Label();
+            pnlNetExpenseAccent = new Panel();
+            pnlCardBusinessPerformance = new Panel();
+            tlpBusinessMetrics = new TableLayoutPanel();
+            lblEstimatedTax = new Label();
+            lblEstimatedTaxCaption = new Label();
+            lblNetProfit = new Label();
+            lblNetProfitCaption = new Label();
+            lblTitleBusinessPerformance = new Label();
+            pnlBusinessPerformanceAccent = new Panel();
             pnlCharts = new Panel();
             pnlChartCard = new Panel();
             pnlExpenseHost = new Panel();
@@ -58,10 +63,10 @@
             pnlFilter.SuspendLayout();
             tlpFilter.SuspendLayout();
             tlpKpi.SuspendLayout();
-            pnlCardIncome.SuspendLayout();
-            pnlCardExpense.SuspendLayout();
-            pnlCardBalance.SuspendLayout();
-            pnlCardDebt.SuspendLayout();
+            pnlCardNetIncome.SuspendLayout();
+            pnlCardNetExpense.SuspendLayout();
+            pnlCardBusinessPerformance.SuspendLayout();
+            tlpBusinessMetrics.SuspendLayout();
             pnlCharts.SuspendLayout();
             pnlChartCard.SuspendLayout();
             SuspendLayout();
@@ -175,15 +180,13 @@
             // tlpKpi
             // 
             tlpKpi.BackColor = Color.Transparent;
-            tlpKpi.ColumnCount = 4;
-            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            tlpKpi.Controls.Add(pnlCardIncome, 0, 0);
-            tlpKpi.Controls.Add(pnlCardExpense, 1, 0);
-            tlpKpi.Controls.Add(pnlCardBalance, 2, 0);
-            tlpKpi.Controls.Add(pnlCardDebt, 3, 0);
+            tlpKpi.ColumnCount = 3;
+            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3333321F));
+            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3333321F));
+            tlpKpi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3333321F));
+            tlpKpi.Controls.Add(pnlCardNetIncome, 0, 0);
+            tlpKpi.Controls.Add(pnlCardNetExpense, 1, 0);
+            tlpKpi.Controls.Add(pnlCardBusinessPerformance, 2, 0);
             tlpKpi.Dock = DockStyle.Top;
             tlpKpi.Location = new Point(20, 100);
             tlpKpi.Name = "tlpKpi";
@@ -192,164 +195,236 @@
             tlpKpi.Size = new Size(1140, 148);
             tlpKpi.TabIndex = 1;
             // 
-            // pnlCardIncome
+            // pnlCardNetIncome
             // 
-            pnlCardIncome.BackColor = Color.FromArgb(237, 250, 241);
-            pnlCardIncome.BorderStyle = BorderStyle.FixedSingle;
-            pnlCardIncome.Controls.Add(lblTotalIncome);
-            pnlCardIncome.Controls.Add(lblTitleIncome);
-            pnlCardIncome.Dock = DockStyle.Fill;
-            pnlCardIncome.Location = new Point(6, 10);
-            pnlCardIncome.Margin = new Padding(6, 10, 6, 10);
-            pnlCardIncome.Name = "pnlCardIncome";
-            pnlCardIncome.Padding = new Padding(16, 14, 16, 14);
-            pnlCardIncome.Size = new Size(273, 128);
-            pnlCardIncome.TabIndex = 0;
+            pnlCardNetIncome.BackColor = Color.White;
+            pnlCardNetIncome.BorderStyle = BorderStyle.FixedSingle;
+            pnlCardNetIncome.Controls.Add(lblOutputVAT);
+            pnlCardNetIncome.Controls.Add(lblNetIncome);
+            pnlCardNetIncome.Controls.Add(lblTitleNetIncome);
+            pnlCardNetIncome.Controls.Add(pnlNetIncomeAccent);
+            pnlCardNetIncome.Dock = DockStyle.Fill;
+            pnlCardNetIncome.Location = new Point(8, 10);
+            pnlCardNetIncome.Margin = new Padding(8, 10, 8, 10);
+            pnlCardNetIncome.Name = "pnlCardNetIncome";
+            pnlCardNetIncome.Size = new Size(364, 128);
+            pnlCardNetIncome.TabIndex = 0;
             // 
-            // lblTotalIncome
+            // lblOutputVAT
             // 
-            lblTotalIncome.Dock = DockStyle.Fill;
-            lblTotalIncome.Font = new Font("Segoe UI", 22F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTotalIncome.ForeColor = Color.SeaGreen;
-            lblTotalIncome.Location = new Point(16, 35);
-            lblTotalIncome.Name = "lblTotalIncome";
-            lblTotalIncome.Size = new Size(239, 77);
-            lblTotalIncome.TabIndex = 1;
-            lblTotalIncome.Text = "0 VNĐ";
-            lblTotalIncome.TextAlign = ContentAlignment.MiddleLeft;
+            lblOutputVAT.Dock = DockStyle.Bottom;
+            lblOutputVAT.Font = new Font("Segoe UI", 9F, FontStyle.Italic, GraphicsUnit.Point, 0);
+            lblOutputVAT.ForeColor = Color.Gray;
+            lblOutputVAT.Location = new Point(0, 100);
+            lblOutputVAT.Name = "lblOutputVAT";
+            lblOutputVAT.Padding = new Padding(16, 0, 16, 8);
+            lblOutputVAT.Size = new Size(362, 26);
+            lblOutputVAT.TabIndex = 3;
+            lblOutputVAT.Text = "+ Thuế GTGT đầu ra: 0 VNĐ";
+            lblOutputVAT.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // lblTitleIncome
+            // lblNetIncome
             // 
-            lblTitleIncome.Dock = DockStyle.Top;
-            lblTitleIncome.Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTitleIncome.ForeColor = Color.FromArgb(80, 80, 80);
-            lblTitleIncome.Location = new Point(16, 14);
-            lblTitleIncome.Name = "lblTitleIncome";
-            lblTitleIncome.Size = new Size(239, 21);
-            lblTitleIncome.TabIndex = 0;
-            lblTitleIncome.Text = "TỔNG THU";
+            lblNetIncome.AutoSize = false;
+            lblNetIncome.Dock = DockStyle.Fill;
+            lblNetIncome.Font = new Font("Segoe UI", 18F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblNetIncome.ForeColor = Color.SeaGreen;
+            lblNetIncome.Location = new Point(0, 35);
+            lblNetIncome.Name = "lblNetIncome";
+            lblNetIncome.Padding = new Padding(16, 0, 16, 0);
+            lblNetIncome.Size = new Size(362, 91);
+            lblNetIncome.TabIndex = 2;
+            lblNetIncome.Text = "0 VNĐ";
+            lblNetIncome.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // pnlCardExpense
+            // lblTitleNetIncome
             // 
-            pnlCardExpense.BackColor = Color.FromArgb(254, 242, 242);
-            pnlCardExpense.BorderStyle = BorderStyle.FixedSingle;
-            pnlCardExpense.Controls.Add(lblTotalExpense);
-            pnlCardExpense.Controls.Add(lblTitleExpense);
-            pnlCardExpense.Dock = DockStyle.Fill;
-            pnlCardExpense.Location = new Point(291, 10);
-            pnlCardExpense.Margin = new Padding(6, 10, 6, 10);
-            pnlCardExpense.Name = "pnlCardExpense";
-            pnlCardExpense.Padding = new Padding(16, 14, 16, 14);
-            pnlCardExpense.Size = new Size(273, 128);
-            pnlCardExpense.TabIndex = 1;
+            lblTitleNetIncome.Dock = DockStyle.Top;
+            lblTitleNetIncome.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitleNetIncome.ForeColor = Color.DimGray;
+            lblTitleNetIncome.Location = new Point(0, 5);
+            lblTitleNetIncome.Name = "lblTitleNetIncome";
+            lblTitleNetIncome.Padding = new Padding(16, 8, 16, 0);
+            lblTitleNetIncome.Size = new Size(362, 30);
+            lblTitleNetIncome.TabIndex = 1;
+            lblTitleNetIncome.Text = "DOANH THU THUẦN";
+            lblTitleNetIncome.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // lblTotalExpense
+            // pnlNetIncomeAccent
             // 
-            lblTotalExpense.Dock = DockStyle.Fill;
-            lblTotalExpense.Font = new Font("Segoe UI", 22F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTotalExpense.ForeColor = Color.IndianRed;
-            lblTotalExpense.Location = new Point(16, 35);
-            lblTotalExpense.Name = "lblTotalExpense";
-            lblTotalExpense.Size = new Size(239, 77);
-            lblTotalExpense.TabIndex = 1;
-            lblTotalExpense.Text = "0 VNĐ";
-            lblTotalExpense.TextAlign = ContentAlignment.MiddleLeft;
+            pnlNetIncomeAccent.BackColor = Color.SeaGreen;
+            pnlNetIncomeAccent.Dock = DockStyle.Top;
+            pnlNetIncomeAccent.Location = new Point(0, 0);
+            pnlNetIncomeAccent.Name = "pnlNetIncomeAccent";
+            pnlNetIncomeAccent.Size = new Size(362, 5);
+            pnlNetIncomeAccent.TabIndex = 0;
             // 
-            // lblTitleExpense
+            // pnlCardNetExpense
             // 
-            lblTitleExpense.Dock = DockStyle.Top;
-            lblTitleExpense.Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTitleExpense.ForeColor = Color.FromArgb(80, 80, 80);
-            lblTitleExpense.Location = new Point(16, 14);
-            lblTitleExpense.Name = "lblTitleExpense";
-            lblTitleExpense.Size = new Size(239, 21);
-            lblTitleExpense.TabIndex = 0;
-            lblTitleExpense.Text = "TỔNG CHI";
+            pnlCardNetExpense.BackColor = Color.White;
+            pnlCardNetExpense.BorderStyle = BorderStyle.FixedSingle;
+            pnlCardNetExpense.Controls.Add(lblInputVAT);
+            pnlCardNetExpense.Controls.Add(lblNetExpense);
+            pnlCardNetExpense.Controls.Add(lblTitleNetExpense);
+            pnlCardNetExpense.Controls.Add(pnlNetExpenseAccent);
+            pnlCardNetExpense.Dock = DockStyle.Fill;
+            pnlCardNetExpense.Location = new Point(388, 10);
+            pnlCardNetExpense.Margin = new Padding(8, 10, 8, 10);
+            pnlCardNetExpense.Name = "pnlCardNetExpense";
+            pnlCardNetExpense.Size = new Size(364, 128);
+            pnlCardNetExpense.TabIndex = 1;
             // 
-            // pnlCardBalance
+            // lblInputVAT
             // 
-            pnlCardBalance.BackColor = Color.FromArgb(239, 246, 255);
-            pnlCardBalance.BorderStyle = BorderStyle.FixedSingle;
-            pnlCardBalance.Controls.Add(lblBalance);
-            pnlCardBalance.Controls.Add(lblTitleBalance);
-            pnlCardBalance.Dock = DockStyle.Fill;
-            pnlCardBalance.Location = new Point(576, 10);
-            pnlCardBalance.Margin = new Padding(6, 10, 6, 10);
-            pnlCardBalance.Name = "pnlCardBalance";
-            pnlCardBalance.Padding = new Padding(16, 14, 16, 14);
-            pnlCardBalance.Size = new Size(273, 128);
-            pnlCardBalance.TabIndex = 2;
+            lblInputVAT.Dock = DockStyle.Bottom;
+            lblInputVAT.Font = new Font("Segoe UI", 9F, FontStyle.Italic, GraphicsUnit.Point, 0);
+            lblInputVAT.ForeColor = Color.Gray;
+            lblInputVAT.Location = new Point(0, 100);
+            lblInputVAT.Name = "lblInputVAT";
+            lblInputVAT.Padding = new Padding(16, 0, 16, 8);
+            lblInputVAT.Size = new Size(362, 26);
+            lblInputVAT.TabIndex = 3;
+            lblInputVAT.Text = "+ Thuế GTGT đầu vào: 0 VNĐ";
+            lblInputVAT.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // lblBalance
+            // lblNetExpense
             // 
-            lblBalance.Dock = DockStyle.Fill;
-            lblBalance.Font = new Font("Segoe UI", 22F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblBalance.ForeColor = Color.RoyalBlue;
-            lblBalance.Location = new Point(16, 35);
-            lblBalance.Name = "lblBalance";
-            lblBalance.Size = new Size(239, 77);
-            lblBalance.TabIndex = 1;
-            lblBalance.Text = "0 VNĐ";
-            lblBalance.TextAlign = ContentAlignment.MiddleLeft;
+            lblNetExpense.AutoSize = false;
+            lblNetExpense.Dock = DockStyle.Fill;
+            lblNetExpense.Font = new Font("Segoe UI", 18F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblNetExpense.ForeColor = Color.IndianRed;
+            lblNetExpense.Location = new Point(0, 35);
+            lblNetExpense.Name = "lblNetExpense";
+            lblNetExpense.Padding = new Padding(16, 0, 16, 0);
+            lblNetExpense.Size = new Size(362, 91);
+            lblNetExpense.TabIndex = 2;
+            lblNetExpense.Text = "0 VNĐ";
+            lblNetExpense.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // lblTitleBalance
+            // lblTitleNetExpense
             // 
-            lblTitleBalance.Dock = DockStyle.Top;
-            lblTitleBalance.Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTitleBalance.ForeColor = Color.FromArgb(80, 80, 80);
-            lblTitleBalance.Location = new Point(16, 14);
-            lblTitleBalance.Name = "lblTitleBalance";
-            lblTitleBalance.Size = new Size(239, 21);
-            lblTitleBalance.TabIndex = 0;
-            lblTitleBalance.Text = "TỒN QUỸ HIỆN TẠI";
+            lblTitleNetExpense.Dock = DockStyle.Top;
+            lblTitleNetExpense.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitleNetExpense.ForeColor = Color.DimGray;
+            lblTitleNetExpense.Location = new Point(0, 5);
+            lblTitleNetExpense.Name = "lblTitleNetExpense";
+            lblTitleNetExpense.Padding = new Padding(16, 8, 16, 0);
+            lblTitleNetExpense.Size = new Size(362, 30);
+            lblTitleNetExpense.TabIndex = 1;
+            lblTitleNetExpense.Text = "CHI PHÍ THUẦN";
+            lblTitleNetExpense.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // pnlCardDebt
+            // pnlNetExpenseAccent
             // 
-            pnlCardDebt.BackColor = Color.FromArgb(255, 249, 238);
-            pnlCardDebt.BorderStyle = BorderStyle.FixedSingle;
-            pnlCardDebt.Controls.Add(lblTotalPayable);
-            pnlCardDebt.Controls.Add(lblTotalReceivable);
-            pnlCardDebt.Controls.Add(lblTitleDebt);
-            pnlCardDebt.Dock = DockStyle.Fill;
-            pnlCardDebt.Location = new Point(861, 10);
-            pnlCardDebt.Margin = new Padding(6, 10, 6, 10);
-            pnlCardDebt.Name = "pnlCardDebt";
-            pnlCardDebt.Padding = new Padding(16, 14, 16, 14);
-            pnlCardDebt.Size = new Size(273, 128);
-            pnlCardDebt.TabIndex = 3;
+            pnlNetExpenseAccent.BackColor = Color.IndianRed;
+            pnlNetExpenseAccent.Dock = DockStyle.Top;
+            pnlNetExpenseAccent.Location = new Point(0, 0);
+            pnlNetExpenseAccent.Name = "pnlNetExpenseAccent";
+            pnlNetExpenseAccent.Size = new Size(362, 5);
+            pnlNetExpenseAccent.TabIndex = 0;
             // 
-            // lblTotalPayable
+            // pnlCardBusinessPerformance
             // 
-            lblTotalPayable.Dock = DockStyle.Top;
-            lblTotalPayable.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTotalPayable.ForeColor = Color.IndianRed;
-            lblTotalPayable.Location = new Point(16, 70);
-            lblTotalPayable.Name = "lblTotalPayable";
-            lblTotalPayable.Size = new Size(239, 28);
-            lblTotalPayable.TabIndex = 2;
-            lblTotalPayable.Text = "Phải trả: 0 VNĐ";
+            pnlCardBusinessPerformance.BackColor = Color.White;
+            pnlCardBusinessPerformance.BorderStyle = BorderStyle.FixedSingle;
+            pnlCardBusinessPerformance.Controls.Add(tlpBusinessMetrics);
+            pnlCardBusinessPerformance.Controls.Add(lblTitleBusinessPerformance);
+            pnlCardBusinessPerformance.Controls.Add(pnlBusinessPerformanceAccent);
+            pnlCardBusinessPerformance.Dock = DockStyle.Fill;
+            pnlCardBusinessPerformance.Location = new Point(768, 10);
+            pnlCardBusinessPerformance.Margin = new Padding(8, 10, 8, 10);
+            pnlCardBusinessPerformance.Name = "pnlCardBusinessPerformance";
+            pnlCardBusinessPerformance.Size = new Size(364, 128);
+            pnlCardBusinessPerformance.TabIndex = 2;
             // 
-            // lblTotalReceivable
+            // tlpBusinessMetrics
             // 
-            lblTotalReceivable.Dock = DockStyle.Top;
-            lblTotalReceivable.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTotalReceivable.ForeColor = Color.SeaGreen;
-            lblTotalReceivable.Location = new Point(16, 42);
-            lblTotalReceivable.Name = "lblTotalReceivable";
-            lblTotalReceivable.Size = new Size(239, 28);
-            lblTotalReceivable.TabIndex = 1;
-            lblTotalReceivable.Text = "Phải thu: 0 VNĐ";
+            tlpBusinessMetrics.ColumnCount = 2;
+            tlpBusinessMetrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58F));
+            tlpBusinessMetrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42F));
+            tlpBusinessMetrics.Controls.Add(lblEstimatedTax, 1, 1);
+            tlpBusinessMetrics.Controls.Add(lblEstimatedTaxCaption, 0, 1);
+            tlpBusinessMetrics.Controls.Add(lblNetProfit, 1, 0);
+            tlpBusinessMetrics.Controls.Add(lblNetProfitCaption, 0, 0);
+            tlpBusinessMetrics.Dock = DockStyle.Fill;
+            tlpBusinessMetrics.Location = new Point(0, 35);
+            tlpBusinessMetrics.Name = "tlpBusinessMetrics";
+            tlpBusinessMetrics.Padding = new Padding(16, 6, 16, 10);
+            tlpBusinessMetrics.RowCount = 2;
+            tlpBusinessMetrics.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tlpBusinessMetrics.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tlpBusinessMetrics.Size = new Size(362, 91);
+            tlpBusinessMetrics.TabIndex = 2;
             // 
-            // lblTitleDebt
+            // lblEstimatedTax
             // 
-            lblTitleDebt.Dock = DockStyle.Top;
-            lblTitleDebt.Font = new Font("Segoe UI Semibold", 10.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblTitleDebt.ForeColor = Color.FromArgb(80, 80, 80);
-            lblTitleDebt.Location = new Point(16, 14);
-            lblTitleDebt.Name = "lblTitleDebt";
-            lblTitleDebt.Size = new Size(239, 28);
-            lblTitleDebt.TabIndex = 0;
-            lblTitleDebt.Text = "CÔNG NỢ";
+            lblEstimatedTax.Dock = DockStyle.Fill;
+            lblEstimatedTax.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblEstimatedTax.ForeColor = Color.SteelBlue;
+            lblEstimatedTax.Location = new Point(209, 43);
+            lblEstimatedTax.Name = "lblEstimatedTax";
+            lblEstimatedTax.Size = new Size(134, 38);
+            lblEstimatedTax.TabIndex = 3;
+            lblEstimatedTax.Text = "0 VNĐ";
+            lblEstimatedTax.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // lblEstimatedTaxCaption
+            // 
+            lblEstimatedTaxCaption.Dock = DockStyle.Fill;
+            lblEstimatedTaxCaption.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblEstimatedTaxCaption.ForeColor = Color.DimGray;
+            lblEstimatedTaxCaption.Location = new Point(19, 43);
+            lblEstimatedTaxCaption.Name = "lblEstimatedTaxCaption";
+            lblEstimatedTaxCaption.Size = new Size(184, 38);
+            lblEstimatedTaxCaption.TabIndex = 2;
+            lblEstimatedTaxCaption.Text = "Thuế GTGT Phải Nộp:";
+            lblEstimatedTaxCaption.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblNetProfit
+            // 
+            lblNetProfit.Dock = DockStyle.Fill;
+            lblNetProfit.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblNetProfit.ForeColor = Color.SteelBlue;
+            lblNetProfit.Location = new Point(209, 6);
+            lblNetProfit.Name = "lblNetProfit";
+            lblNetProfit.Size = new Size(134, 37);
+            lblNetProfit.TabIndex = 1;
+            lblNetProfit.Text = "0 VNĐ";
+            lblNetProfit.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // lblNetProfitCaption
+            // 
+            lblNetProfitCaption.Dock = DockStyle.Fill;
+            lblNetProfitCaption.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblNetProfitCaption.ForeColor = Color.DimGray;
+            lblNetProfitCaption.Location = new Point(19, 6);
+            lblNetProfitCaption.Name = "lblNetProfitCaption";
+            lblNetProfitCaption.Size = new Size(184, 37);
+            lblNetProfitCaption.TabIndex = 0;
+            lblNetProfitCaption.Text = "Lợi Nhuận Gộp:";
+            lblNetProfitCaption.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblTitleBusinessPerformance
+            // 
+            lblTitleBusinessPerformance.Dock = DockStyle.Top;
+            lblTitleBusinessPerformance.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitleBusinessPerformance.ForeColor = Color.DimGray;
+            lblTitleBusinessPerformance.Location = new Point(0, 5);
+            lblTitleBusinessPerformance.Name = "lblTitleBusinessPerformance";
+            lblTitleBusinessPerformance.Padding = new Padding(16, 8, 16, 0);
+            lblTitleBusinessPerformance.Size = new Size(362, 30);
+            lblTitleBusinessPerformance.TabIndex = 1;
+            lblTitleBusinessPerformance.Text = "LỢI NHUẬN & THUẾ";
+            lblTitleBusinessPerformance.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // pnlBusinessPerformanceAccent
+            // 
+            pnlBusinessPerformanceAccent.BackColor = Color.SteelBlue;
+            pnlBusinessPerformanceAccent.Dock = DockStyle.Top;
+            pnlBusinessPerformanceAccent.Location = new Point(0, 0);
+            pnlBusinessPerformanceAccent.Name = "pnlBusinessPerformanceAccent";
+            pnlBusinessPerformanceAccent.Size = new Size(362, 5);
+            pnlBusinessPerformanceAccent.TabIndex = 0;
             // 
             // pnlCharts
             // 
@@ -426,10 +501,10 @@
             tlpFilter.ResumeLayout(false);
             tlpFilter.PerformLayout();
             tlpKpi.ResumeLayout(false);
-            pnlCardIncome.ResumeLayout(false);
-            pnlCardExpense.ResumeLayout(false);
-            pnlCardBalance.ResumeLayout(false);
-            pnlCardDebt.ResumeLayout(false);
+            pnlCardNetIncome.ResumeLayout(false);
+            pnlCardNetExpense.ResumeLayout(false);
+            pnlCardBusinessPerformance.ResumeLayout(false);
+            tlpBusinessMetrics.ResumeLayout(false);
             pnlCharts.ResumeLayout(false);
             pnlChartCard.ResumeLayout(false);
             ResumeLayout(false);
@@ -446,19 +521,24 @@
         private Panel pnlFilterSpacer;
         private Button btnThongKe;
         private TableLayoutPanel tlpKpi;
-        private Panel pnlCardIncome;
-        private Label lblTitleIncome;
-        private Label lblTotalIncome;
-        private Panel pnlCardExpense;
-        private Label lblTitleExpense;
-        private Label lblTotalExpense;
-        private Panel pnlCardBalance;
-        private Label lblTitleBalance;
-        private Label lblBalance;
-        private Panel pnlCardDebt;
-        private Label lblTitleDebt;
-        private Label lblTotalReceivable;
-        private Label lblTotalPayable;
+        private Panel pnlCardNetIncome;
+        private Panel pnlNetIncomeAccent;
+        private Label lblTitleNetIncome;
+        private Label lblNetIncome;
+        private Label lblOutputVAT;
+        private Panel pnlCardNetExpense;
+        private Panel pnlNetExpenseAccent;
+        private Label lblTitleNetExpense;
+        private Label lblNetExpense;
+        private Label lblInputVAT;
+        private Panel pnlCardBusinessPerformance;
+        private Panel pnlBusinessPerformanceAccent;
+        private Label lblTitleBusinessPerformance;
+        private TableLayoutPanel tlpBusinessMetrics;
+        private Label lblNetProfitCaption;
+        private Label lblNetProfit;
+        private Label lblEstimatedTaxCaption;
+        private Label lblEstimatedTax;
         private Panel pnlCharts;
         private Panel pnlChartCard;
         private Label lblChartTitle;

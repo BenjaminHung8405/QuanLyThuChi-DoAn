@@ -8,6 +8,7 @@ using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.BLL.DTOs;
 using QuanLyThuChi_DoAn.BLL.Services;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
+using DashboardSummaryDTO = QuanLyThuChi_DoAn.BLL.DTOs.DashboardOverviewDTO;
 
 namespace QuanLyThuChi_DoAn
 {
@@ -97,10 +98,10 @@ namespace QuanLyThuChi_DoAn
                     return;
                 }
 
-                DashboardOverviewDTO overview = await _reportService.GetOverviewAsync(tenantId, branchId, fromDate, toDate);
+                DashboardSummaryDTO summary = await _reportService.GetOverviewAsync(tenantId, branchId, fromDate, toDate);
                 List<CategoryStatisticDTO> categoryStats = await _reportService.GetExpenseByCategoryAsync(tenantId, branchId, fromDate, toDate);
 
-                BindOverview(overview);
+                UpdateDashboardCards(summary);
                 BindPieChart(categoryStats);
             }
             catch (Exception ex)
@@ -140,16 +141,38 @@ namespace QuanLyThuChi_DoAn
             return true;
         }
 
-        private void BindOverview(DashboardOverviewDTO overview)
+        private void UpdateDashboardCards(DashboardSummaryDTO summary)
         {
-            lblTotalIncome.Text = $"{overview.TotalIncome:N0} VNĐ";
-            lblTotalExpense.Text = $"{overview.TotalExpense:N0} VNĐ";
+            // 1. CAP NHAT CARD DOANH THU
+            lblNetIncome.Text = summary.NetIncome.ToString("N0") + " VNĐ";
+            lblOutputVAT.Text = $"+ Thuế GTGT thu hộ (Đầu ra): {summary.OutputVAT:N0} đ";
 
-            lblBalance.Text = $"{overview.CurrentBalance:N0} VNĐ";
-            lblBalance.ForeColor = overview.CurrentBalance >= 0 ? Color.SeaGreen : Color.IndianRed;
+            // 2. CAP NHAT CARD CHI PHI
+            lblNetExpense.Text = summary.NetExpense.ToString("N0") + " VNĐ";
+            lblInputVAT.Text = $"+ Thuế GTGT được khấu trừ (Đầu vào): {summary.InputVAT:N0} đ";
 
-            lblTotalReceivable.Text = $"Phải thu: {overview.TotalReceivable:N0} VNĐ";
-            lblTotalPayable.Text = $"Phải trả: {overview.TotalPayable:N0} VNĐ";
+            // 3. CAP NHAT CARD LOI NHUAN & THUE
+            lblNetProfit.Text = summary.NetProfit.ToString("N0") + " VNĐ";
+            lblEstimatedTax.Text = summary.EstimatedTaxPayable.ToString("N0") + " VNĐ";
+
+            // UX NANG CAO: DOI MAU THEO SO LIEU THUC TE
+            if (summary.NetProfit < 0)
+            {
+                lblNetProfit.ForeColor = Color.IndianRed;
+            }
+            else
+            {
+                lblNetProfit.ForeColor = Color.SeaGreen;
+            }
+
+            if (summary.EstimatedTaxPayable > 0)
+            {
+                lblEstimatedTax.ForeColor = Color.IndianRed;
+            }
+            else
+            {
+                lblEstimatedTax.ForeColor = Color.SeaGreen;
+            }
         }
 
         private void BindPieChart(List<CategoryStatisticDTO> stats)

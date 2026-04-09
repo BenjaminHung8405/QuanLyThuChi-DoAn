@@ -31,13 +31,15 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 transQuery = transQuery.Where(t => t.BranchId == branchId.Value);
             }
 
-            decimal totalIn = await transQuery
-                .Where(t => t.TransType == "IN")
-                .SumAsync(t => (decimal?)t.Amount) ?? 0;
+            IQueryable<Transaction> incomeQuery = transQuery.Where(t => t.TransType == "IN");
+            decimal netIncome = await incomeQuery.SumAsync(t => (decimal?)t.SubTotal) ?? 0;
+            decimal outputVat = await incomeQuery.SumAsync(t => (decimal?)t.TaxAmount) ?? 0;
+            decimal grossIncome = await incomeQuery.SumAsync(t => (decimal?)t.Amount) ?? 0;
 
-            decimal totalOut = await transQuery
-                .Where(t => t.TransType == "OUT")
-                .SumAsync(t => (decimal?)t.Amount) ?? 0;
+            IQueryable<Transaction> expenseQuery = transQuery.Where(t => t.TransType == "OUT");
+            decimal netExpense = await expenseQuery.SumAsync(t => (decimal?)t.SubTotal) ?? 0;
+            decimal inputVat = await expenseQuery.SumAsync(t => (decimal?)t.TaxAmount) ?? 0;
+            decimal grossExpense = await expenseQuery.SumAsync(t => (decimal?)t.Amount) ?? 0;
 
             IQueryable<Debt> debtQuery = _context.Debts
                 .AsNoTracking()
@@ -60,8 +62,12 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             return new DashboardOverviewDTO
             {
-                TotalIncome = totalIn,
-                TotalExpense = totalOut,
+                GrossIncome = grossIncome,
+                NetIncome = netIncome,
+                OutputVAT = outputVat,
+                GrossExpense = grossExpense,
+                NetExpense = netExpense,
+                InputVAT = inputVat,
                 TotalReceivable = totalReceivable,
                 TotalPayable = totalPayable
             };
