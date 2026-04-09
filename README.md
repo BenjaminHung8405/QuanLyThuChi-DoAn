@@ -11,11 +11,11 @@
 
 Dự án này là một ứng dụng Desktop chuyên sâu dành cho mô hình kinh doanh chuỗi (chuỗi cửa hàng, nhà hàng, hệ thống bán lẻ...). Hệ thống sở hữu khả năng quản lý tài chính độc lập cho từng chi nhánh và quỹ tiền, giám sát chặt chẽ công nợ theo thời gian thực và lưu vết biến động (Audit). Mọi luồng dữ liệu đều được cách ly chặt chẽ theo `TenantId` và `BranchId`.
 
-Dưới đây là tiến trình hoàn thiện qua **11 Giai đoạn (Sprints)** của dự án.
+Dưới đây là tiến trình hoàn thiện qua **12 Giai đoạn (Sprints)** của dự án.
 
 ---
 
-## 🚀 Lộ trình 11 Giai đoạn Phát triển (Sprints)
+## 🚀 Lộ trình 12 Giai đoạn Phát triển (Sprints)
 
 ### 🎯 Giai đoạn 1: Khởi tạo Kiến trúc & Thiết kế Database
 * **Mục tiêu:** Xây dựng cơ sở dữ liệu cốt lõi hỗ trợ mô hình Multi-tenant & Multi-branch.
@@ -66,5 +66,15 @@ Dưới đây là tiến trình hoàn thiện qua **11 Giai đoạn (Sprints)** 
   * **Quản lý Thuế:** Phát triển module thuế hoàn chỉnh (`TaxService`, `ucTaxManagement`, `frmAddEditTax`), hỗ trợ tính toán thuế áp dụng trên các khoản thu/chi.
   * **Cải tiến Dashboard:** Bổ sung các chỉ số tổng quan (Financial overview metrics) trên `ucDashboard`, cung cấp cái nhìn toàn diện hơn về dòng tiền hiện tại.
 
+### 🎯 Giai đoạn 12: Chuyển quỹ 2 bước, Snapshot dữ liệu lịch sử & Chuẩn hóa báo cáo
+* **Mục tiêu:** Tăng độ an toàn khi chuyển quỹ liên chi nhánh và bảo toàn tính nhất quán báo cáo khi dữ liệu danh mục/đối tác thay đổi theo thời gian.
+* **Chi tiết:**
+  * **Chuyển quỹ nội bộ 2 bước:** Tại `TransactionService`, lệnh chuyển quỹ tạo đồng thời phiếu OUT trạng thái `COMPLETED` (trừ quỹ nguồn ngay) và phiếu IN trạng thái `PENDING` (chờ xác nhận ở quỹ đích). Bổ sung luồng xác nhận nhận tiền (`ConfirmPendingInboundTransferAsync`) và liên kết chứng từ qua `TransferRefId`/`TransferRefNo`.
+  * **Hỗ trợ phí giao dịch ngân hàng:** Luồng chuyển quỹ cho phép nhập phí và tự động tạo thêm giao dịch OUT phí ngân hàng, vẫn đảm bảo tính toàn vẹn bằng transaction DB.
+  * **Nâng cấp UX giao dịch:** `ucTransaction` hiển thị cột trạng thái (Chờ xác nhận/Hoàn tất/Đã hủy), khóa chỉnh sửa phiếu chờ xác nhận và cho phép người có quyền xác nhận trực tiếp trên màn hình. `frmFundTransfer` cập nhật thông báo kết quả theo mô hình 2 bước và định dạng nhập tiền theo chuẩn văn hóa cấu hình.
+  * **Snapshot dữ liệu chống trôi lịch sử:** Bổ sung `CategoryNameSnapshot`, `PartnerNameSnapshot` cho `Transactions` và `PartnerNameSnapshot` cho `Debts`; migration `AddTransactionAndDebtSnapshots` tự động backfill dữ liệu cũ để báo cáo không bị ảnh hưởng khi đổi tên danh mục hoặc đối tác.
+  * **Chuẩn hóa tính toán theo trạng thái:** Báo cáo/số dư quỹ chỉ tính giao dịch `COMPLETED`, loại trừ phiếu `PENDING` và phiếu đã hủy khỏi tổng hợp tài chính.
+  * **Nhất quán xóa mềm dữ liệu nền:** Chuẩn hóa xóa mềm cho Branch/Partner (`IsActive = false`) nhằm bảo toàn liên kết lịch sử giao dịch và công nợ.
+
 ---
-*Cập nhật tự động nội dung tổng hợp từ 11 giai đoạn phát triển.*
+*Cập nhật tự động nội dung tổng hợp từ 12 giai đoạn phát triển.*
