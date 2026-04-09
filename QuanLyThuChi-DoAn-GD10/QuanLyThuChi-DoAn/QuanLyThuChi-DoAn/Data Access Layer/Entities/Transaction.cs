@@ -24,9 +24,16 @@ namespace QuanLyThuChi_DoAn
         [ForeignKey("CategoryId")]
         public virtual TransactionCategory Category { get; set; }
 
+        [Required]
+        [StringLength(100)]
+        public string CategoryNameSnapshot { get; set; } = string.Empty;
+
         public int? PartnerId { get; set; }
         [ForeignKey("PartnerId")]
         public virtual Partner Partner { get; set; }
+
+        [StringLength(255)]
+        public string? PartnerNameSnapshot { get; set; }
 
         public long? DebtId { get; set; }
         [ForeignKey("DebtId")]

@@ -145,7 +145,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             var branch = _branchRepo.GetById(branchId);
             if (branch != null)
             {
-                _branchRepo.Delete(branchId);
+                branch.IsActive = false;
+                _branchRepo.Update(branch);
                 _branchRepo.Save();
             }
         }
@@ -298,7 +299,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 return false;
             }
 
-            _context.Branches.Remove(branch);
+            branch.IsActive = false;
             return await _context.SaveChangesAsync().ConfigureAwait(false) > 0;
         }
     }

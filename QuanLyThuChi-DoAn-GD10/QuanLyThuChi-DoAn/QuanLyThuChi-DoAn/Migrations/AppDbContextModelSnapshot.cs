@@ -186,6 +186,11 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Property<int>("PartnerId")
                         .HasColumnType("int");
 
+                    b.Property<string>("PartnerNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -456,6 +461,11 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
+                    b.Property<string>("CategoryNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
@@ -475,6 +485,10 @@ namespace QuanLyThuChi_DoAn.Migrations
 
                     b.Property<int?>("PartnerId")
                         .HasColumnType("int");
+
+                    b.Property<string>("PartnerNameSnapshot")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("RefNo")
                         .IsRequired()

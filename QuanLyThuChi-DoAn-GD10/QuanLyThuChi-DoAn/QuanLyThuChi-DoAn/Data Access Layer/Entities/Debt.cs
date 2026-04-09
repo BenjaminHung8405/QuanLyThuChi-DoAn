@@ -25,6 +25,10 @@ namespace QuanLyThuChi_DoAn
         public virtual Partner Partner { get; set; }
 
         [Required]
+        [StringLength(255)]
+        public string PartnerNameSnapshot { get; set; } = string.Empty;
+
+        [Required]
         [StringLength(20)]
         public string DebtType { get; set; } // 'RECEIVABLE' hoặc 'PAYABLE'
 

@@ -93,7 +93,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             List<CategoryStatisticDTO> stats = await query
-                .GroupBy(t => t.Category != null ? t.Category.CategoryName : "Khac")
+                .GroupBy(t => t.CategoryNameSnapshot == null || t.CategoryNameSnapshot == string.Empty
+                    ? "Khac"
+                    : t.CategoryNameSnapshot)
                 .Select(g => new CategoryStatisticDTO
                 {
                     CategoryName = g.Key,
@@ -166,7 +168,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             IQueryable<Transaction> periodQuery = _context.Transactions
                 .AsNoTracking()
-                .Include(t => t.Category)
                 .Include(t => t.User)
                 .Where(t => t.TenantId == tenantId
                             && t.IsActive == true
@@ -216,7 +217,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 {
                     TransactionDate = transaction.TransDate,
                     TransactionType = isIncome ? "Thu" : "Chi",
-                    CategoryName = transaction.Category != null ? transaction.Category.CategoryName ?? "Khác" : "Khác",
+                    CategoryName = string.IsNullOrWhiteSpace(transaction.CategoryNameSnapshot) ? "Khác" : transaction.CategoryNameSnapshot,
                     Notes = transaction.Description ?? string.Empty,
                     IncomeAmount = income,
                     ExpenseAmount = expense,
@@ -235,7 +236,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             IQueryable<Transaction> periodQuery = _context.Transactions
                 .AsNoTracking()
-                .Include(t => t.Category)
                 .Where(t => t.TenantId == tenantId
                             && t.IsActive == true
                             && t.Status == "COMPLETED"
@@ -251,7 +251,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .GroupBy(t => new
                 {
                     t.TransType,
-                    CategoryName = t.Category != null ? t.Category.CategoryName : "Khác"
+                    CategoryName = t.CategoryNameSnapshot == null || t.CategoryNameSnapshot == string.Empty
+                        ? "Khác"
+                        : t.CategoryNameSnapshot
                 })
                 .Select(g => new CashbookSummaryDTO
                 {

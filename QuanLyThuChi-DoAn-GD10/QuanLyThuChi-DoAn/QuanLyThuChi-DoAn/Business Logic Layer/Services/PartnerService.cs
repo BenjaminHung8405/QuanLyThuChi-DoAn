@@ -214,8 +214,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         }
 
         /// <summary>
-        /// Xóa đối tác (Hard Delete nếu không có giao dịch, Soft Delete nếu có giao dịch)
-        /// 🔒 Soft Delete: Chỉ đặt IsActive = false để bảo toàn lịch sử công nợ
+        /// Xóa đối tác (Soft Delete)
+        /// 🔒 Chỉ đặt IsActive = false để bảo toàn lịch sử giao dịch/công nợ
         /// </summary>
         public void DeletePartner(int id)
         {
@@ -230,27 +230,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new InvalidOperationException("Không tìm thấy đối tác cần xóa!");
             }
 
-            // ✅ Logic: Kiểm tra xem đối tác có giao dịch hay nợ phát sinh không
-            // Nếu InitialDebt == 0 và không có giao dịch → Hard Delete
-            // Nếu InitialDebt > 0 hoặc có giao dịch → Soft Delete (IsActive = false)
-
-            if (partner.InitialDebt == 0)
-            {
-                // 🗑️ Hard Delete - Xóa hoàn toàn (không có dữ liệu liên kết)
-                _partnerRepo.Delete(id);
-                _partnerRepo.Save();
-            }
-            else
-            {
-                // 🔒 Soft Delete - Chỉ đặt IsActive = false (bảo toàn lịch sử công nợ)
-                // Phương pháp này giúp:
-                // 1. Bảo toàn lịch sử công nợ (vẫn có dữ liệu trong Transactions, Debts)
-                // 2. Không ảnh hưởng đến báo cáo lịch sử
-                // 3. Ngăn không cho chọn đối tác này khi nhập phiếu mới
-                partner.IsActive = false;
-                _partnerRepo.Update(partner);
-                _partnerRepo.Save();
-            }
+            partner.IsActive = false;
+            _partnerRepo.Update(partner);
+            _partnerRepo.Save();
         }
     }
 }

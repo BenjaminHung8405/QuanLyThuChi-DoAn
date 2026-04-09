@@ -620,13 +620,13 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    data = data.Where(d => (d.Partner?.PartnerName ?? string.Empty).IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0).ToList();
+                    data = data.Where(d => GetDebtPartnerDisplayName(d).IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0).ToList();
                 }
 
                 var displayData = data.Select(d => new DebtGridItem
                 {
                     DebtId = d.DebtId,
-                    PartnerName = d.Partner?.PartnerName ?? string.Empty,
+                    PartnerName = GetDebtPartnerDisplayName(d),
                     DebtType = ToDebtTypeDisplay(d.DebtType),
                     TotalAmount = d.TotalAmount,
                     PaidAmount = d.PaidAmount,
@@ -772,6 +772,16 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             return string.Equals(debtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase)
                 ? "Khách nợ (Phải thu)"
                 : "Nợ NCC (Phải trả)";
+        }
+
+        private static string GetDebtPartnerDisplayName(Debt debt)
+        {
+            if (!string.IsNullOrWhiteSpace(debt.PartnerNameSnapshot))
+            {
+                return debt.PartnerNameSnapshot.Trim();
+            }
+
+            return debt.Partner?.PartnerName ?? string.Empty;
         }
 
         private void SetFilterState(bool isLoading)

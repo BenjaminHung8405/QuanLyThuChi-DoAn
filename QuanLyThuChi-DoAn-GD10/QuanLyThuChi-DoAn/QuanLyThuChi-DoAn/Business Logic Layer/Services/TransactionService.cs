@@ -83,6 +83,16 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             string normalizedDescription = string.IsNullOrWhiteSpace(description)
                 ? "Chuyển quỹ nội bộ"
                 : description.Trim();
+            string transferOutCategorySnapshot = await ResolveCategorySnapshotNameAsync(
+                sourceFund.TenantId,
+                sourceFund.BranchId,
+                InternalTransferOutCategoryId,
+                "Chuyển quỹ nội bộ (quỹ nguồn)");
+            string transferInCategorySnapshot = await ResolveCategorySnapshotNameAsync(
+                destinationFund.TenantId,
+                destinationFund.BranchId,
+                InternalTransferInCategoryId,
+                "Nhận chuyển quỹ nội bộ");
 
             await using var dbTransaction = await _context.Database.BeginTransactionAsync();
             try
@@ -93,6 +103,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     BranchId = sourceFund.BranchId,
                     FundId = sourceFund.FundId,
                     CategoryId = InternalTransferOutCategoryId,
+                    CategoryNameSnapshot = transferOutCategorySnapshot,
+                    PartnerNameSnapshot = null,
                     TransType = "OUT",
                     Amount = amount,
                     SubTotal = amount,
@@ -115,6 +127,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     BranchId = destinationFund.BranchId,
                     FundId = destinationFund.FundId,
                     CategoryId = InternalTransferInCategoryId,
+                    CategoryNameSnapshot = transferInCategorySnapshot,
+                    PartnerNameSnapshot = null,
                     TransType = "IN",
                     Amount = amount,
                     SubTotal = amount,
@@ -134,12 +148,20 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 if (bankFee > 0)
                 {
                     int bankFeeCategoryId = await ResolveBankFeeCategoryIdAsync(sourceFund.TenantId, sourceFund.BranchId);
+                    string bankFeeCategorySnapshot = await ResolveCategorySnapshotNameAsync(
+                        sourceFund.TenantId,
+                        sourceFund.BranchId,
+                        bankFeeCategoryId,
+                        "Phí ngân hàng");
+
                     var bankFeeTrans = new Transaction
                     {
                         TenantId = sourceFund.TenantId,
                         BranchId = sourceFund.BranchId,
                         FundId = sourceFund.FundId,
                         CategoryId = bankFeeCategoryId,
+                        CategoryNameSnapshot = bankFeeCategorySnapshot,
+                        PartnerNameSnapshot = null,
                         TransType = "OUT",
                         Amount = bankFee,
                         SubTotal = bankFee,
@@ -261,8 +283,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         public List<Transaction> GetTransactions(int tenantId, DateTime fromDate, DateTime toDate, string keyword = "")
         {
             var query = _context.Transactions
-                .Include(t => t.Category) // Kéo theo dữ liệu bảng Category
-                .Include(t => t.Partner)  // Kéo theo dữ liệu bảng Partner
                 .Where(t => t.TenantId == tenantId)  // ✅ Filter by tenant ID
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED") // ✅ Exclude soft-deleted transactions
@@ -273,8 +293,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 string keywordNormalized = keyword.ToLower(); // Nên dùng hàm RemoveVietnameseAccents của bạn ở UI
                 query = query.Where(t =>
                     (t.Description != null && t.Description.ToLower().Contains(keywordNormalized)) ||
-                    (t.Category != null && t.Category.CategoryName.ToLower().Contains(keywordNormalized)) ||
-                    (t.Partner != null && t.Partner.PartnerName.ToLower().Contains(keywordNormalized))
+                    ((t.CategoryNameSnapshot ?? string.Empty).ToLower().Contains(keywordNormalized)) ||
+                    ((t.PartnerNameSnapshot ?? string.Empty).ToLower().Contains(keywordNormalized))
                 );
             }
 
@@ -295,8 +315,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             int currentBranchId = SessionManager.CurrentBranchId ?? 0;
 
             var query = _context.Transactions
-                .Include(t => t.Category)
-                .Include(t => t.Partner)
                 .Where(t => t.TenantId == currentTenantId)
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED")
@@ -317,8 +335,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 string keywordNormalized = keyword.ToLower();
                 query = query.Where(t =>
                     (t.Description != null && t.Description.ToLower().Contains(keywordNormalized)) ||
-                    (t.Category != null && t.Category.CategoryName.ToLower().Contains(keywordNormalized)) ||
-                    (t.Partner != null && t.Partner.PartnerName.ToLower().Contains(keywordNormalized))
+                    ((t.CategoryNameSnapshot ?? string.Empty).ToLower().Contains(keywordNormalized)) ||
+                    ((t.PartnerNameSnapshot ?? string.Empty).ToLower().Contains(keywordNormalized))
                 );
             }
 
@@ -339,8 +357,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             int currentBranchId = SessionManager.CurrentBranchId ?? 0;
 
             var query = _context.Transactions
-                .Include(t => t.Category)
-                .Include(t => t.Partner)
                 .Where(t => t.IsActive == true)
                 .Where(t => t.Status != "DELETED")
                 .Where(t => t.TenantId == currentTenantId);
@@ -436,9 +452,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (category == null)
                 throw new InvalidOperationException("Danh mục giao dịch không hợp lệ cho chi nhánh hiện tại.");
 
+            Partner? partner = null;
+
             if (trans.PartnerId.HasValue)
             {
-                var partner = await _context.Partners
+                partner = await _context.Partners
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.PartnerId == trans.PartnerId.Value
                                            && p.TenantId == trans.TenantId
@@ -466,6 +484,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             }
 
             trans.TransType = transType;
+            trans.CategoryNameSnapshot = (category.CategoryName ?? string.Empty).Trim();
+            trans.PartnerNameSnapshot = string.IsNullOrWhiteSpace(partner?.PartnerName)
+                ? null
+                : partner.PartnerName.Trim();
 
             _context.Transactions.Add(trans);
             return await _context.SaveChangesAsync() > 0;
@@ -511,9 +533,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (category == null)
                 throw new InvalidOperationException("Danh mục giao dịch không hợp lệ cho chi nhánh hiện tại.");
 
+            Partner? partner = null;
+
             if (transaction.PartnerId.HasValue)
             {
-                var partner = _context.Partners.FirstOrDefault(p => p.PartnerId == transaction.PartnerId.Value
+                partner = _context.Partners.FirstOrDefault(p => p.PartnerId == transaction.PartnerId.Value
                                                                   && p.TenantId == transaction.TenantId
                                                                   && p.BranchId == transaction.BranchId
                                                                   && p.IsActive);
@@ -539,6 +563,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             {
                 throw new Exception("Loại giao dịch không hợp lệ. Vui lòng chọn IN hoặc OUT.");
             }
+
+            transaction.CategoryNameSnapshot = (category.CategoryName ?? string.Empty).Trim();
+            transaction.PartnerNameSnapshot = string.IsNullOrWhiteSpace(partner?.PartnerName)
+                ? null
+                : partner.PartnerName.Trim();
 
             // Bước 3: Đưa giao dịch mới vào DB
             _context.Transactions.Add(transaction);
@@ -577,9 +606,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (category == null)
                 throw new InvalidOperationException("Danh mục giao dịch không hợp lệ cho chi nhánh hiện tại.");
 
+            Partner? partner = null;
+
             if (transaction.PartnerId.HasValue)
             {
-                var partner = _context.Partners.FirstOrDefault(p => p.PartnerId == transaction.PartnerId.Value
+                partner = _context.Partners.FirstOrDefault(p => p.PartnerId == transaction.PartnerId.Value
                                                                   && p.TenantId == existing.TenantId
                                                                   && p.BranchId == existing.BranchId
                                                                   && p.IsActive);
@@ -590,6 +621,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             transaction.TenantId = existing.TenantId;
             transaction.BranchId = existing.BranchId;
             transaction.TransDate = existing.TransDate;
+            transaction.CategoryNameSnapshot = (category.CategoryName ?? string.Empty).Trim();
+            transaction.PartnerNameSnapshot = string.IsNullOrWhiteSpace(partner?.PartnerName)
+                ? null
+                : partner.PartnerName.Trim();
             ApplyTaxCalculation(transaction);
 
             if (transaction.Amount <= 0)
@@ -644,7 +679,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new ArgumentException("Vui lòng nhập lý do hủy giao dịch.", nameof(cancelReason));
 
             var query = _context.Transactions
-                .Include(t => t.Category)
                 .Where(t => t.TransId == transactionId);
 
             if (!SessionManager.IsSuperAdmin)
@@ -684,8 +718,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 transaction.BranchId,
                 transaction.FundId,
                 transaction.CategoryId,
-                CategoryName = transaction.Category?.CategoryName ?? "Khác",
+                CategoryName = string.IsNullOrWhiteSpace(transaction.CategoryNameSnapshot) ? "Khác" : transaction.CategoryNameSnapshot,
                 transaction.PartnerId,
+                transaction.PartnerNameSnapshot,
                 transaction.TransDate,
                 transaction.SubTotal,
                 transaction.TaxAmount,
@@ -821,6 +856,24 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     throw new UnauthorizedAccessException("Bạn không có quyền tạo giao dịch ngoài chi nhánh hiện tại.");
                 }
             }
+        }
+
+        private async Task<string> ResolveCategorySnapshotNameAsync(int tenantId, int branchId, int categoryId, string fallbackName)
+        {
+            if (categoryId <= 0)
+                return fallbackName;
+
+            string? categoryName = await _context.TransactionCategories
+                .AsNoTracking()
+                .Where(c => c.CategoryId == categoryId
+                         && c.TenantId == tenantId
+                         && c.BranchId == branchId)
+                .Select(c => c.CategoryName)
+                .FirstOrDefaultAsync();
+
+            return string.IsNullOrWhiteSpace(categoryName)
+                ? fallbackName
+                : categoryName.Trim();
         }
 
         private async Task<int> ResolveBankFeeCategoryIdAsync(int tenantId, int branchId)

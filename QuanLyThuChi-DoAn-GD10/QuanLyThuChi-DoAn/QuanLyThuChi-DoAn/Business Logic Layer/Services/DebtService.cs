@@ -129,15 +129,16 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (!string.IsNullOrWhiteSpace(search))
             {
                 string keyword = search.Trim();
-                query = query.Where(d => d.Partner != null
-                                         && EF.Functions.Like(d.Partner.PartnerName ?? string.Empty, $"%{keyword}%"));
+                query = query.Where(d => EF.Functions.Like(d.PartnerNameSnapshot ?? string.Empty, $"%{keyword}%")
+                                         || (d.Partner != null
+                                             && EF.Functions.Like(d.Partner.PartnerName ?? string.Empty, $"%{keyword}%")));
             }
 
             return await query
                 .GroupBy(d => new
                 {
                     d.PartnerId,
-                    PartnerName = d.Partner.PartnerName,
+                    PartnerName = d.PartnerNameSnapshot ?? d.Partner.PartnerName,
                     d.DebtType
                 })
                 .Select(g => new DebtSummaryDTO
@@ -197,17 +198,36 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         {
             try
             {
+                int tenantId = SessionManager.CurrentTenantId ?? 0;
+                if (tenantId <= 0)
+                    throw new InvalidOperationException("Không có Tenant trong ngữ cảnh.");
+
+                int branchId = SessionManager.CurrentBranchId ?? 0;
+                if (branchId <= 0)
+                    throw new InvalidOperationException("Không có Chi nhánh trong ngữ cảnh.");
+
+                var partner = _context.Partners
+                    .AsNoTracking()
+                    .FirstOrDefault(p => p.PartnerId == partnerId
+                                      && p.TenantId == tenantId
+                                      && p.BranchId == branchId
+                                      && p.IsActive);
+
+                if (partner == null)
+                    throw new InvalidOperationException("Đối tác không hợp lệ hoặc đã ngừng hoạt động.");
+
                 DateTime createdAt = DateTime.Now;
 
                 var newDebt = new Debt
                 {
-                    TenantId = SessionManager.CurrentTenantId ?? 0,
-                    BranchId = SessionManager.CurrentBranchId ?? 0,
+                    TenantId = tenantId,
+                    BranchId = branchId,
                     PartnerId = partnerId,
+                    PartnerNameSnapshot = (partner.PartnerName ?? string.Empty).Trim(),
                     DebtType = string.IsNullOrWhiteSpace(debtType) ? "PAYABLE" : debtType.ToUpperInvariant(),
                     TotalAmount = totalAmount,
                     PaidAmount = 0,
-                    DueDate = createdAt.Date,
+                    DueDate = dueDate?.Date ?? createdAt.Date,
                     Status = "NEW",
                     Notes = notes ?? string.Empty,
                     CreatedDate = createdAt
@@ -382,7 +402,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                         TenantId = tenantId,
                         FundId = fundId,
                         CategoryId = category.CategoryId,
+                        CategoryNameSnapshot = (category.CategoryName ?? string.Empty).Trim(),
                         PartnerId = debt.PartnerId,
+                        PartnerNameSnapshot = ResolveDebtPartnerSnapshot(debt),
                         DebtId = debt.DebtId,
                         BranchId = branchId,
                         TransDate = DateTime.Now,
@@ -419,6 +441,24 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     throw;
                 }
             }
+        }
+
+        private string ResolveDebtPartnerSnapshot(Debt debt)
+        {
+            if (!string.IsNullOrWhiteSpace(debt.PartnerNameSnapshot))
+            {
+                return debt.PartnerNameSnapshot.Trim();
+            }
+
+            var partnerName = _context.Partners
+                .AsNoTracking()
+                .Where(p => p.PartnerId == debt.PartnerId)
+                .Select(p => p.PartnerName)
+                .FirstOrDefault();
+
+            return string.IsNullOrWhiteSpace(partnerName)
+                ? string.Empty
+                : partnerName.Trim();
         }
     }
 }
