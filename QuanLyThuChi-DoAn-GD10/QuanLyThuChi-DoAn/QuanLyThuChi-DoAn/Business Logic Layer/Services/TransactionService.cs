@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
+using System.Text.Json;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
 {
@@ -380,6 +381,99 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             transaction.Status = "DELETED";
             _context.Transactions.Update(transaction);
             _context.SaveChanges();
+        }
+
+        /// <summary>
+        /// Hủy giao dịch và ghi AuditLog trong cùng một SaveChangesAsync.
+        /// Nếu một trong hai thao tác thất bại, EF Core sẽ rollback toàn bộ.
+        /// </summary>
+        public async Task<bool> CancelTransactionAsync(long transactionId, string cancelReason)
+        {
+            if (transactionId <= 0)
+                throw new ArgumentException("Mã giao dịch không hợp lệ.", nameof(transactionId));
+
+            string reason = cancelReason?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new ArgumentException("Vui lòng nhập lý do hủy giao dịch.", nameof(cancelReason));
+
+            var query = _context.Transactions
+                .Include(t => t.Category)
+                .Where(t => t.TransId == transactionId);
+
+            if (!SessionManager.IsSuperAdmin)
+            {
+                if (!SessionManager.CurrentTenantId.HasValue)
+                    throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
+
+                int currentTenantId = SessionManager.CurrentTenantId.Value;
+                query = query.Where(t => t.TenantId == currentTenantId);
+
+                if (SessionManager.IsBranchManager || SessionManager.IsStaff)
+                {
+                    if (!SessionManager.CurrentBranchId.HasValue)
+                        throw new UnauthorizedAccessException("Không có chi nhánh ngữ cảnh.");
+
+                    int currentBranchId = SessionManager.CurrentBranchId.Value;
+                    query = query.Where(t => t.BranchId == currentBranchId);
+                }
+            }
+
+            var transaction = await query.FirstOrDefaultAsync();
+            if (transaction == null)
+                throw new KeyNotFoundException($"Không tìm thấy giao dịch ID {transactionId} trong phạm vi được phép.");
+
+            if (!transaction.IsActive
+                || string.Equals(transaction.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(transaction.Status, "DELETED", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Giao dịch này đã bị hủy từ trước.");
+            }
+
+            // Snapshot tối thiểu để tránh lỗi circular reference khi serialize entity đầy đủ.
+            var oldData = new
+            {
+                transaction.TransId,
+                transaction.TenantId,
+                transaction.BranchId,
+                transaction.FundId,
+                transaction.CategoryId,
+                CategoryName = transaction.Category?.CategoryName ?? "Khác",
+                transaction.PartnerId,
+                transaction.TransDate,
+                transaction.SubTotal,
+                transaction.TaxAmount,
+                transaction.Amount,
+                transaction.TransType,
+                transaction.Description,
+                transaction.RefNo,
+                transaction.Status,
+                transaction.IsActive
+            };
+
+            transaction.IsActive = false;
+            transaction.Status = "CANCELLED";
+
+            var auditLog = new AuditLog
+            {
+                TenantId = transaction.TenantId,
+                UserId = SessionManager.CurrentUserId > 0 ? SessionManager.CurrentUserId : null,
+                UserName = string.IsNullOrWhiteSpace(SessionManager.Username) ? "system" : SessionManager.Username,
+                ActionType = "VOID_TRANSACTION",
+                TableName = "Transactions",
+                RecordId = transaction.TransId.ToString(),
+                OldValues = JsonSerializer.Serialize(oldData),
+                NewValues = JsonSerializer.Serialize(new
+                {
+                    IsActive = false,
+                    Status = transaction.Status,
+                    Reason = reason
+                }),
+                ActionDate = DateTime.Now
+            };
+
+            _context.AuditLogs.Add(auditLog);
+
+            return await _context.SaveChangesAsync() > 0;
         }
 
         private void ApplyTaxCalculation(Transaction transaction)
