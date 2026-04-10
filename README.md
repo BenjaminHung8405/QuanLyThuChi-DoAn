@@ -78,3 +78,16 @@ Dưới đây là tiến trình hoàn thiện qua **12 Giai đoạn (Sprints)** 
 
 ---
 *Cập nhật tự động nội dung tổng hợp từ 12 giai đoạn phát triển.*
+
+## Cập nhật (từ commit 4e3ddc511d046a14659534b7c6733fc0e7160dd9 → HEAD)
+- **2026-04-10 — feat(transactions): enhance transaction list with details** (08bc579): Mở rộng giao diện danh sách giao dịch hiển thị thông tin chi tiết, cập nhật `TransactionService` và `ucTransaction` để hỗ trợ hiển thị thêm cột và hành vi lọc/chi tiết.
+- **2026-04-10 — feat: disallow editing of established transactions** (8917710): Khóa khả năng chỉnh sửa các giao dịch đã được xác nhận/hoàn tất; thay đổi trong `TransactionService` và `ucTransaction` để ngăn sửa phiếu đã thiết lập trạng thái.
+- **Thêm** `Data Access Layer/DatabaseSchemaInitializer.cs`: tiện ích khởi tạo/cập nhật schema cơ sở dữ liệu tại khởi động (được thêm để hỗ trợ môi trường phát triển cục bộ).
+- **Cập nhật** `Business Logic Layer/Services/DebtService.cs`, `Business Logic Layer/Services/TransactionService.cs`, `Graphical User Interface/ucDebt.cs`, `Graphical User Interface/ucTransaction.cs`, và `Program.cs`.
+- **Cập nhật cơ sở dữ liệu cục bộ**: `Database/CashFlowDB.mdf` và `Database/CashFlowDB_log.ldf` (tập tin DB đã thay đổi — lưu ý khi đồng bộ môi trường).
+
+Hướng dẫn ngắn:
+- Rebuild solution và chạy ứng dụng để kiểm tra thay đổi UI.
+- Nếu chạy lần đầu sau pull, kiểm tra `DatabaseSchemaInitializer` để đảm bảo schema đã được áp dụng hoặc chạy migration tương ứng.
+
+-- Cập nhật tự động được sinh từ lịch sử commit phạm vi yêu cầu.
