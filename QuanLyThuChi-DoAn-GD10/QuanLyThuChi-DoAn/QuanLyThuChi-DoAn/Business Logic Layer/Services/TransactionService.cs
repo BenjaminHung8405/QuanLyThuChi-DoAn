@@ -283,6 +283,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         public List<Transaction> GetTransactions(int tenantId, DateTime fromDate, DateTime toDate, string keyword = "")
         {
             var query = _context.Transactions
+                .Include(t => t.User)
+                .Include(t => t.Branch)
                 .Where(t => t.TenantId == tenantId)  // ✅ Filter by tenant ID
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED") // ✅ Exclude soft-deleted transactions
@@ -315,6 +317,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             int currentBranchId = SessionManager.CurrentBranchId ?? 0;
 
             var query = _context.Transactions
+                .Include(t => t.User)
+                .Include(t => t.Branch)
                 .Where(t => t.TenantId == currentTenantId)
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED")
@@ -357,6 +361,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             int currentBranchId = SessionManager.CurrentBranchId ?? 0;
 
             var query = _context.Transactions
+                .Include(t => t.User)
+                .Include(t => t.Branch)
                 .Where(t => t.IsActive == true)
                 .Where(t => t.Status != "DELETED")
                 .Where(t => t.TenantId == currentTenantId);

@@ -158,9 +158,25 @@ namespace QuanLyThuChi_DoAn
             {
                 Name = "colTransDate",
                 DataPropertyName = "TransDate",
-                HeaderText = "Ngày",
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" },
-                Width = 100
+                HeaderText = "Ngày lập",
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy HH:mm" },
+                Width = 140
+            };
+
+            var colCreator = new DataGridViewTextBoxColumn
+            {
+                Name = "colCreator",
+                DataPropertyName = "CreatedBy",
+                HeaderText = "Người lập",
+                Width = 150
+            };
+
+            var colBranch = new DataGridViewTextBoxColumn
+            {
+                Name = "colBranch",
+                DataPropertyName = "BranchId",
+                HeaderText = "Chi nhánh",
+                Width = 170
             };
 
             var colTransType = new DataGridViewTextBoxColumn
@@ -211,12 +227,27 @@ namespace QuanLyThuChi_DoAn
                 colTransType,
                 colAmount,
                 colStatus,
+                colCreator,
+                colBranch,
                 colDescription,
                 colRefNo
             });
 
+            ApplyGridRoleVisibility();
+
             dgvTransactions.CellFormatting -= DgvTransactions_CellFormatting;
             dgvTransactions.CellFormatting += DgvTransactions_CellFormatting;
+        }
+
+        private void ApplyGridRoleVisibility()
+        {
+            if (!dgvTransactions.Columns.Contains("colBranch"))
+            {
+                return;
+            }
+
+            // Branch column is important for tenant-level views to compare cross-branch data.
+            dgvTransactions.Columns["colBranch"].Visible = SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin;
         }
 
         /// <summary>
@@ -266,6 +297,7 @@ namespace QuanLyThuChi_DoAn
 
                 dgvTransactions.DataSource = null;
                 dgvTransactions.DataSource = transactions;
+                ApplyGridRoleVisibility();
 
                 var completedTransactions = transactions
                     .Where(t => string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
@@ -357,6 +389,8 @@ namespace QuanLyThuChi_DoAn
                     dgvTransactions.DataSource = result;
                 }
 
+                ApplyGridRoleVisibility();
+
                 var completedResult = result
                     .Where(t => string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
                     .ToList();
@@ -442,10 +476,48 @@ namespace QuanLyThuChi_DoAn
                 e.FormattingApplied = true;
                 return;
             }
+            else if (colName == "colCreator")
+            {
+                var row = dgvTransactions.Rows[e.RowIndex];
+                var transaction = row.DataBoundItem as Transaction;
+                if (transaction == null)
+                {
+                    return;
+                }
+
+                string creatorDisplayName = !string.IsNullOrWhiteSpace(transaction.User?.FullName)
+                    ? transaction.User.FullName.Trim()
+                    : (!string.IsNullOrWhiteSpace(transaction.User?.Username)
+                        ? transaction.User.Username.Trim()
+                        : $"User #{transaction.CreatedBy}");
+
+                e.Value = creatorDisplayName;
+                e.FormattingApplied = true;
+                return;
+            }
+            else if (colName == "colBranch")
+            {
+                var row = dgvTransactions.Rows[e.RowIndex];
+                var transaction = row.DataBoundItem as Transaction;
+                if (transaction == null)
+                {
+                    return;
+                }
+
+                string branchDisplayName = !string.IsNullOrWhiteSpace(transaction.Branch?.BranchName)
+                    ? transaction.Branch.BranchName.Trim()
+                    : (!string.IsNullOrWhiteSpace(SessionManager.BranchName) && SessionManager.CurrentBranchId == transaction.BranchId
+                        ? SessionManager.BranchName
+                        : $"CN #{transaction.BranchId}");
+
+                e.Value = branchDisplayName;
+                e.FormattingApplied = true;
+                return;
+            }
             // Format currency
             else if (colName == "colAmount")
             {
-                if (decimal.TryParse(e.Value.ToString(), out decimal amount))
+                if (e.Value != null && decimal.TryParse(e.Value.ToString(), out decimal amount))
                 {
                     e.Value = amount.ToString("N0");
                 }
@@ -1190,6 +1262,7 @@ namespace QuanLyThuChi_DoAn
         private void ApplyPermissionRules()
         {
             string role = SessionManager.RoleName;
+            ApplyGridRoleVisibility();
 
             if (role == "Staff")
             {
