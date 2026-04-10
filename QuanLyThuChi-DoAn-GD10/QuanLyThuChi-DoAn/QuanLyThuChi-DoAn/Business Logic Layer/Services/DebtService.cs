@@ -409,6 +409,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                         BranchId = branchId,
                         TransDate = DateTime.Now,
                         Amount = amount,
+                        // Cấu hình trường thuế để dashboard không bị lệch
+                        SubTotal = amount, // Doanh thu thuần bằng số tiền trả (thuế đã tính khi tạo công nợ)
+                        TaxAmount = 0m,    // Thuế = 0 vì đã tính lúc tạo công nợ
                         Description = note,
                         TransType = transType,
                         RefNo = string.Empty, // Not null - use empty string instead

@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using System.Windows.Forms;
 using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.BLL.Services;
@@ -145,6 +146,10 @@ namespace QuanLyThuChi_DoAn
         {
             dgvTransactions.AutoGenerateColumns = false;
             dgvTransactions.Columns.Clear();
+            dgvTransactions.ReadOnly = true;
+            dgvTransactions.AllowUserToAddRows = false;
+            dgvTransactions.AllowUserToDeleteRows = false;
+            dgvTransactions.AllowUserToResizeRows = false;
 
             var colTransId = new DataGridViewTextBoxColumn
             {
@@ -426,6 +431,117 @@ namespace QuanLyThuChi_DoAn
         }
 
         /// <summary>
+        /// Asynchronously load transactions for a given date range and optional filters.
+        /// Uses EF Core async query (ToListAsync) so the UI thread is not blocked.
+        /// </summary>
+        private async Task LoadDataAsync(DateTime fromDate, DateTime toDate, int categoryId = 0, int partnerId = 0)
+        {
+            try
+            {
+                var query = _transactionService.GetTransactionsQueryForCurrentSession();
+
+                var from = fromDate.Date;
+                var to = toDate.Date;
+                query = query.Where(t => t.TransDate.Date >= from && t.TransDate.Date <= to);
+
+                if (categoryId > 0)
+                {
+                    query = query.Where(t => t.CategoryId == categoryId);
+                }
+
+                if (partnerId > 0)
+                {
+                    query = query.Where(t => t.PartnerId == partnerId);
+                }
+
+                var result = await query.OrderByDescending(t => t.TransDate).ToListAsync();
+
+                // Update UI (if called from background thread, marshal to UI thread)
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action(() =>
+                    {
+                        if (result.Count == 0)
+                        {
+                            dgvTransactions.DataSource = null;
+                            MessageBox.Show("Không tìm thấy giao dịch phù hợp với điều kiện lọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            dgvTransactions.DataSource = result;
+                        }
+
+                        ApplyGridRoleVisibility();
+
+                        var completedResult = result
+                            .Where(t => string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+
+                        var totalIn = completedResult.Where(t => t.TransType == "IN").Sum(t => t.Amount);
+                        var totalOut = completedResult.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
+
+                        lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
+                        lblTotalOut.Text = $"Tổng Chi: {totalOut:N0} đ";
+
+                        IEnumerable<CashFund> cashFunds;
+                        if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentBranchId.HasValue)
+                        {
+                            cashFunds = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId);
+                        }
+                        else
+                        {
+                            cashFunds = _cashFundService.GetVisibleFunds(SessionManager.RoleId);
+                        }
+
+                        var realBalance = cashFunds.Sum(f => f.Balance);
+                        lblBalance.Text = $"Số dư quỹ hiện tại: {realBalance:N0} đ";
+                    }));
+                }
+                else
+                {
+                    if (result.Count == 0)
+                    {
+                        dgvTransactions.DataSource = null;
+                        MessageBox.Show("Không tìm thấy giao dịch phù hợp với điều kiện lọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        dgvTransactions.DataSource = result;
+                    }
+
+                    ApplyGridRoleVisibility();
+
+                    var completedResult = result
+                        .Where(t => string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    var totalIn = completedResult.Where(t => t.TransType == "IN").Sum(t => t.Amount);
+                    var totalOut = completedResult.Where(t => t.TransType == "OUT").Sum(t => t.Amount);
+
+                    lblTotalIn.Text = $"Tổng Thu: {totalIn:N0} đ";
+                    lblTotalOut.Text = $"Tổng Chi: {totalOut:N0} đ";
+
+                    IEnumerable<CashFund> cashFunds;
+                    if (SessionManager.CurrentTenantId.HasValue && SessionManager.CurrentBranchId.HasValue)
+                    {
+                        cashFunds = _cashFundService.GetFundsByBranch(SessionManager.CurrentTenantId.Value, SessionManager.CurrentBranchId.Value, SessionManager.RoleId);
+                    }
+                    else
+                    {
+                        cashFunds = _cashFundService.GetVisibleFunds(SessionManager.RoleId);
+                    }
+
+                    var realBalance = cashFunds.Sum(f => f.Balance);
+                    lblBalance.Text = $"Số dư quỹ hiện tại: {realBalance:N0} đ";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
         /// Format grid cells (color, currency format, etc.)
         /// Updated for new column names: TransType, Description, Amount
         /// </summary>
@@ -525,8 +641,8 @@ namespace QuanLyThuChi_DoAn
         }
 
         /// <summary>
-        /// Handle grid row selection (auto-edit mode)
-        /// Updated for new schema: TransDate, TransType, Description, etc.
+        /// Handle grid row selection in read-only mode.
+        /// Existing vouchers are view-only to keep bookkeeping transparent.
         /// </summary>
         private void OnGridRowSelected(int rowIndex)
         {
@@ -582,10 +698,10 @@ namespace QuanLyThuChi_DoAn
                 _isAddMode = false;
 
                 bool isPendingInboundTransfer = IsPendingInboundTransfer(selected);
+                SetInputFieldsEnabled(false);
+
                 if (isPendingInboundTransfer)
                 {
-                    SetInputFieldsEnabled(false);
-
                     bool canConfirmTransfer = CanCurrentUserConfirmTransfer(selected);
                     btnSave.Enabled = canConfirmTransfer;
                     btnSave.Text = canConfirmTransfer ? "Xác nhận đã nhận" : "Phiếu chờ xác nhận";
@@ -595,16 +711,10 @@ namespace QuanLyThuChi_DoAn
                 }
                 else
                 {
-                    SetInputFieldsEnabled(true);
+                    btnSave.Enabled = false;
+                    btnSave.Text = "Phiếu đã ghi sổ";
+                    btnDelete.Visible = true;
                     btnDelete.Text = "Hủy Phiếu";
-
-                    if (SessionManager.RoleName == "Staff")
-                    {
-                        bool isOwner = selected.CreatedBy == SessionManager.UserId;
-                        bool within24h = selected.TransDate >= DateTime.Now.AddHours(-24);
-                        btnSave.Enabled = isOwner && within24h;
-                        btnDelete.Enabled = false;
-                    }
                 }
 
                 ApplyPermissionRules();
@@ -621,9 +731,9 @@ namespace QuanLyThuChi_DoAn
         private void OnBtnNewClicked()
         {
             ResetForm();
-            SetInputFieldsEnabled(true);
             _isAddMode = true;
             _selectedTransaction = null;
+            SetInputFieldsEnabled(true);
             txtSubTotal.Focus();
         }
 
@@ -644,14 +754,18 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
-            // Gọi hàm kiểm tra trước khi làm bất cứ việc gì khác
-            if (!ValidateInput()) return;
-
-            if (SessionManager.RoleName == "Staff" && !_isAddMode)
+            if (!_isAddMode)
             {
-                MessageBox.Show("Bạn không có quyền sửa phiếu sau 24h hoặc của người khác.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    "Không cho phép sửa phiếu đã lập để đảm bảo minh bạch sổ sách. Vui lòng hủy phiếu cũ và lập phiếu mới.",
+                    "Từ chối chỉnh sửa",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
                 return;
             }
+
+            // Gọi hàm kiểm tra trước khi làm bất cứ việc gì khác
+            if (!ValidateInput()) return;
 
             try
             {
@@ -710,21 +824,6 @@ namespace QuanLyThuChi_DoAn
 
                     isSuccess = await _transactionService.AddTransactionAsync(newTrans);
                 }
-                else if (_selectedTransaction != null)
-                {
-                    var existing = (Transaction)_selectedTransaction;
-                    // Cập nhật các trường cho phép sửa
-                    existing.SubTotal = subTotal;
-                    existing.TaxId = taxId;
-                    existing.Amount = subTotal;
-                    existing.Description = txtNote.Text.Trim();
-                    existing.CategoryId = categoryId;
-                    existing.PartnerId = partnerId;
-                    existing.TransType = typeValue;
-
-                    _transactionService.UpdateTransaction(existing);
-                    isSuccess = true;
-                }
 
                 if (!isSuccess)
                 {
@@ -732,7 +831,7 @@ namespace QuanLyThuChi_DoAn
                     return;
                 }
 
-                MessageBox.Show(_isAddMode ? "Lập phiếu thành công!" : "Cập nhật thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Lập phiếu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 ResetForm();
                 SetInputFieldsEnabled(false);
@@ -777,7 +876,7 @@ namespace QuanLyThuChi_DoAn
 
             if (selectedTransaction != null && IsPendingInboundTransfer(selectedTransaction))
             {
-                MessageBox.Show("Phiếu chuyển quỹ đang chờ xác nhận. Vui lòng dùng nút Cập nhật để xác nhận đã nhận.",
+                MessageBox.Show("Phiếu chuyển quỹ đang chờ xác nhận. Vui lòng dùng nút Xác nhận đã nhận.",
                     "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -981,6 +1080,7 @@ namespace QuanLyThuChi_DoAn
             if (cboPartner.Items.Count > 0) cboPartner.SelectedIndex = 0;
             if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = -1;
             if (cbTax.Items.Count > 0) cbTax.SelectedIndex = 0;
+            _isAddMode = false;
             _selectedTransaction = null;
             btnDelete.Text = "Hủy Phiếu";
 
@@ -1003,19 +1103,15 @@ namespace QuanLyThuChi_DoAn
             cboPartner.Enabled = enabled;
             txtNote.Enabled = enabled;
 
-            bool canEdit = enabled;
-            if (SessionManager.RoleName == "Staff")
-            {
-                // Nhân viên chỉ cho thêm mới, không sửa nếu không thoả điều kiện
-                if (!_isAddMode)
-                {
-                    canEdit = false;
-                }
-            }
+            bool canSaveNewVoucher = enabled && _isAddMode;
+            btnSave.Enabled = canSaveNewVoucher;
 
-            btnSave.Enabled = canEdit;
-            btnDelete.Enabled = _selectedTransaction != null && enabled && SessionManager.RoleName != "Staff";
-            btnSave.Text = enabled ? (_isAddMode ? "Lập Phiếu" : "Cập nhật") : "Lưu";
+            bool canCancelSelectedVoucher = _selectedTransaction is Transaction selectedTransaction
+                && !IsPendingInboundTransfer(selectedTransaction)
+                && SessionManager.RoleName != "Staff";
+
+            btnDelete.Enabled = canCancelSelectedVoucher;
+            btnSave.Text = canSaveNewVoucher ? "Lập Phiếu" : "Lưu";
 
             btnDelete.Text = "Hủy Phiếu";
         }
@@ -1330,6 +1426,10 @@ namespace QuanLyThuChi_DoAn
 
         private async void btnFilter_Click(object sender, EventArgs e)
         {
+            // 1. Read UI values on the UI thread
+            DateTime fromDate = dtpFromDate.Value.Date;
+            DateTime toDate = dtpToDate.Value.Date;
+
             int selectedCategoryId = 0;
             int selectedPartnerId = 0;
 
@@ -1352,7 +1452,12 @@ namespace QuanLyThuChi_DoAn
             btnFilter.Enabled = false;
             try
             {
-                await Task.Run(() => LoadData(selectedCategoryId, selectedPartnerId));
+                // 2. Await the async data loader (returns to UI thread when complete)
+                await LoadDataAsync(fromDate, toDate, selectedCategoryId, selectedPartnerId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi lọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {

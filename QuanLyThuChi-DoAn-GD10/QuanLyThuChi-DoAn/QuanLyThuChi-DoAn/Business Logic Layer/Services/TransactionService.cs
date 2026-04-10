@@ -588,56 +588,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (transaction == null)
                 throw new ArgumentNullException(nameof(transaction));
 
-            var existing = _context.Transactions.FirstOrDefault(t => t.TransId == transaction.TransId);
-            if (existing == null)
-                throw new KeyNotFoundException("Không tìm thấy giao dịch cần cập nhật.");
-
-            if (!SessionManager.IsSuperAdmin)
-            {
-                if (!SessionManager.CurrentTenantId.HasValue || existing.TenantId != SessionManager.CurrentTenantId.Value)
-                    throw new UnauthorizedAccessException("Bạn không có quyền sửa giao dịch ngoài tenant hiện tại.");
-
-                if ((SessionManager.IsBranchManager || SessionManager.IsStaff)
-                    && SessionManager.CurrentBranchId.HasValue
-                    && existing.BranchId != SessionManager.CurrentBranchId.Value)
-                {
-                    throw new UnauthorizedAccessException("Bạn không có quyền sửa giao dịch ngoài chi nhánh hiện tại.");
-                }
-            }
-
-            var category = _context.TransactionCategories.FirstOrDefault(c => c.CategoryId == transaction.CategoryId
-                                                                           && c.TenantId == existing.TenantId
-                                                                           && c.BranchId == existing.BranchId
-                                                                           && c.IsActive);
-            if (category == null)
-                throw new InvalidOperationException("Danh mục giao dịch không hợp lệ cho chi nhánh hiện tại.");
-
-            Partner? partner = null;
-
-            if (transaction.PartnerId.HasValue)
-            {
-                partner = _context.Partners.FirstOrDefault(p => p.PartnerId == transaction.PartnerId.Value
-                                                                  && p.TenantId == existing.TenantId
-                                                                  && p.BranchId == existing.BranchId
-                                                                  && p.IsActive);
-                if (partner == null)
-                    throw new InvalidOperationException("Đối tác không hợp lệ cho chi nhánh hiện tại.");
-            }
-
-            transaction.TenantId = existing.TenantId;
-            transaction.BranchId = existing.BranchId;
-            transaction.TransDate = existing.TransDate;
-            transaction.CategoryNameSnapshot = (category.CategoryName ?? string.Empty).Trim();
-            transaction.PartnerNameSnapshot = string.IsNullOrWhiteSpace(partner?.PartnerName)
-                ? null
-                : partner.PartnerName.Trim();
-            ApplyTaxCalculation(transaction);
-
-            if (transaction.Amount <= 0)
-                throw new ArgumentException("Số tiền giao dịch phải lớn hơn 0.");
-
-            _context.Transactions.Update(transaction);
-            _context.SaveChanges();
+            throw new InvalidOperationException(
+                "Không cho phép sửa giao dịch đã lập để đảm bảo minh bạch sổ sách. Vui lòng hủy phiếu cũ và lập phiếu mới.");
         }
 
         // 6. Xóa mềm giao dịch
@@ -716,6 +668,39 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new InvalidOperationException("Giao dịch này đã bị hủy từ trước.");
             }
 
+            // Nếu giao dịch liên quan tới một quỹ, điều chỉnh lại số dư quỹ trước khi hủy giao dịch.
+            decimal? oldFundBalance = null;
+            decimal? newFundBalance = null;
+            if (transaction.FundId > 0)
+            {
+                var fund = await _context.CashFunds
+                    .FirstOrDefaultAsync(f => f.FundId == transaction.FundId
+                                           && f.TenantId == transaction.TenantId
+                                           && f.BranchId == transaction.BranchId);
+
+                if (fund == null || !fund.IsActive)
+                    throw new InvalidOperationException("Quỹ liên quan không tồn tại hoặc đã bị khóa. Không thể hủy giao dịch.");
+
+                oldFundBalance = fund.Balance;
+
+                if (string.Equals(transaction.TransType, "OUT", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Trước đây OUT đã trừ quỹ, khi hủy phải cộng lại
+                    fund.Balance += transaction.Amount;
+                }
+                else if (string.Equals(transaction.TransType, "IN", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Trước đây IN đã cộng quỹ, khi hủy phải trừ lại. Kiểm tra để tránh âm.
+                    if (fund.Balance < transaction.Amount)
+                        throw new InvalidOperationException("Quỹ hiện tại không đủ số dư để hủy giao dịch IN.");
+
+                    fund.Balance -= transaction.Amount;
+                }
+
+                newFundBalance = fund.Balance;
+                _context.CashFunds.Update(fund);
+            }
+
             // Snapshot tối thiểu để tránh lỗi circular reference khi serialize entity đầy đủ.
             var oldData = new
             {
@@ -735,7 +720,8 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 transaction.Description,
                 transaction.RefNo,
                 transaction.Status,
-                transaction.IsActive
+                transaction.IsActive,
+                FundBalance = oldFundBalance
             };
 
             transaction.IsActive = false;
@@ -754,7 +740,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 {
                     IsActive = false,
                     Status = transaction.Status,
-                    Reason = reason
+                    Reason = reason,
+                    FundId = transaction.FundId,
+                    OldFundBalance = oldFundBalance,
+                    NewFundBalance = newFundBalance
                 }),
                 ActionDate = DateTime.Now
             };

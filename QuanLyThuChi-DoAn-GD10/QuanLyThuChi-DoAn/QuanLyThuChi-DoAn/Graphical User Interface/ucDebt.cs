@@ -79,6 +79,10 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
         private void ConfigureGrid()
         {
             EnsureGridColumns();
+            dgvDebts.ReadOnly = true;
+            dgvDebts.AllowUserToAddRows = false;
+            dgvDebts.AllowUserToDeleteRows = false;
+            dgvDebts.AllowUserToResizeRows = false;
             dgvDebts.MultiSelect = false;
             dgvDebts.DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 247, 255);
             dgvDebts.DefaultCellStyle.SelectionForeColor = Color.FromArgb(33, 33, 33);
@@ -186,6 +190,10 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
             dgvDebts.AutoGenerateColumns = false;
             dgvDebts.Columns.Clear();
+            dgvDebts.ReadOnly = true;
+            dgvDebts.AllowUserToAddRows = false;
+            dgvDebts.AllowUserToDeleteRows = false;
+            dgvDebts.AllowUserToResizeRows = false;
 
             var colSummaryPartnerId = new DataGridViewTextBoxColumn
             {
