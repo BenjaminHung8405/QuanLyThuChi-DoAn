@@ -40,7 +40,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         private static void EnsureCanManageCategoryMasterData()
         {
-            if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+            if (!SessionManager.IsTenantAdmin && !SessionManager.IsBranchManager)
                 throw new UnauthorizedAccessException("Bạn không có quyền cấu hình danh mục Thu/Chi.");
         }
 

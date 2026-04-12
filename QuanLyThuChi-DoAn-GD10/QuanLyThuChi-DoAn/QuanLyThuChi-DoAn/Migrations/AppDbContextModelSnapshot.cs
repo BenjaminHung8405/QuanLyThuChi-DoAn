@@ -324,7 +324,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                             RoleId = 1,
                             Description = "Quản trị hệ thống tối cao",
                             IsActive = true,
-                            PriorityLevel = 0,
+                            PriorityLevel = 100,
                             RoleCode = "SUPERADMIN",
                             RoleName = "SuperAdmin"
                         },
@@ -333,7 +333,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                             RoleId = 2,
                             Description = "Giám đốc công ty",
                             IsActive = true,
-                            PriorityLevel = 1,
+                            PriorityLevel = 80,
                             RoleCode = "TENANTADMIN",
                             RoleName = "TenantAdmin"
                         },
@@ -342,7 +342,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                             RoleId = 3,
                             Description = "Quản lý chi nhánh",
                             IsActive = true,
-                            PriorityLevel = 2,
+                            PriorityLevel = 50,
                             RoleCode = "BRANCHMANAGER",
                             RoleName = "BranchManager"
                         },
@@ -351,7 +351,7 @@ namespace QuanLyThuChi_DoAn.Migrations
                             RoleId = 4,
                             Description = "Nhân viên",
                             IsActive = true,
-                            PriorityLevel = 3,
+                            PriorityLevel = 10,
                             RoleCode = "STAFF",
                             RoleName = "Staff"
                         });
@@ -544,36 +544,6 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.HasIndex("TransferRefId");
 
                     b.ToTable("Transactions");
-                });
-
-            modelBuilder.Entity("QuanLyThuChi_DoAn.TransactionAttachment", b =>
-                {
-                    b.Property<long>("AttachmentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AttachmentId"));
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("TransId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("UploadedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("AttachmentId");
-
-                    b.HasIndex("TransId");
-
-                    b.ToTable("TransactionAttachments");
                 });
 
             modelBuilder.Entity("QuanLyThuChi_DoAn.TransactionCategory", b =>
@@ -831,17 +801,6 @@ namespace QuanLyThuChi_DoAn.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("QuanLyThuChi_DoAn.TransactionAttachment", b =>
-                {
-                    b.HasOne("QuanLyThuChi_DoAn.Transaction", "Transaction")
-                        .WithMany("Attachments")
-                        .HasForeignKey("TransId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Transaction");
-                });
-
             modelBuilder.Entity("QuanLyThuChi_DoAn.TransactionCategory", b =>
                 {
                     b.HasOne("QuanLyThuChi_DoAn.Branch", "Branch")
@@ -904,11 +863,6 @@ namespace QuanLyThuChi_DoAn.Migrations
             modelBuilder.Entity("QuanLyThuChi_DoAn.Tax", b =>
                 {
                     b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("QuanLyThuChi_DoAn.Transaction", b =>
-                {
-                    b.Navigation("Attachments");
                 });
 #pragma warning restore 612, 618
         }

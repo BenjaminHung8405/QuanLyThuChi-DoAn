@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -179,7 +179,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                             string passwordHash = reader.IsDBNull(passwordHashOrdinal) ? string.Empty : reader.GetString(passwordHashOrdinal);
                             string fullName = reader.IsDBNull(fullNameOrdinal) ? string.Empty : reader.GetString(fullNameOrdinal);
                             string roleCode = reader.IsDBNull(roleCodeOrdinal) ? string.Empty : reader.GetString(roleCodeOrdinal);
-                            int priorityLevel = reader.IsDBNull(priorityLevelOrdinal) ? int.MaxValue : reader.GetInt32(priorityLevelOrdinal);
+                            int priorityLevel = reader.IsDBNull(priorityLevelOrdinal) ? -1 : reader.GetInt32(priorityLevelOrdinal);
                             string roleName = reader.IsDBNull(roleNameOrdinal) ? "Unknown" : reader.GetString(roleNameOrdinal);
                             string branchName = reader.IsDBNull(branchNameOrdinal) ? string.Empty : reader.GetString(branchNameOrdinal);
 
@@ -345,7 +345,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             _ = ResolveTenantScope(tenantId);
 
-            int fallbackPriority = SessionManager.IsSuperAdmin ? -1 : int.MaxValue;
+            int fallbackPriority = SessionManager.IsSuperAdmin ? int.MaxValue : -1;
             int currentRolePriority = await _context.Roles
                 .AsNoTracking()
                 .Where(r => r.RoleId == SessionManager.RoleId)
@@ -355,10 +355,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             var query = _context.Roles
                 .AsNoTracking()
-                .Where(r => r.IsActive && r.PriorityLevel > currentRolePriority);
+                .Where(r => r.IsActive && r.PriorityLevel < currentRolePriority);
 
             return await query
-                .OrderBy(r => r.PriorityLevel)
+                .OrderByDescending(r => r.PriorityLevel)
                 .ThenBy(r => r.RoleName)
                 .ToListAsync()
                 .ConfigureAwait(false);
@@ -456,7 +456,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new InvalidOperationException("Vai trò cập nhật không hợp lệ hoặc đã ngừng hoạt động.");
             }
 
-            int fallbackPriority = SessionManager.IsSuperAdmin ? -1 : int.MaxValue;
+            int fallbackPriority = SessionManager.IsSuperAdmin ? int.MaxValue : -1;
             int editorPriority = await _context.Roles
                 .AsNoTracking()
                 .Where(r => r.RoleId == SessionManager.RoleId)
@@ -465,14 +465,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .ConfigureAwait(false) ?? fallbackPriority;
 
             bool isUpdatingSelf = existingUser.UserId == SessionManager.CurrentUserId;
-            if (!isUpdatingSelf && targetRole.PriorityLevel <= editorPriority)
+            if (!isUpdatingSelf && targetRole.PriorityLevel >= editorPriority)
             {
-                throw new UnauthorizedAccessException("Bạn chỉ được cập nhật tài khoản có cấp quyền thấp hơn quyền hiện tại.");
+                throw new UnauthorizedAccessException("Bạn không có quyền sửa tài khoản có cấp bậc ngang hoặc cao hơn bạn.");
             }
 
-            if (desiredRole.PriorityLevel <= editorPriority)
+            if (desiredRole.PriorityLevel >= editorPriority)
             {
-                throw new UnauthorizedAccessException("Bạn chỉ được gán vai trò có cấp quyền thấp hơn quyền hiện tại.");
+                throw new UnauthorizedAccessException("Bạn không thể gán một vai trò có quyền ngang hoặc cao hơn quyền hiện tại.");
             }
 
             bool requiresBranch = IsBranchScopedRole(desiredRole.RoleCode);
@@ -563,7 +563,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 throw new InvalidOperationException("Vai trò không hợp lệ hoặc đã ngừng hoạt động.");
             }
 
-            int fallbackPriority = SessionManager.IsSuperAdmin ? -1 : int.MaxValue;
+            int fallbackPriority = SessionManager.IsSuperAdmin ? int.MaxValue : -1;
             int creatorPriority = await _context.Roles
                 .AsNoTracking()
                 .Where(r => r.RoleId == SessionManager.RoleId)
@@ -571,9 +571,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false) ?? fallbackPriority;
 
-            if (role.PriorityLevel <= creatorPriority)
+            if (role.PriorityLevel >= creatorPriority)
             {
-                throw new UnauthorizedAccessException("Bạn chỉ được tạo tài khoản có cấp quyền thấp hơn quyền hiện tại.");
+                throw new UnauthorizedAccessException("Bạn không thể tạo tài khoản có quyền ngang hoặc cao hơn quyền hiện tại.");
             }
 
             bool requiresBranch = IsBranchScopedRole(role.RoleCode);

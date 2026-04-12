@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -80,7 +80,7 @@ namespace QuanLyThuChi_DoAn
         [ForeignKey("TransferRefId")]
         public virtual Transaction TransferRefTransaction { get; set; }
 
-        public virtual ICollection<TransactionAttachment> Attachments { get; set; }
+
 
         public bool IsActive { get; set; } = true;
     }

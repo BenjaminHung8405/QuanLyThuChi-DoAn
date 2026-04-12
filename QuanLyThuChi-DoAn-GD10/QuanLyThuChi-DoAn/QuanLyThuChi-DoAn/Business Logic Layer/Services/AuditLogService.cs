@@ -141,9 +141,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         private static void EnsureCanViewAuditLog()
         {
-            if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+            if (!SessionManager.IsSuperAdmin && 
+               (!SessionManager.IsTenantAdmin || SessionManager.CurrentPriorityLevel < 80))
             {
-                throw new UnauthorizedAccessException("Chỉ Quản trị hệ thống hoặc Giám đốc mới được xem nhật ký hệ thống.");
+                throw new UnauthorizedAccessException("Chỉ có Ban Giám đốc (Priority >= 80) mới có quyền truy cập Dấu vết Hệ thống.");
             }
         }
 

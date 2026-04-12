@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 
 namespace QuanLyThuChi_DoAn.BLL.Common
@@ -72,7 +72,7 @@ namespace QuanLyThuChi_DoAn.BLL.Common
             set => RoleCode = value ?? string.Empty;
         }
 
-        // Số càng nhỏ quyền càng cao: 0=SuperAdmin, 1=TenantAdmin, 2=BranchManager, 3=Staff
+        // Số càng lớn quyền càng cao: 100=SuperAdmin, 80=TenantAdmin, 50=BranchManager, 10=Staff
         public static int CurrentPriorityLevel { get; set; } = int.MaxValue;
         public static string RoleName { get; set; } = string.Empty;
 
@@ -111,7 +111,7 @@ namespace QuanLyThuChi_DoAn.BLL.Common
         public static bool CanManageUsers => IsSuperAdmin || IsTenantAdmin;
         public static bool CanManageBranches => IsSuperAdmin || IsTenantAdmin;
         public static bool CanViewSummaryReports => IsSuperAdmin || IsTenantAdmin;
-        public static bool CanTransferInterBranch => IsSuperAdmin || IsTenantAdmin;
+        public static bool CanTransferInterBranch => IsTenantAdmin || IsBranchManager;
 
         public static int CurrentUserId
         {

@@ -1,4 +1,4 @@
-﻿using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.Data_Access_Layer.Repositories;
 using System;
@@ -37,7 +37,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         private static void EnsureCanManagePartnerMasterData()
         {
-            if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+            if (!SessionManager.IsTenantAdmin && !SessionManager.IsBranchManager)
                 throw new UnauthorizedAccessException("Bạn không có quyền cấu hình danh mục đối tác.");
         }
 

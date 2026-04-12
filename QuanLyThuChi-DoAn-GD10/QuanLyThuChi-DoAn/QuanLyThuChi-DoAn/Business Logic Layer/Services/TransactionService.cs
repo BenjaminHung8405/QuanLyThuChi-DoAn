@@ -209,7 +209,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (pendingInTransactionId <= 0)
                 throw new ArgumentException("Mã giao dịch không hợp lệ.", nameof(pendingInTransactionId));
 
-            if (!(SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin || SessionManager.IsBranchManager))
+            if (SessionManager.IsSuperAdmin || SessionManager.IsStaff)
                 throw new UnauthorizedAccessException("Bạn không có quyền xác nhận nhận tiền chuyển quỹ.");
 
             var pendingInbound = await _context.Transactions
@@ -595,14 +595,12 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         // 6. Xóa mềm giao dịch
         public void DeleteTransaction(long transactionId, int tenantId)
         {
-            int scopedTenantId = tenantId;
-            if (!SessionManager.IsSuperAdmin)
-            {
-                if (!SessionManager.CurrentTenantId.HasValue)
-                    throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
+            if (SessionManager.IsSuperAdmin || SessionManager.IsStaff)
+                throw new UnauthorizedAccessException("Bạn không có quyền xóa mềm giao dịch ngoài phạm vi quản lý.");
 
-                scopedTenantId = SessionManager.CurrentTenantId.Value;
-            }
+            int scopedTenantId = SessionManager.CurrentTenantId ?? tenantId;
+            if (!SessionManager.CurrentTenantId.HasValue)
+                throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
 
             var transaction = _context.Transactions
                 .FirstOrDefault(t => t.TransId == transactionId && t.TenantId == scopedTenantId);
@@ -610,9 +608,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (transaction == null)
                 throw new KeyNotFoundException($"Không tìm thấy giao dịch ID {transactionId}");
 
-            if (!SessionManager.IsSuperAdmin
-                && (SessionManager.IsBranchManager || SessionManager.IsStaff)
-                && SessionManager.CurrentBranchId.HasValue
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue
                 && transaction.BranchId != SessionManager.CurrentBranchId.Value)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền xóa giao dịch ngoài chi nhánh hiện tại.");
@@ -629,6 +625,10 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public async Task<bool> CancelTransactionAsync(long transactionId, string cancelReason)
         {
+            // ===== 1. ACTION AUTHORIZATION =====
+            if (SessionManager.IsSuperAdmin || SessionManager.IsStaff)
+                throw new UnauthorizedAccessException("Bạn không có quyền hủy phiếu giao dịch (chức năng này dành cho Quản lý chi nhánh hoặc Giám đốc).");
+
             if (transactionId <= 0)
                 throw new ArgumentException("Mã giao dịch không hợp lệ.", nameof(transactionId));
 
@@ -636,30 +636,28 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (string.IsNullOrWhiteSpace(reason))
                 throw new ArgumentException("Vui lòng nhập lý do hủy giao dịch.", nameof(cancelReason));
 
-            var query = _context.Transactions
-                .Where(t => t.TransId == transactionId);
+            var transaction = await _context.Transactions
+                .FirstOrDefaultAsync(t => t.TransId == transactionId);
 
-            if (!SessionManager.IsSuperAdmin)
-            {
-                if (!SessionManager.CurrentTenantId.HasValue)
-                    throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
-
-                int currentTenantId = SessionManager.CurrentTenantId.Value;
-                query = query.Where(t => t.TenantId == currentTenantId);
-
-                if (SessionManager.IsBranchManager || SessionManager.IsStaff)
-                {
-                    if (!SessionManager.CurrentBranchId.HasValue)
-                        throw new UnauthorizedAccessException("Không có chi nhánh ngữ cảnh.");
-
-                    int currentBranchId = SessionManager.CurrentBranchId.Value;
-                    query = query.Where(t => t.BranchId == currentBranchId);
-                }
-            }
-
-            var transaction = await query.FirstOrDefaultAsync();
             if (transaction == null)
-                throw new KeyNotFoundException($"Không tìm thấy giao dịch ID {transactionId} trong phạm vi được phép.");
+                throw new KeyNotFoundException($"Không tìm thấy giao dịch ID {transactionId}.");
+
+            // ===== 2. DATA SCOPE AUTHORIZATION (BẪY TỬ THẦN) =====
+            if (!SessionManager.CurrentTenantId.HasValue)
+                throw new UnauthorizedAccessException("Không có tenant ngữ cảnh.");
+
+            if (transaction.TenantId != SessionManager.CurrentTenantId.Value)
+                throw new UnauthorizedAccessException("Dữ liệu này không thuộc hệ thống công ty của bạn.");
+
+            if (SessionManager.IsBranchManager)
+            {
+                if (!SessionManager.CurrentBranchId.HasValue || SessionManager.CurrentBranchId.Value <= 0)
+                    throw new UnauthorizedAccessException("Không có chi nhánh ngữ cảnh.");
+
+                if (transaction.BranchId != SessionManager.CurrentBranchId.Value)
+                    throw new UnauthorizedAccessException("Cảnh báo bảo mật: Bạn đang cố gắng hủy phiếu của một chi nhánh khác! Thao tác đã bị từ chối.");
+            }
+            // =======================================================
 
             if (!transaction.IsActive
                 || string.Equals(transaction.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase)

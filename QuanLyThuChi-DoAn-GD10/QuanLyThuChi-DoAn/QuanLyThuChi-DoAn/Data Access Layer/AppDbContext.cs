@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -20,8 +20,30 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
         public DbSet<Tax> Taxes { get; set; }
         public DbSet<TransactionCategory> TransactionCategories { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
-        public DbSet<TransactionAttachment> TransactionAttachments { get; set; }
+
         public DbSet<AuditLog> AuditLogs { get; set; }
+
+        public override int SaveChanges()
+        {
+            var deletedAuditLogs = ChangeTracker.Entries<AuditLog>()
+                                                .Where(e => e.State == EntityState.Deleted);
+            if (deletedAuditLogs.Any())
+            {
+                throw new InvalidOperationException("🔥 CẢNH BÁO BẢO MẬT: Nỗ lực rà phá Audit Log bị chặn đứng! Không thể xóa nhật ký.");
+            }
+            return base.SaveChanges();
+        }
+
+        public override async System.Threading.Tasks.Task<int> SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default)
+        {
+            var deletedAuditLogs = ChangeTracker.Entries<AuditLog>()
+                                                .Where(e => e.State == EntityState.Deleted);
+            if (deletedAuditLogs.Any())
+            {
+                throw new InvalidOperationException("🔥 CẢNH BÁO BẢO MẬT: Nỗ lực rà phá Audit Log bị chặn đứng! Không thể xóa nhật ký.");
+            }
+            return await base.SaveChangesAsync(cancellationToken);
+        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -47,7 +69,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
                         RoleCode = "SUPERADMIN",
                         RoleName = "SuperAdmin",
                         Description = "Quản trị hệ thống tối cao",
-                        PriorityLevel = 0,
+                        PriorityLevel = 100,
                         IsActive = true
                     },
                     new Role
@@ -56,7 +78,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
                         RoleCode = "TENANTADMIN",
                         RoleName = "TenantAdmin",
                         Description = "Giám đốc công ty",
-                        PriorityLevel = 1,
+                        PriorityLevel = 80,
                         IsActive = true
                     },
                     new Role
@@ -65,7 +87,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
                         RoleCode = "BRANCHMANAGER",
                         RoleName = "BranchManager",
                         Description = "Quản lý chi nhánh",
-                        PriorityLevel = 2,
+                        PriorityLevel = 50,
                         IsActive = true
                     },
                     new Role
@@ -74,7 +96,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
                         RoleCode = "STAFF",
                         RoleName = "Staff",
                         Description = "Nhân viên",
-                        PriorityLevel = 3,
+                        PriorityLevel = 10,
                         IsActive = true
                     });
 
@@ -93,13 +115,7 @@ namespace QuanLyThuChi_DoAn.Data_Access_Layer
                 fk.DeleteBehavior = DeleteBehavior.Restrict;
             }
 
-            // 3. Ngoại lệ: Cho phép Cascade Delete cho TransactionAttachment
-            // Lý do: Nếu xóa một Giao dịch (Transaction) thì các hình ảnh đính kèm của nó cũng nên bị xóa theo
-            modelBuilder.Entity<TransactionAttachment>()
-                .HasOne(ta => ta.Transaction)
-                .WithMany(t => t.Attachments)
-                .HasForeignKey(ta => ta.TransId)
-                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }
