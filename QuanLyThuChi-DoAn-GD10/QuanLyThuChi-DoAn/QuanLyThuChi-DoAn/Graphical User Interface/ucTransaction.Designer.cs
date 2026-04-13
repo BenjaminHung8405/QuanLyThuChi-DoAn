@@ -386,6 +386,8 @@ namespace QuanLyThuChi_DoAn
             // 
             // cboPartner
             // 
+            cboPartner.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cboPartner.AutoCompleteSource = AutoCompleteSource.ListItems;
             cboPartner.Dock = DockStyle.Top;
             cboPartner.DropDownStyle = ComboBoxStyle.DropDownList;
             cboPartner.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
@@ -409,6 +411,8 @@ namespace QuanLyThuChi_DoAn
             // 
             // cboCategory
             // 
+            cboCategory.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cboCategory.AutoCompleteSource = AutoCompleteSource.ListItems;
             cboCategory.Dock = DockStyle.Top;
             cboCategory.DropDownStyle = ComboBoxStyle.DropDownList;
             cboCategory.Font = new Font("Segoe UI", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);

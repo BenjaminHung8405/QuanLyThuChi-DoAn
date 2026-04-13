@@ -35,10 +35,6 @@ namespace QuanLyThuChi_DoAn
             tableLayoutPanel1 = new TableLayoutPanel();
             panel2 = new Panel();
             dgvPartners = new DataGridView();
-            PartnerName = new DataGridViewTextBoxColumn();
-            Phone = new DataGridViewTextBoxColumn();
-            Type = new DataGridViewTextBoxColumn();
-            InitialDebt = new DataGridViewTextBoxColumn();
             panel3 = new Panel();
             cboFilterType = new ComboBox();
             txtSearch = new TextBox();
@@ -146,7 +142,6 @@ namespace QuanLyThuChi_DoAn
             dgvPartners.BackgroundColor = Color.White;
             dgvPartners.BorderStyle = BorderStyle.None;
             dgvPartners.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvPartners.Columns.AddRange(new DataGridViewColumn[] { PartnerName, Phone, Type, InitialDebt });
             dgvPartners.Dock = DockStyle.Fill;
             dgvPartners.Location = new Point(16, 55);
             dgvPartners.MultiSelect = false;
@@ -156,38 +151,7 @@ namespace QuanLyThuChi_DoAn
             dgvPartners.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvPartners.Size = new Size(662, 560);
             dgvPartners.TabIndex = 1;
-            // 
-            // PartnerName
-            // 
-            PartnerName.DataPropertyName = "PartnerName";
-            PartnerName.FillWeight = 150F;
-            PartnerName.HeaderText = "Tên Đối Tác";
-            PartnerName.Name = "PartnerName";
-            PartnerName.ReadOnly = true;
-            // 
-            // Phone
-            // 
-            Phone.DataPropertyName = "Phone";
-            Phone.HeaderText = "Số Điện Thoại";
-            Phone.Name = "Phone";
-            Phone.ReadOnly = true;
-            // 
-            // Type
-            // 
-            Type.DataPropertyName = "Type";
-            Type.FillWeight = 80F;
-            Type.HeaderText = "Loại";
-            Type.Name = "Type";
-            Type.ReadOnly = true;
-            // 
-            // InitialDebt
-            // 
-            InitialDebt.DataPropertyName = "InitialDebt";
-            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleRight;
-            InitialDebt.DefaultCellStyle = dataGridViewCellStyle1;
-            InitialDebt.HeaderText = "Nợ Đầu Kỳ";
-            InitialDebt.Name = "InitialDebt";
-            InitialDebt.ReadOnly = true;
+
             // 
             // panel3
             // 
@@ -558,10 +522,7 @@ namespace QuanLyThuChi_DoAn
         private FontAwesome.Sharp.IconButton btnCancel;
         private FontAwesome.Sharp.IconButton btnNew;
         private Panel panel7;
-        private DataGridViewTextBoxColumn PartnerName;
-        private DataGridViewTextBoxColumn Phone;
-        private DataGridViewTextBoxColumn Type;
-        private DataGridViewTextBoxColumn InitialDebt;
+
         private FontAwesome.Sharp.IconButton btnRefresh;
     }
 }

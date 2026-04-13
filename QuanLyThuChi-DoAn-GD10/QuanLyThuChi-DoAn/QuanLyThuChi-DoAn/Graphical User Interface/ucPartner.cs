@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
@@ -19,6 +19,7 @@ namespace QuanLyThuChi_DoAn
             InitializeComponent();
             var context = new AppDbContext();
             _partnerService = new PartnerService(context);
+            SetupDataGridView();
             HookupEvents();
         }
 
@@ -88,29 +89,127 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
-        // ✅ Criterion 3: CellFormatting - Color code by Type
+        private void SetupDataGridView()
+        {
+            dgvPartners.AutoGenerateColumns = false;
+            dgvPartners.Columns.Clear();
+            dgvPartners.ReadOnly = true;
+            dgvPartners.AllowUserToAddRows = false;
+            dgvPartners.AllowUserToDeleteRows = false;
+            dgvPartners.AllowUserToResizeRows = false;
+            dgvPartners.RowHeadersVisible = false;
+            dgvPartners.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvPartners.BackgroundColor = Color.White;
+            dgvPartners.BorderStyle = BorderStyle.None;
+
+            var colPartnerName = new DataGridViewTextBoxColumn
+            {
+                Name = "PartnerName",
+                DataPropertyName = "PartnerName",
+                HeaderText = "Tên Đối Tác",
+                Width = 180
+            };
+
+            var colPhone = new DataGridViewTextBoxColumn
+            {
+                Name = "Phone",
+                DataPropertyName = "Phone",
+                HeaderText = "SĐT",
+                Width = 100
+            };
+
+            var colType = new DataGridViewTextBoxColumn
+            {
+                Name = "Type",
+                DataPropertyName = "Type",
+                HeaderText = "Loại",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+
+            var colAddress = new DataGridViewTextBoxColumn
+            {
+                Name = "Address",
+                DataPropertyName = "Address",
+                HeaderText = "Địa chỉ",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                MinimumWidth = 200
+            };
+
+            var colInitialDebt = new DataGridViewTextBoxColumn
+            {
+                Name = "InitialDebt",
+                DataPropertyName = "InitialDebt",
+                HeaderText = "Nợ Đầu Kỳ",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N0", Alignment = DataGridViewContentAlignment.MiddleRight }
+            };
+
+            var colIsActive = new DataGridViewTextBoxColumn
+            {
+                Name = "IsActive",
+                DataPropertyName = "IsActive",
+                HeaderText = "Trạng thái",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+
+            dgvPartners.Columns.AddRange(new DataGridViewColumn[]
+            {
+                colPartnerName,
+                colPhone,
+                colType,
+                colAddress,
+                colInitialDebt,
+                colIsActive
+            });
+        }
+
+        // ✅ Criterion 3: CellFormatting - Color code by Type and Status
         private void DgvPartners_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvPartners.Columns[e.ColumnIndex].DataPropertyName == "Type" && e.Value != null)
-            {
-                if (e.Value.ToString() == "CUSTOMER")
-                {
-                    e.CellStyle.ForeColor = System.Drawing.Color.Blue;
-                    e.CellStyle.Font = new System.Drawing.Font(e.CellStyle.Font, System.Drawing.FontStyle.Bold);
-                }
-                else if (e.Value.ToString() == "SUPPLIER")
-                {
-                    e.CellStyle.ForeColor = System.Drawing.Color.Orange;
-                    e.CellStyle.Font = new System.Drawing.Font(e.CellStyle.Font, System.Drawing.FontStyle.Bold);
-                }
-            }
+            if (e.RowIndex < 0 || e.RowIndex >= dgvPartners.Rows.Count) return;
 
-            // ✅ Criterion 3: Format InitialDebt as currency with thousands separator
-            if (dgvPartners.Columns[e.ColumnIndex].DataPropertyName == "InitialDebt" && e.Value != null)
+            string colName = dgvPartners.Columns[e.ColumnIndex].Name;
+            var partner = dgvPartners.Rows[e.RowIndex].DataBoundItem as Partner;
+            if (partner == null) return;
+
+            if (colName == "Type")
             {
-                if (decimal.TryParse(e.Value.ToString(), out decimal amount))
+                if (partner.Type == "CUSTOMER")
                 {
-                    e.Value = amount.ToString("N0"); // Format as "1.000.000"
+                    e.Value = "Khách hàng";
+                    e.CellStyle.ForeColor = Color.Blue;
+                    e.CellStyle.Font = new Font(dgvPartners.Font, FontStyle.Bold);
+                }
+                else if (partner.Type == "SUPPLIER")
+                {
+                    e.Value = "Nhà cung cấp";
+                    e.CellStyle.ForeColor = Color.DarkOrange;
+                    e.CellStyle.Font = new Font(dgvPartners.Font, FontStyle.Bold);
+                }
+                e.FormattingApplied = true;
+            }
+            else if (colName == "IsActive")
+            {
+                if (partner.IsActive)
+                {
+                    e.Value = "🎯 Đang hoạt động";
+                    e.CellStyle.ForeColor = Color.SeaGreen;
+                }
+                else
+                {
+                    e.Value = "💤 Ngừng hoạt động";
+                    e.CellStyle.ForeColor = Color.Red;
+                }
+                e.FormattingApplied = true;
+            }
+            else if (colName == "InitialDebt")
+            {
+                if (e.Value != null && decimal.TryParse(e.Value.ToString(), out decimal amount))
+                {
+                    e.Value = amount.ToString("N0");
+                    if (amount > 0) e.CellStyle.ForeColor = Color.Crimson;
                     e.FormattingApplied = true;
                 }
             }

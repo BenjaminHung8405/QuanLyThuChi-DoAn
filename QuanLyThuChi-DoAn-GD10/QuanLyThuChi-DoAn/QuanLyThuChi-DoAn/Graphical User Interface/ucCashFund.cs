@@ -73,20 +73,7 @@ namespace QuanLyThuChi_DoAn
             btnDelete.Enabled = _selectedFund != null;
         }
 
-        public void LoadFunds()
-        {
-            var funds = _context.CashFunds
-                .Where(f => f.IsActive)
-                .ToList();
 
-            dgvCashFunds.DataSource = null;
-            dgvCashFunds.DataSource = funds;
-
-            lblTotalBalance.Text = funds.Sum(f => f.Balance).ToString("N0") + " đ";
-
-            ResetForm();
-            SetInputFieldsEnabled(false); btnSyncSelected.Enabled = false;
-        }
 
         public void LoadData()
         {
@@ -277,7 +264,7 @@ namespace QuanLyThuChi_DoAn
                 }
             }
 
-            LoadFunds();
+            LoadData();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
@@ -312,7 +299,7 @@ namespace QuanLyThuChi_DoAn
             _context.SaveChanges();
 
             MessageBox.Show("Quỹ đã được ẩn (xóa mềm).", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            LoadFunds();
+            LoadData();
         }
 
         private void btnRefresh_Click(object sender, EventArgs e)

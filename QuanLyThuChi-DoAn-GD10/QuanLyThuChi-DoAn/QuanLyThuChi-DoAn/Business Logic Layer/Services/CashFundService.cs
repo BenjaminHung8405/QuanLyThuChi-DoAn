@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
@@ -200,14 +200,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                          && t.TransType == "IN"
                          && t.IsActive == true
                          && t.Status == "COMPLETED")
-                .Sum(t => t.Amount);
+                .Sum(t => (decimal?)t.Amount) ?? 0;
 
             decimal totalOut = _context.Transactions
                 .Where(t => t.FundId == fundId
                          && t.TransType == "OUT"
                          && t.IsActive == true
                          && t.Status == "COMPLETED")
-                .Sum(t => t.Amount);
+                .Sum(t => (decimal?)t.Amount) ?? 0;
 
             // 3. Cập nhật số dư mới
             decimal calculatedBalance = totalIn - totalOut;
@@ -248,14 +248,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                          && t.TransType == "IN"
                          && t.IsActive == true
                          && t.Status == "COMPLETED")
-                .Sum(t => t.Amount);
+                .Sum(t => (decimal?)t.Amount) ?? 0;
 
             decimal totalOut = _context.Transactions
                 .Where(t => t.FundId == fundId
                          && t.TransType == "OUT"
                          && t.IsActive == true
                          && t.Status == "COMPLETED")
-                .Sum(t => t.Amount);
+                .Sum(t => (decimal?)t.Amount) ?? 0;
 
             decimal calculated = totalIn - totalOut;
 
@@ -285,14 +285,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                              && t.TransType == "IN"
                              && t.IsActive == true
                              && t.Status == "COMPLETED")
-                    .Sum(t => t.Amount);
+                    .Sum(t => (decimal?)t.Amount) ?? 0;
 
                 decimal totalOut = _context.Transactions
                     .Where(t => t.FundId == fund.FundId
                              && t.TransType == "OUT"
                              && t.IsActive == true
                              && t.Status == "COMPLETED")
-                    .Sum(t => t.Amount);
+                    .Sum(t => (decimal?)t.Amount) ?? 0;
 
                 decimal calculated = totalIn - totalOut;
 

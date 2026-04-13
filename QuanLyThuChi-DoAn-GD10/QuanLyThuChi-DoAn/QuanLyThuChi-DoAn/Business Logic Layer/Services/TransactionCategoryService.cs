@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.DTOs;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 
 namespace QuanLyThuChi_DoAn.BLL.Services
@@ -110,6 +111,49 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .OrderBy(c => c.Type)
                 .ThenBy(c => c.CategoryName)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Get categories with statistics (Usage Count and Total Amount)
+        /// </summary>
+        public List<TransactionCategoryDisplayDTO> GetCategoryStats(int tenantId, string keyword = "")
+        {
+            int scopedTenantId = ResolveTenantScope(tenantId);
+            int? scopedBranchId = ResolveBranchScopeForRead();
+
+            // 1. Get base categories
+            var baseQuery = _context.TransactionCategories
+                .Where(c => c.TenantId == scopedTenantId && c.IsActive == true)
+                .Where(c => !scopedBranchId.HasValue || c.BranchId == scopedBranchId.Value);
+
+            // 2. Perform stats calculation using subqueries
+            var statsQuery = baseQuery.Select(c => new TransactionCategoryDisplayDTO
+            {
+                CategoryId = c.CategoryId,
+                CategoryName = c.CategoryName,
+                Type = c.Type,
+                IsActive = c.IsActive,
+                TransactionCount = _context.Transactions.Count(t => t.CategoryId == c.CategoryId && t.IsActive),
+                TotalAmount = _context.Transactions
+                    .Where(t => t.CategoryId == c.CategoryId && t.IsActive)
+                    .Sum(t => (decimal?)t.Amount) ?? 0
+            });
+
+            var results = statsQuery
+                .OrderBy(c => c.Type)
+                .ThenBy(c => c.CategoryName)
+                .ToList();
+
+            // 3. Optional keyword search (Client-side because of TextUtility complexity in EF)
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                string keywordNormalized = TextUtility.RemoveVietnameseAccents(keyword);
+                results = results.Where(c =>
+                    TextUtility.RemoveVietnameseAccents(c.CategoryName).Contains(keywordNormalized)
+                ).ToList();
+            }
+
+            return results;
         }
 
         /// <summary>

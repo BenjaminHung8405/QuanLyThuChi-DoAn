@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuChi_DoAn
+namespace QuanLyThuChi_DoAn
 {
     partial class ucTransactionCategory
     {
@@ -34,8 +34,6 @@
             tableLayoutPanel1 = new TableLayoutPanel();
             panel2 = new Panel();
             dgvCategories = new DataGridView();
-            colCategoryName = new DataGridViewTextBoxColumn();
-            colType = new DataGridViewTextBoxColumn();
             panel3 = new Panel();
             cboFilterType = new ComboBox();
             txtSearch = new TextBox();
@@ -129,41 +127,17 @@
             // 
             // dgvCategories
             // 
-            dgvCategories.AllowUserToAddRows = false;
-            dgvCategories.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvCategories.BackgroundColor = Color.White;
-            dgvCategories.BorderStyle = BorderStyle.None;
-            dgvCategories.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvCategories.Columns.AddRange(new DataGridViewColumn[] { colCategoryName, colType });
-            dgvCategories.Dock = DockStyle.Fill;
-            dgvCategories.Location = new Point(16, 55);
-            dgvCategories.MultiSelect = false;
-            dgvCategories.Name = "dgvCategories";
-            dgvCategories.ReadOnly = true;
-            dgvCategories.RowHeadersVisible = false;
-            dgvCategories.RowHeadersWidth = 62;
             dgvCategories.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCategories.Size = new Size(662, 560);
             dgvCategories.TabIndex = 1;
-            // 
-            // colCategoryName
-            // 
-            colCategoryName.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            colCategoryName.DataPropertyName = "CategoryName";
-            colCategoryName.FillWeight = 250F;
-            colCategoryName.HeaderText = "Tên Danh Mục";
-            colCategoryName.MinimumWidth = 8;
-            colCategoryName.Name = "colCategoryName";
-            colCategoryName.ReadOnly = true;
-            // 
-            // colType
-            // 
-            colType.DataPropertyName = "Type";
-            colType.FillWeight = 327.411163F;
-            colType.HeaderText = "Phân Loại";
-            colType.MinimumWidth = 8;
-            colType.Name = "colType";
-            colType.ReadOnly = true;
+            dgvCategories.Dock = DockStyle.Fill;
+            dgvCategories.Name = "dgvCategories";
+            dgvCategories.MultiSelect = false;
+            dgvCategories.ReadOnly = true;
+            dgvCategories.Location = new Point(16, 55);
+            dgvCategories.RowHeadersVisible = false;
+            dgvCategories.BackgroundColor = Color.White;
+            dgvCategories.BorderStyle = BorderStyle.None;
             // 
             // panel3
             // 
@@ -429,13 +403,9 @@
         private TableLayoutPanel tableLayoutPanel1;
         private Panel panel2;
         private DataGridView dgvCategories;
-        private DataGridViewTextBoxColumn PartnerName;
-        private DataGridViewTextBoxColumn Phone;
-        private DataGridViewTextBoxColumn Type;
-        private DataGridViewTextBoxColumn InitialDebt;
-        private Panel panel3;
         private ComboBox cboFilterType;
         private TextBox txtSearch;
+        private Panel panel3;
         private Panel panel4;
         private GroupBox gbDetail;
         private TableLayoutPanel tableLayoutPanel3;
@@ -443,21 +413,12 @@
         private FontAwesome.Sharp.IconButton btnSave;
         private FontAwesome.Sharp.IconButton btnCancel;
         private FontAwesome.Sharp.IconButton btnNew;
-        private TextBox txtInitialDebt;
-        private Label label6;
-        private TableLayoutPanel tableLayoutPanel2;
-        private Panel panel5;
-        private TextBox txtPhone;
-        private Label label4;
-        private TextBox txtAddress;
-        private Label label3;
         private TextBox txtCategoryName;
         private Label label2;
+        private TableLayoutPanel tableLayoutPanel2;
         private Panel panel7;
         private Panel panel6;
         private ComboBox cboType;
         private Label label5;
-        private DataGridViewTextBoxColumn colCategoryName;
-        private DataGridViewTextBoxColumn colType;
     }
 }

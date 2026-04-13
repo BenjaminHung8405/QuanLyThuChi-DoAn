@@ -285,6 +285,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             var query = _context.Transactions
                 .Include(t => t.User)
                 .Include(t => t.Branch)
+                .Include(t => t.Category)
+                .Include(t => t.Partner)
+                .Include(t => t.CashFund)
                 .Where(t => t.TenantId == tenantId)  // ✅ Filter by tenant ID
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED") // ✅ Exclude soft-deleted transactions
@@ -319,6 +322,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             var query = _context.Transactions
                 .Include(t => t.User)
                 .Include(t => t.Branch)
+                .Include(t => t.Category)
+                .Include(t => t.Partner)
+                .Include(t => t.CashFund)
                 .Where(t => t.TenantId == currentTenantId)
                 .Where(t => t.TransDate.Date >= fromDate.Date && t.TransDate.Date <= toDate.Date)
                 .Where(t => t.Status != "DELETED")
@@ -363,6 +369,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             var query = _context.Transactions
                 .Include(t => t.User)
                 .Include(t => t.Branch)
+                .Include(t => t.Category)
+                .Include(t => t.Partner)
+                .Include(t => t.CashFund)
                 .Where(t => t.IsActive == true)
                 .Where(t => t.Status != "DELETED")
                 .Where(t => t.TenantId == currentTenantId);

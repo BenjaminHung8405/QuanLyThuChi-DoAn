@@ -8,6 +8,18 @@ namespace QuanLyThuChi_DoAn.BLL.Services
     {
         private readonly AppDbContext _context;
 
+        /// <summary>
+        /// CategoryId hệ thống dành cho phiếu Chuyển quỹ nội bộ (quỹ nguồn - phía OUT).
+        /// Phải khớp với <c>TransactionService.InternalTransferOutCategoryId</c>.
+        /// </summary>
+        private const int InternalTransferOutCategoryId = 98;
+
+        /// <summary>
+        /// CategoryId hệ thống dành cho phiếu Nhận chuyển quỹ nội bộ (quỹ đích - phía IN).
+        /// Phải khớp với <c>TransactionService.InternalTransferInCategoryId</c>.
+        /// </summary>
+        private const int InternalTransferInCategoryId = 99;
+
         public ReportService(AppDbContext context)
         {
             _context = context;
@@ -31,12 +43,18 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 transQuery = transQuery.Where(t => t.BranchId == branchId.Value);
             }
 
-            IQueryable<Transaction> incomeQuery = transQuery.Where(t => t.TransType == "IN");
+            // Loại trừ các phiếu Chuyển quỹ nội bộ ra khỏi P&L.
+            // Chúng là dịch chuyển tiền giữa các quỹ, KHÔNG phải doanh thu hay chi phí thực tế.
+            IQueryable<Transaction> incomeQuery = transQuery
+                .Where(t => t.TransType == "IN"
+                         && t.CategoryId != InternalTransferInCategoryId);
             decimal netIncome = await incomeQuery.SumAsync(t => (decimal?)t.SubTotal) ?? 0;
             decimal outputVat = await incomeQuery.SumAsync(t => (decimal?)t.TaxAmount) ?? 0;
             decimal grossIncome = await incomeQuery.SumAsync(t => (decimal?)t.Amount) ?? 0;
 
-            IQueryable<Transaction> expenseQuery = transQuery.Where(t => t.TransType == "OUT");
+            IQueryable<Transaction> expenseQuery = transQuery
+                .Where(t => t.TransType == "OUT"
+                         && t.CategoryId != InternalTransferOutCategoryId);
             decimal netExpense = await expenseQuery.SumAsync(t => (decimal?)t.SubTotal) ?? 0;
             decimal inputVat = await expenseQuery.SumAsync(t => (decimal?)t.TaxAmount) ?? 0;
             decimal grossExpense = await expenseQuery.SumAsync(t => (decimal?)t.Amount) ?? 0;
@@ -85,7 +103,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                             && t.IsActive == true
                             && t.Status == "COMPLETED"
                             && t.TransDate >= startDate
-                            && t.TransDate <= endDate);
+                            && t.TransDate <= endDate
+                            // Loại trừ phiếu Chuyển quỹ nội bộ khỏi biểu đồ cơ cấu chi tiêu
+                            && t.CategoryId != InternalTransferOutCategoryId);
 
             if (branchId.HasValue && branchId.Value > 0)
             {
@@ -130,8 +150,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                 .Select(g => new CashFlowTrendDTO
                 {
                     Date = g.Key,
-                    TotalIncome = g.Sum(x => x.TransType == "IN" ? x.Amount : 0),
-                    TotalExpense = g.Sum(x => x.TransType == "OUT" ? x.Amount : 0)
+                    // Loại trừ phiếu chuyển quỹ nội bộ khỏi biểu đồ xu hướng Thu/Chi
+                    TotalIncome = g.Sum(x => x.TransType == "IN" && x.CategoryId != InternalTransferInCategoryId ? x.Amount : 0),
+                    TotalExpense = g.Sum(x => x.TransType == "OUT" && x.CategoryId != InternalTransferOutCategoryId ? x.Amount : 0)
                 })
                 .OrderBy(x => x.Date)
                 .ToListAsync();
@@ -292,11 +313,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     // g.Key chính là BranchName. Dùng toán tử ?? để đề phòng tên chi nhánh bị Null trong DB
                     BranchName = g.Key ?? "Chi nhánh không xác định",
 
-                    // Tính tổng thu/chi
-                    TotalIncome = g.Sum(x => x.TransType == "IN" ? x.Amount : 0),
-                    TotalExpense = g.Sum(x => x.TransType == "OUT" ? x.Amount : 0),
+                    // Tính tổng thu/chi thực tế - loại trừ phiếu Chuyển quỹ nội bộ (không phải P&L)
+                    TotalIncome = g.Sum(x => x.TransType == "IN" && x.CategoryId != InternalTransferInCategoryId ? x.Amount : 0),
+                    TotalExpense = g.Sum(x => x.TransType == "OUT" && x.CategoryId != InternalTransferOutCategoryId ? x.Amount : 0),
 
-                    // Đếm tổng số phiếu Thu/Chi của chi nhánh đó
+                    // Đếm tổng số phiếu Thu/Chi của chi nhánh đó (bao gồm cả phiếu chuyển quỹ)
                     TransactionCount = g.Count()
                 })
                 .OrderByDescending(x => x.TotalIncome - x.TotalExpense)

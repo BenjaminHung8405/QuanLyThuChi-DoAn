@@ -302,11 +302,9 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             try
             {
                 SetSubmittingState(true);
-                bool isSuccess = await Task.Run(() =>
-                {
-                    var paymentService = new DebtService();
-                    return paymentService.PayDebt(_debtId, selectedFundId, amount, note);
-                });
+                var paymentService = new DebtService();
+                bool isSuccess = await paymentService.PayDebtAsync(_debtId, selectedFundId, amount, note);
+
 
                 if (isSuccess)
                 {

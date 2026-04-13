@@ -183,6 +183,12 @@ namespace QuanLyThuChi_DoAn
                 return;
             }
 
+            if (selectedUser.UserId == SessionManager.CurrentUserId)
+            {
+                MessageBox.Show("Bạn không thể tự chỉnh sửa thông tin hoặc phân quyền của chính mình ở màn hình này.", "Từ chối quyền", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             using var editUserForm = new frmEditUser(selectedUser.UserId);
             DialogResult dialogResult = FindForm() is Form owner
                 ? editUserForm.ShowDialog(owner)
@@ -205,6 +211,12 @@ namespace QuanLyThuChi_DoAn
             if (selectedUser == null)
             {
                 MessageBox.Show("Vui lòng chọn một tài khoản trong danh sách.", "Chưa chọn dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (selectedUser.UserId == SessionManager.CurrentUserId)
+            {
+                MessageBox.Show("Bạn không thể tự khóa hoặc mở khóa tài khoản của chính mình.", "Từ chối quyền", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

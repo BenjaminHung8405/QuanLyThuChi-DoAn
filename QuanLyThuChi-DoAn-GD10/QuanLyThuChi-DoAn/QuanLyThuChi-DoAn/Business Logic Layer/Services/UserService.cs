@@ -30,9 +30,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
         private static void EnsureCanManageUsers()
         {
-            if (!SessionManager.IsSuperAdmin && !SessionManager.IsTenantAdmin)
+            if (!SessionManager.CanManageUsers)
             {
-                throw new UnauthorizedAccessException("Chỉ SuperAdmin hoặc Giám đốc mới có quyền quản lý người dùng.");
+                throw new UnauthorizedAccessException("Bạn không có quyền quản lý người dùng.");
             }
         }
 
@@ -306,11 +306,19 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             int effectiveTenantId = ResolveTenantScope(tenantId);
 
-            var users = await _context.Users
+            var query = _context.Users
                 .AsNoTracking()
                 .Include(u => u.Role)
                 .Include(u => u.Branch)
-                .Where(u => u.TenantId == effectiveTenantId)
+                .Where(u => u.TenantId == effectiveTenantId);
+
+            // Filter by branch for Branch Managers
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+            {
+                query = query.Where(u => u.BranchId == SessionManager.CurrentBranchId.Value);
+            }
+
+            var users = await query
                 .OrderBy(u => u.FullName)
                 .ThenBy(u => u.Username)
                 .Select(u => new
@@ -369,9 +377,16 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             int effectiveTenantId = ResolveTenantScope(tenantId);
 
-            return await _context.Branches
+            var query = _context.Branches
                 .AsNoTracking()
-                .Where(b => b.TenantId == effectiveTenantId && b.IsActive)
+                .Where(b => b.TenantId == effectiveTenantId && b.IsActive);
+
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+            {
+                query = query.Where(b => b.BranchId == SessionManager.CurrentBranchId.Value);
+            }
+
+            return await query
                 .OrderBy(b => b.BranchName)
                 .ToListAsync()
                 .ConfigureAwait(false);
@@ -388,10 +403,20 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             int effectiveTenantId = ResolveTenantScope(tenantId);
 
-            return await _context.Users
+            var user = await _context.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UserId == userId && u.TenantId == effectiveTenantId)
                 .ConfigureAwait(false);
+
+            if (user != null && SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue)
+            {
+                if (user.BranchId != SessionManager.CurrentBranchId.Value)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền xem thông tin người dùng thuộc chi nhánh khác.");
+                }
+            }
+
+            return user;
         }
 
         public async Task<bool> UpdateUserAsync(User user, string? rawPassword = null)
@@ -432,6 +457,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (existingUser.TenantId != effectiveTenantId)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền cập nhật tài khoản của Tenant khác.");
+            }
+
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue)
+            {
+                if (existingUser.BranchId != SessionManager.CurrentBranchId.Value)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền cập nhật tài khoản thuộc chi nhánh khác.");
+                }
             }
 
             var targetRole = existingUser.Role
@@ -638,6 +671,14 @@ namespace QuanLyThuChi_DoAn.BLL.Services
             if (user.TenantId != effectiveTenantId)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền thay đổi tài khoản của Tenant khác.");
+            }
+
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue)
+            {
+                if (user.BranchId != SessionManager.CurrentBranchId.Value)
+                {
+                    throw new UnauthorizedAccessException("Bạn không có quyền thay đổi trạng thái tài khoản thuộc chi nhánh khác.");
+                }
             }
 
             if (user.UserId == SessionManager.CurrentUserId)

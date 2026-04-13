@@ -1,4 +1,4 @@
-﻿using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.Common;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 using QuanLyThuChi_DoAn.Data_Access_Layer.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -171,9 +171,16 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// </summary>
         public async Task<List<Branch>> GetActiveBranchesByTenantAsync(int tenantId)
         {
-            return await _context.Branches
+            var query = _context.Branches
                 .AsNoTracking()
-                .Where(b => b.TenantId == tenantId && b.IsActive)
+                .Where(b => b.TenantId == tenantId && b.IsActive);
+
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue && SessionManager.CurrentBranchId.Value > 0)
+            {
+                query = query.Where(b => b.BranchId == SessionManager.CurrentBranchId.Value);
+            }
+
+            return await query
                 .OrderByDescending(b => b.CreatedDate)
                 .ToListAsync()
                 .ConfigureAwait(false);

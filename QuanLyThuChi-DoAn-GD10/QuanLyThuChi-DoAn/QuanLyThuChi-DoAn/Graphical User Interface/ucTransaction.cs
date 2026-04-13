@@ -150,6 +150,10 @@ namespace QuanLyThuChi_DoAn
             dgvTransactions.AllowUserToAddRows = false;
             dgvTransactions.AllowUserToDeleteRows = false;
             dgvTransactions.AllowUserToResizeRows = false;
+            dgvTransactions.RowHeadersVisible = false;
+            dgvTransactions.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvTransactions.BackgroundColor = Color.White;
+            dgvTransactions.BorderStyle = BorderStyle.None;
 
             var colTransId = new DataGridViewTextBoxColumn
             {
@@ -163,25 +167,9 @@ namespace QuanLyThuChi_DoAn
             {
                 Name = "colTransDate",
                 DataPropertyName = "TransDate",
-                HeaderText = "Ngày lập",
+                HeaderText = "Ngày",
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy HH:mm" },
-                Width = 140
-            };
-
-            var colCreator = new DataGridViewTextBoxColumn
-            {
-                Name = "colCreator",
-                DataPropertyName = "CreatedBy",
-                HeaderText = "Người lập",
-                Width = 150
-            };
-
-            var colBranch = new DataGridViewTextBoxColumn
-            {
-                Name = "colBranch",
-                DataPropertyName = "BranchId",
-                HeaderText = "Chi nhánh",
-                Width = 170
+                Width = 125
             };
 
             var colTransType = new DataGridViewTextBoxColumn
@@ -189,7 +177,24 @@ namespace QuanLyThuChi_DoAn
                 Name = "colTransType",
                 DataPropertyName = "TransType",
                 HeaderText = "Loại",
-                Width = 80
+                Width = 60,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+
+            var colCategory = new DataGridViewTextBoxColumn
+            {
+                Name = "colCategory",
+                DataPropertyName = "CategoryNameSnapshot",
+                HeaderText = "Danh mục",
+                Width = 130
+            };
+
+            var colPartner = new DataGridViewTextBoxColumn
+            {
+                Name = "colPartner",
+                DataPropertyName = "PartnerNameSnapshot",
+                HeaderText = "Đối tác",
+                Width = 130
             };
 
             var colAmount = new DataGridViewTextBoxColumn
@@ -198,7 +203,7 @@ namespace QuanLyThuChi_DoAn
                 DataPropertyName = "Amount",
                 HeaderText = "Số tiền",
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0", Alignment = DataGridViewContentAlignment.MiddleRight },
-                Width = 120
+                Width = 110
             };
 
             var colStatus = new DataGridViewTextBoxColumn
@@ -206,15 +211,32 @@ namespace QuanLyThuChi_DoAn
                 Name = "colStatus",
                 DataPropertyName = "Status",
                 HeaderText = "Trạng thái",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+
+            var colFund = new DataGridViewTextBoxColumn
+            {
+                Name = "colFund",
+                DataPropertyName = "FundId",
+                HeaderText = "Tài khoản",
                 Width = 120
             };
 
-            var colDescription = new DataGridViewTextBoxColumn
+            var colCreator = new DataGridViewTextBoxColumn
             {
-                Name = "colDescription",
-                DataPropertyName = "Description",
-                HeaderText = "Nội dung",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                Name = "colCreator",
+                DataPropertyName = "CreatedBy",
+                HeaderText = "Người lập",
+                Width = 120
+            };
+
+            var colBranch = new DataGridViewTextBoxColumn
+            {
+                Name = "colBranch",
+                DataPropertyName = "BranchId",
+                HeaderText = "Chi nhánh",
+                Width = 120
             };
 
             var colRefNo = new DataGridViewTextBoxColumn
@@ -222,7 +244,16 @@ namespace QuanLyThuChi_DoAn
                 Name = "colRefNo",
                 DataPropertyName = "RefNo",
                 HeaderText = "Mã Ref",
-                Width = 120
+                Width = 100
+            };
+
+            var colDescription = new DataGridViewTextBoxColumn
+            {
+                Name = "colDescription",
+                DataPropertyName = "Description",
+                HeaderText = "Nội dung",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                MinimumWidth = 150
             };
 
             dgvTransactions.Columns.AddRange(new DataGridViewColumn[]
@@ -230,12 +261,15 @@ namespace QuanLyThuChi_DoAn
                 colTransId,
                 colTransDate,
                 colTransType,
+                colCategory,
+                colPartner,
                 colAmount,
                 colStatus,
+                colFund,
                 colCreator,
                 colBranch,
-                colDescription,
-                colRefNo
+                colRefNo,
+                colDescription
             });
 
             ApplyGridRoleVisibility();
@@ -541,85 +575,91 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
-        /// <summary>
-        /// Format grid cells (color, currency format, etc.)
-        /// Updated for new column names: TransType, Description, Amount
-        /// </summary>
         private void DgvTransactions_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (e.RowIndex < 0) return;
+            if (e.RowIndex < 0 || e.RowIndex >= dgvTransactions.Rows.Count) return;
 
             string colName = dgvTransactions.Columns[e.ColumnIndex].Name;
+            var row = dgvTransactions.Rows[e.RowIndex];
+            var transaction = row.DataBoundItem as Transaction;
+            if (transaction == null) return;
 
             // Color code transaction type and map to Thu/Chi
             if (colName == "colTransType")
             {
-                var row = dgvTransactions.Rows[e.RowIndex];
-                var transaction = row.DataBoundItem as Transaction;
-                if (transaction == null) return;
-
                 string type = transaction.TransType?.Trim().ToUpperInvariant();
                 var isIn = type == "IN";
 
                 e.Value = isIn ? "Thu" : "Chi";
-                e.CellStyle.ForeColor = isIn ? Color.MediumSeaGreen : Color.Crimson;
-                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                e.CellStyle.ForeColor = isIn ? Color.SeaGreen : Color.Crimson;
+                e.CellStyle.Font = new Font(dgvTransactions.Font, FontStyle.Bold);
                 e.FormattingApplied = true;
-                return;
+            }
+            else if (colName == "colCategory")
+            {
+                string categoryName = !string.IsNullOrWhiteSpace(transaction.CategoryNameSnapshot)
+                    ? transaction.CategoryNameSnapshot.Trim()
+                    : (transaction.Category != null ? transaction.Category.CategoryName.Trim() : "N/A");
+                e.Value = categoryName;
+                e.FormattingApplied = true;
+            }
+            else if (colName == "colPartner")
+            {
+                string partnerName = !string.IsNullOrWhiteSpace(transaction.PartnerNameSnapshot)
+                    ? transaction.PartnerNameSnapshot.Trim()
+                    : (transaction.Partner != null ? transaction.Partner.PartnerName.Trim() : "---");
+                e.Value = partnerName;
+                e.FormattingApplied = true;
+            }
+            else if (colName == "colFund")
+            {
+                string fundName = transaction.CashFund != null ? transaction.CashFund.FundName.Trim() : $"Quỹ #{transaction.FundId}";
+                e.Value = fundName;
+                e.FormattingApplied = true;
             }
             else if (colName == "colStatus")
             {
-                string status = Convert.ToString(e.Value)?.Trim().ToUpperInvariant() ?? string.Empty;
+                string status = transaction.Status?.Trim().ToUpperInvariant() ?? string.Empty;
 
                 if (status == "PENDING")
                 {
                     e.Value = "Chờ xác nhận";
                     e.CellStyle.ForeColor = Color.DarkOrange;
-                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    e.CellStyle.Font = new Font(dgvTransactions.Font, FontStyle.Bold);
                 }
                 else if (status == "COMPLETED")
                 {
                     e.Value = "Hoàn tất";
-                    e.CellStyle.ForeColor = Color.SeaGreen;
-                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    e.CellStyle.ForeColor = Color.MediumSeaGreen;
+                    e.CellStyle.Font = new Font(dgvTransactions.Font, FontStyle.Bold);
                 }
                 else if (status == "CANCELLED")
                 {
                     e.Value = "Đã hủy";
-                    e.CellStyle.ForeColor = Color.IndianRed;
+                    e.CellStyle.ForeColor = Color.Gray;
+                    e.CellStyle.SelectionForeColor = Color.LightGray;
+                }
+                else if (status == "DELETED")
+                {
+                    e.Value = "Đã xóa";
+                    e.CellStyle.ForeColor = Color.Silver;
                 }
 
                 e.FormattingApplied = true;
-                return;
             }
             else if (colName == "colCreator")
             {
-                var row = dgvTransactions.Rows[e.RowIndex];
-                var transaction = row.DataBoundItem as Transaction;
-                if (transaction == null)
-                {
-                    return;
-                }
-
                 string creatorDisplayName = !string.IsNullOrWhiteSpace(transaction.User?.FullName)
                     ? transaction.User.FullName.Trim()
                     : (!string.IsNullOrWhiteSpace(transaction.User?.Username)
                         ? transaction.User.Username.Trim()
-                        : $"User #{transaction.CreatedBy}");
+                        : $"ID: {transaction.CreatedBy}");
 
                 e.Value = creatorDisplayName;
                 e.FormattingApplied = true;
-                return;
             }
             else if (colName == "colBranch")
             {
-                var row = dgvTransactions.Rows[e.RowIndex];
-                var transaction = row.DataBoundItem as Transaction;
-                if (transaction == null)
-                {
-                    return;
-                }
-
                 string branchDisplayName = !string.IsNullOrWhiteSpace(transaction.Branch?.BranchName)
                     ? transaction.Branch.BranchName.Trim()
                     : (!string.IsNullOrWhiteSpace(SessionManager.BranchName) && SessionManager.CurrentBranchId == transaction.BranchId
@@ -628,7 +668,6 @@ namespace QuanLyThuChi_DoAn
 
                 e.Value = branchDisplayName;
                 e.FormattingApplied = true;
-                return;
             }
             // Format currency
             else if (colName == "colAmount")
@@ -636,6 +675,7 @@ namespace QuanLyThuChi_DoAn
                 if (e.Value != null && decimal.TryParse(e.Value.ToString(), out decimal amount))
                 {
                     e.Value = amount.ToString("N0");
+                    e.CellStyle.Font = new Font(dgvTransactions.Font, FontStyle.Bold);
                 }
             }
         }
@@ -1077,7 +1117,11 @@ namespace QuanLyThuChi_DoAn
             txtNote.Text = "";
             dtpTransactionDate.Value = DateTime.Now;
             radIn.Checked = true;
-            if (cboPartner.Items.Count > 0) cboPartner.SelectedIndex = 0;
+            if (cboPartner.Items.Count > 0)
+            {
+                // Tìm "Không có" hoặc chọn item đầu tiên
+                cboPartner.SelectedIndex = 0;
+            }
             if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = -1;
             if (cbTax.Items.Count > 0) cbTax.SelectedIndex = 0;
             _isAddMode = false;
@@ -1192,10 +1236,16 @@ namespace QuanLyThuChi_DoAn
 
                 // 2. Load Đối tác (Partner)
                 var partners = _partnerService.GetPartnersByTenant(currentTenantId);
+                partners.Insert(0, new Partner
+                {
+                    PartnerId = 0,
+                    PartnerName = "--- Không có ---"
+                });
+
                 cboPartner.DataSource = partners;
                 cboPartner.DisplayMember = "PartnerName";
                 cboPartner.ValueMember = "PartnerId";
-                cboPartner.SelectedIndex = -1; // giữ trạng thái chưa chọn
+                cboPartner.SelectedIndex = 0; // Mặc định là 'Không có'
 
                 // 3. Load Cash Funds theo context branch hiện tại (chi nhánh đang chọn)
                 int currentBranchId = SessionManager.CurrentBranchId.Value;
@@ -1467,6 +1517,33 @@ namespace QuanLyThuChi_DoAn
                 }
                 btnFilter.Enabled = true;
             }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            switch (keyData)
+            {
+                case Keys.F5:
+                    btnRefresh.PerformClick();
+                    return true;
+                case Keys.Control | Keys.N:
+                    btnNew.PerformClick();
+                    return true;
+                case Keys.Control | Keys.S:
+                    if (btnSave.Enabled)
+                    {
+                        btnSave.PerformClick();
+                    }
+                    return true;
+                case Keys.Escape:
+                    if (_isAddMode)
+                    {
+                        btnCancel.PerformClick();
+                        return true;
+                    }
+                    break;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

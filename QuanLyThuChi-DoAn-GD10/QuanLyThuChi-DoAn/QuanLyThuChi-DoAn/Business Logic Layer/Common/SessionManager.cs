@@ -119,7 +119,7 @@ namespace QuanLyThuChi_DoAn.BLL.Common
         public static bool CanChangeBranchContext => IsSuperAdmin || IsTenantAdmin;
         public static bool CanAccessDebtScreen => IsSuperAdmin || IsTenantAdmin || IsBranchManager || IsStaff;
         public static bool CanApproveDebt => IsSuperAdmin || IsTenantAdmin || IsBranchManager;
-        public static bool CanManageUsers => IsSuperAdmin || IsTenantAdmin;
+        public static bool CanManageUsers => IsSuperAdmin || IsTenantAdmin || IsBranchManager;
         public static bool CanManageBranches => IsSuperAdmin || IsTenantAdmin;
         public static bool CanViewSummaryReports => IsSuperAdmin || IsTenantAdmin;
         public static bool CanTransferInterBranch => IsTenantAdmin || IsBranchManager;

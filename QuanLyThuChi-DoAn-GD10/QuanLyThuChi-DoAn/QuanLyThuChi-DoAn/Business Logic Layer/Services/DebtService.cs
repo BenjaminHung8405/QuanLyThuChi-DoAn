@@ -309,19 +309,19 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         /// Thực hiện trả nợ: tạo Transaction, cập nhật số dư Quỹ và cập nhật PaidAmount trong bảng Debts.
         /// Sử dụng IDbContextTransaction để đảm bảo atomic.
         /// </summary>
-        public bool PayDebt(long debtId, int fundId, decimal amount, string note)
+        public async Task<bool> PayDebtAsync(long debtId, int fundId, decimal amount, string note)
         {
             if (!SessionManager.CanApproveDebt)
                 throw new UnauthorizedAccessException("Bạn không có quyền duyệt thanh toán công nợ.");
 
-            using (var tx = _context.Database.BeginTransaction())
+            using (var tx = await _context.Database.BeginTransactionAsync())
             {
                 try
                 {
                     Debt debt;
                     if (SessionManager.IsSuperAdmin)
                     {
-                        debt = _context.Debts.FirstOrDefault(d => d.DebtId == debtId);
+                        debt = await _context.Debts.FirstOrDefaultAsync(d => d.DebtId == debtId);
                     }
                     else
                     {
@@ -340,7 +340,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                             debtQuery = debtQuery.Where(d => d.BranchId == currentBranchId);
                         }
 
-                        debt = debtQuery.FirstOrDefault();
+                        debt = await debtQuery.FirstOrDefaultAsync();
                     }
 
                     if (debt == null)
@@ -360,7 +360,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                         fundQuery = fundQuery.Where(f => f.BranchId == currentBranchId);
                     }
 
-                    var fund = fundQuery.FirstOrDefault();
+                    var fund = await fundQuery.FirstOrDefaultAsync();
                     if (fund == null) throw new KeyNotFoundException("Quỹ thanh toán không hợp lệ hoặc không hoạt động.");
 
                     // Determine transaction direction
@@ -379,7 +379,7 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
                     if (branchId <= 0)
                     {
-                        var branch = _context.Branches.FirstOrDefault(b => b.TenantId == tenantId && b.IsActive);
+                        var branch = await _context.Branches.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.IsActive);
                         if (branch == null)
                             throw new InvalidOperationException("Không tìm thấy chi nhánh hoạt động. Vui lòng cấu hình chi nhánh trước.");
                         branchId = branch.BranchId;
@@ -388,16 +388,31 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                     if ((SessionManager.IsBranchManager || SessionManager.IsStaff) && SessionManager.CurrentBranchId.HasValue && branchId != SessionManager.CurrentBranchId.Value)
                         throw new UnauthorizedAccessException("Bạn chỉ có quyền thao tác công nợ trong chi nhánh hiện tại.");
 
-                    // Choose a default category for this transType
-                    var category = _context.TransactionCategories
-                        .Where(c => c.TenantId == tenantId && c.BranchId == branchId && c.Type == transType && c.IsActive)
-                        .OrderBy(c => c.CategoryId)
-                        .FirstOrDefault();
+                    // --- AUTO-PROVISION SYSTEM CATEGORIES ---
+                    // 1. Xác định tên Danh mục Hệ thống dựa theo Loại Công nợ
+                    string sysCategoryName = transType == "IN" ? "Thu nợ Khách hàng" : "Thanh toán Công nợ NCC";
+
+                    // 2. Tìm Danh mục Hệ thống (Tìm kiếm theo Tenant để mang tính Global)
+                    var category = await _context.TransactionCategories
+                        .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.CategoryName == sysCategoryName);
+
+                    // 3. AUTO-PROVISION: Nếu chưa có, Hệ thống tự động tạo ngầm luôn!
                     if (category == null)
-                        throw new InvalidOperationException("Không tìm thấy danh mục giao dịch phù hợp. Vui lòng tạo Category trước.");
+                    {
+                        category = new TransactionCategory
+                        {
+                            TenantId = tenantId,
+                            BranchId = branchId,
+                            CategoryName = sysCategoryName,
+                            Type = transType,
+                            IsActive = true
+                        };
+                        _context.TransactionCategories.Add(category);
+                        await _context.SaveChangesAsync();
+                    }
 
                     // Verify the branch belongs to this tenant
-                    var selectedBranch = _context.Branches.FirstOrDefault(b => b.BranchId == branchId && b.TenantId == tenantId);
+                    var selectedBranch = await _context.Branches.FirstOrDefaultAsync(b => b.BranchId == branchId && b.TenantId == tenantId);
                     if (selectedBranch == null)
                         throw new InvalidOperationException("Chi nhánh không hợp lệ cho Tenant hiện tại.");
 
@@ -438,18 +453,19 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                         debt.Status = "PARTIALLY_PAID";
 
                     _context.Transactions.Add(transaction);
-                    _context.SaveChanges();
+                    await _context.SaveChangesAsync();
 
-                    tx.Commit();
+                    await tx.CommitAsync();
                     return true;
                 }
                 catch
                 {
-                    tx.Rollback();
+                    await tx.RollbackAsync();
                     throw;
                 }
             }
         }
+
 
         private string ResolveDebtPartnerSnapshot(Debt debt)
         {

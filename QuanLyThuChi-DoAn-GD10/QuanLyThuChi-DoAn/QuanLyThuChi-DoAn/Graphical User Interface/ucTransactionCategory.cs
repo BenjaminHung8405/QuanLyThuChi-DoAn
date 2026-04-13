@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using QuanLyThuChi_DoAn.BLL.Common;
+using QuanLyThuChi_DoAn.BLL.DTOs;
 using QuanLyThuChi_DoAn.BLL.Services;
 using QuanLyThuChi_DoAn.Data_Access_Layer;
 
@@ -22,6 +23,7 @@ namespace QuanLyThuChi_DoAn
             InitializeComponent();
             var context = new AppDbContext();
             _categoryService = new TransactionCategoryService(context);
+            SetupDataGridView();
             HookupEvents();
         }
 
@@ -34,6 +36,7 @@ namespace QuanLyThuChi_DoAn
             // ✅ DataGrid Interaction - Hook CellClick to populate textboxes
             dgvCategories.CellClick += DgvCategories_CellClick;
             dgvCategories.CellFormatting += DgvCategories_CellFormatting;
+            dgvCategories.DataError += DgvCategories_DataError;
 
             // Button events
             btnNew.Click += BtnNew_Click;
@@ -43,36 +46,87 @@ namespace QuanLyThuChi_DoAn
             btnRefresh.Click += BtnRefresh_Click;
         }
 
+        private void SetupDataGridView()
+        {
+            dgvCategories.AutoGenerateColumns = false;
+            dgvCategories.Columns.Clear();
+            dgvCategories.ReadOnly = true;
+            dgvCategories.RowHeadersVisible = false;
+            dgvCategories.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvCategories.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+
+            var colCategoryName = new DataGridViewTextBoxColumn
+            {
+                Name = "CategoryName",
+                DataPropertyName = "CategoryName",
+                HeaderText = "Tên Danh Mục",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                MinimumWidth = 200
+            };
+
+            var colType = new DataGridViewTextBoxColumn
+            {
+                Name = "Type",
+                DataPropertyName = "Type",
+                HeaderText = "Phân Loại",
+                Width = 140,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+
+            var colTransactionCount = new DataGridViewTextBoxColumn
+            {
+                Name = "TransactionCount",
+                DataPropertyName = "TransactionCount",
+                HeaderText = "Số Giao Dịch",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "N0" }
+            };
+
+            var colTotalAmount = new DataGridViewTextBoxColumn
+            {
+                Name = "TotalAmount",
+                DataPropertyName = "TotalAmount",
+                HeaderText = "Tổng Tiền",
+                Width = 150,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "N0" }
+            };
+
+            var colIsActive = new DataGridViewTextBoxColumn
+            {
+                Name = "IsActive",
+                DataPropertyName = "IsActive",
+                HeaderText = "Trạng Thái",
+                Width = 150,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+
+            dgvCategories.Columns.AddRange(new DataGridViewColumn[]
+            {
+                colCategoryName,
+                colType,
+                colTransactionCount,
+                colTotalAmount,
+                colIsActive
+            });
+        }
+
         private void RefreshDataGrid()
         {
             try
             {
-                // ✅ CRITICAL - Pass SessionManager.TenantId to filter by tenant
                 string keyword = txtSearch.Text.Trim();
                 string filterType = cboFilterType.SelectedItem?.ToString() ?? "Tất cả";
 
-                // ✅ FIX: Get ALL categories WITHOUT keyword filter from Service
-                // (Service may not normalize same as UI, so we filter here with TextUtility)
                 if (!SessionManager.TenantId.HasValue)
                 {
-                    dgvCategories.DataSource = new List<TransactionCategory>();
+                    dgvCategories.DataSource = new List<TransactionCategoryDisplayDTO>();
                     return;
                 }
 
                 int currentTenantId = SessionManager.CurrentTenantId ?? SessionManager.TenantId.Value;
-                List<TransactionCategory> categories = _categoryService.GetCategories(currentTenantId, "");
-
-                // ✅ Filter by keyword with proper normalization (Tiếng Việt)
-                if (!string.IsNullOrWhiteSpace(keyword))
-                {
-                    string keywordNormalized = TextUtility.RemoveVietnameseAccents(keyword);
-
-                    categories = categories.Where(c =>
-                    {
-                        string name = TextUtility.RemoveVietnameseAccents(c.CategoryName ?? string.Empty);
-                        return name.Contains(keywordNormalized);
-                    }).ToList();
-                }
+                
+                // ✅ Using enriched statistics method from Service
+                List<TransactionCategoryDisplayDTO> categories = _categoryService.GetCategoryStats(currentTenantId, keyword);
 
                 // ✅ Filter by Type (Tất cả/Khoản Thu/Khoản Chi)
                 if (filterType != "Tất cả")
@@ -89,25 +143,60 @@ namespace QuanLyThuChi_DoAn
             }
         }
 
-        // 🎨 ĐIỂM NHẤN UX: Định dạng màu sắc Thu (Xanh) - Chi (Đỏ)
+        // 🎨 ĐIỂM NHẤN UX: Định dạng màu sắc Thu (Xanh) - Chi (Đỏ) và Trạng thái
         private void DgvCategories_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvCategories.Columns[e.ColumnIndex].DataPropertyName == "Type" && e.Value != null)
+            if (e.RowIndex < 0 || e.RowIndex >= dgvCategories.Rows.Count) return;
+
+            string colName = dgvCategories.Columns[e.ColumnIndex].Name;
+            var category = dgvCategories.Rows[e.RowIndex].DataBoundItem as TransactionCategoryDisplayDTO;
+            if (category == null) return;
+
+            if (colName == "Type")
             {
-                string type = e.Value.ToString();
-                if (type == "IN")
+                if (category.Type == "IN")
                 {
-                    e.Value = "Khoản Thu (IN)";
+                    e.Value = "➕ Khoản Thu";
                     e.CellStyle.ForeColor = Color.MediumSeaGreen;
-                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    e.CellStyle.Font = new Font(dgvCategories.Font, FontStyle.Bold);
                 }
-                else if (type == "OUT")
+                else if (category.Type == "OUT")
                 {
-                    e.Value = "Khoản Chi (OUT)";
+                    e.Value = "➖ Khoản Chi";
                     e.CellStyle.ForeColor = Color.Crimson;
-                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    e.CellStyle.Font = new Font(dgvCategories.Font, FontStyle.Bold);
+                }
+                e.FormattingApplied = true;
+            }
+            else if (colName == "IsActive")
+            {
+                // ✅ Avoid FormatException: Just set the value and color, let the grid handle display
+                e.Value = category.IsActive ? "🎯 Đang hoạt động" : "💤 Ngừng hoạt động";
+                e.CellStyle.ForeColor = category.IsActive ? Color.SeaGreen : Color.Gray;
+                e.FormattingApplied = true;
+            }
+            else if (colName == "TotalAmount")
+            {
+                // ✅ Don't manually ToString("N0") here because the column already has Format = "N0"
+                // Just change the color based on category type
+                if (category.TotalAmount > 0)
+                {
+                    e.CellStyle.ForeColor = category.Type == "OUT" ? Color.Crimson : Color.MediumSeaGreen;
                 }
             }
+            else if (colName == "TransactionCount")
+            {
+                if (category.TransactionCount == 0)
+                {
+                    e.CellStyle.ForeColor = Color.Silver;
+                }
+            }
+        }
+
+        private void DgvCategories_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            // Silently handle data errors (usually formatting issues during rapid scroll)
+            e.ThrowException = false;
         }
 
         // ✅ Auto-Edit on Select: Enable input fields and set to edit mode
@@ -116,11 +205,21 @@ namespace QuanLyThuChi_DoAn
             if (e.RowIndex < 0) return;
 
             var row = dgvCategories.Rows[e.RowIndex];
-            _selectedCategory = (TransactionCategory)row.DataBoundItem;
+            var dto = row.DataBoundItem as TransactionCategoryDisplayDTO;
+            if (dto == null) return;
+
+            // ✅ Map DTO back to Entity for the service operations
+            _selectedCategory = new TransactionCategory
+            {
+                CategoryId = dto.CategoryId,
+                CategoryName = dto.CategoryName,
+                Type = dto.Type,
+                IsActive = dto.IsActive
+            };
 
             // Populate textboxes with selected data
             txtCategoryName.Text = _selectedCategory.CategoryName ?? "";
-            cboType.SelectedItem = _selectedCategory.Type ?? "IN";
+            cboType.SelectedItem = _selectedCategory.Type == "IN" ? "Thu" : "Chi";
 
             // ✅ CHANGE: Enable input fields for edit (Auto-Edit on Select)
             SetInputFieldsEnabled(true);

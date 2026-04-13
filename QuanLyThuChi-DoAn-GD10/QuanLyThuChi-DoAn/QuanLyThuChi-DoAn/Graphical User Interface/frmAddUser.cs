@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -149,12 +149,21 @@ namespace QuanLyThuChi_DoAn
             cbBranch.DataSource = branches;
             cbBranch.DisplayMember = nameof(Branch.BranchName);
             cbBranch.ValueMember = nameof(Branch.BranchId);
-            cbBranch.SelectedIndex = branches.Count > 0 ? 0 : -1;
+            
+            if (SessionManager.IsBranchManager && SessionManager.CurrentBranchId.HasValue)
+            {
+                cbBranch.SelectedValue = SessionManager.CurrentBranchId.Value;
+                cbBranch.Enabled = false;
+            }
+            else
+            {
+                cbBranch.SelectedIndex = branches.Count > 0 ? 0 : -1;
+            }
 
             int currentPriority = SessionManager.CurrentPriorityLevel;
             var roles = await _userService.GetAssignableRolesByTenantAsync(tenantId);
             var roleOptions = roles
-                .Where(r => r.PriorityLevel > currentPriority)
+                .Where(r => r.PriorityLevel < currentPriority)
                 .Select(r => new RoleOption
                 {
                     RoleId = r.RoleId,
@@ -188,7 +197,7 @@ namespace QuanLyThuChi_DoAn
             var selectedRole = cbRole.SelectedItem as RoleOption;
             bool requiresBranch = selectedRole?.RequiresBranch ?? true;
 
-            cbBranch.Enabled = requiresBranch;
+            cbBranch.Enabled = requiresBranch && !SessionManager.IsBranchManager;
             lblBranch.Text = requiresBranch ? "Chi nhánh (*)" : "Chi nhánh";
 
             if (!requiresBranch)
