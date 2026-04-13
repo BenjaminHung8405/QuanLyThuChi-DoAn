@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuChi_DoAn
+namespace QuanLyThuChi_DoAn
 {
     partial class ucPartner
     {
@@ -365,6 +365,7 @@
             txtInitialDebt.TabIndex = 7;
             txtInitialDebt.TextAlign = HorizontalAlignment.Right;
             txtInitialDebt.ThousandsSeparator = true;
+            txtInitialDebt.DecimalPlaces = 0;
             // 
             // label6
             // 

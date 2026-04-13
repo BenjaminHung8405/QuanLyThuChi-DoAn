@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -144,16 +144,16 @@ namespace QuanLyThuChi_DoAn
         private void UpdateDashboardCards(DashboardSummaryDTO summary)
         {
             // 1. CAP NHAT CARD DOANH THU
-            lblNetIncome.Text = summary.NetIncome.ToString("N0") + " VNĐ";
+            lblNetIncome.Text = summary.NetIncome.ToString("N0") + " đ";
             lblOutputVAT.Text = $"+ Thuế GTGT thu hộ (Đầu ra): {summary.OutputVAT:N0} đ";
 
             // 2. CAP NHAT CARD CHI PHI
-            lblNetExpense.Text = summary.NetExpense.ToString("N0") + " VNĐ";
+            lblNetExpense.Text = summary.NetExpense.ToString("N0") + " đ";
             lblInputVAT.Text = $"+ Thuế GTGT được khấu trừ (Đầu vào): {summary.InputVAT:N0} đ";
 
             // 3. CAP NHAT CARD LOI NHUAN & THUE
-            lblNetProfit.Text = summary.NetProfit.ToString("N0") + " VNĐ";
-            lblEstimatedTax.Text = summary.EstimatedTaxPayable.ToString("N0") + " VNĐ";
+            lblNetProfit.Text = summary.NetProfit.ToString("N0") + " đ";
+            lblEstimatedTax.Text = summary.EstimatedTaxPayable.ToString("N0") + " đ";
 
             // UX NANG CAO: DOI MAU THEO SO LIEU THUC TE
             if (summary.NetProfit < 0)
@@ -190,7 +190,7 @@ namespace QuanLyThuChi_DoAn
             if (positiveStats.Count == 0)
             {
                 ListViewItem emptyItem = new ListViewItem("Chưa có phát sinh chi tiêu");
-                emptyItem.SubItems.Add("0 VNĐ");
+                emptyItem.SubItems.Add("0 đ");
                 emptyItem.SubItems.Add("0.00%");
                 _lvExpenseBreakdown.Items.Add(emptyItem);
                 ResizeExpenseColumns();
@@ -202,7 +202,7 @@ namespace QuanLyThuChi_DoAn
             {
                 decimal ratio = totalAmount > 0 ? (stat.TotalAmount / totalAmount) * 100m : 0m;
                 ListViewItem row = new ListViewItem(stat.CategoryName);
-                row.SubItems.Add($"{stat.TotalAmount:N0} VNĐ");
+                row.SubItems.Add($"{stat.TotalAmount:N0} đ");
                 row.SubItems.Add($"{ratio:N2}%");
                 _lvExpenseBreakdown.Items.Add(row);
             }

@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuChi_DoAn
+namespace QuanLyThuChi_DoAn
 {
     partial class ucTransaction
     {
@@ -543,6 +543,7 @@
             txtSubTotal.TabIndex = 3;
             txtSubTotal.TextAlign = HorizontalAlignment.Right;
             txtSubTotal.ThousandsSeparator = true;
+            txtSubTotal.DecimalPlaces = 0;
             // 
             // lblSubTotal
             // 

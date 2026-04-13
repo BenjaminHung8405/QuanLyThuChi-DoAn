@@ -117,7 +117,7 @@ namespace QuanLyThuChi_DoAn
             mnuDashboard.Visible = SessionManager.CanViewSummaryReports;
             mnuReconciliation.Visible = SessionManager.CanViewSummaryReports;
             mnuInternalTransfer.Visible = SessionManager.CanTransferInterBranch;
-            mnuDebtManagement.Visible = SessionManager.CanApproveDebt;
+            mnuDebtManagement.Visible = SessionManager.CanAccessDebtScreen;
             mnuAuditLogs.Visible = SessionManager.IsSuperAdmin || SessionManager.IsTenantAdmin;
 
             string currentRoleCode = (SessionManager.CurrentRoleCode ?? string.Empty).Trim().ToUpperInvariant();

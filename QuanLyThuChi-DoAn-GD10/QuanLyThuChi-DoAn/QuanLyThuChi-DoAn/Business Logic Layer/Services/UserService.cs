@@ -208,7 +208,6 @@ namespace QuanLyThuChi_DoAn.BLL.Services
                                     // Set role info first and treat numeric roleId as authoritative
                                     SessionManager.RoleId = roleId;
                                     SessionManager.CurrentRoleCode = roleCode ?? string.Empty;
-                                    SessionManager.CurrentPriorityLevel = priorityLevel;
                                     SessionManager.RoleName = roleName ?? "Unknown";
 
                                     // Warn if DB has inconsistent roleId/roleName

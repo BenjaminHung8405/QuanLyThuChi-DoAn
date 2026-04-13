@@ -114,7 +114,9 @@ namespace QuanLyThuChi_DoAn.BLL.Services
 
             if (string.IsNullOrWhiteSpace(status))
             {
-                query = query.Where(d => d.Status != "PAID");
+                // Mặc định báo cáo tổng chỉ tính các khoản nợ đã được DUYỆT (PENDING, PARTIALLY_PAID)
+                // Loại bỏ PAID (đã xong) và NEW (chưa duyệt - Maker Checker)
+                query = query.Where(d => d.Status != "PAID" && d.Status != "NEW");
             }
             else
             {
@@ -246,8 +248,11 @@ namespace QuanLyThuChi_DoAn.BLL.Services
         {
             try
             {
-                if (!SessionManager.CanApproveDebt)
-                    throw new UnauthorizedAccessException("Bạn không có quyền duyệt công nợ.");
+                // Chặn đứng Staff nếu cố tình gọi API duyệt
+                if (SessionManager.IsStaff)
+                {
+                    throw new UnauthorizedAccessException("Bạn chỉ có quyền lập phiếu. Vui lòng liên hệ Quản lý để duyệt công nợ này!");
+                }
 
                 IQueryable<Debt> query = _context.Debts;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -290,7 +290,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 
             if (amount > _remaining)
             {
-                MessageBox.Show($"Số tiền trả ({amount:N0}) không được lớn hơn dư nợ ({_remaining:N0})!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Số tiền trả ({amount:N0} đ) không được lớn hơn dư nợ ({_remaining:N0} đ)!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 

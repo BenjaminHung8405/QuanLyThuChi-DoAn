@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuChi_DoAn.Graphical_User_Interface
+namespace QuanLyThuChi_DoAn.Graphical_User_Interface
 {
     partial class frmDebtPayment
     {
@@ -210,7 +210,11 @@
             this.nudAmount.Name = "nudAmount";
             this.nudAmount.Size = new System.Drawing.Size(200, 23);
             this.nudAmount.TabIndex = 0;
-            this.nudAmount.Maximum = new decimal(new int[] { 1215752191, 23, 0, 0 });
+            this.nudAmount.Maximum = new decimal(new int[] {
+            -1539607552,
+            465,
+            0,
+            0});
             this.nudAmount.DecimalPlaces = 0;
             this.nudAmount.ThousandsSeparator = true;
             this.nudAmount.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;

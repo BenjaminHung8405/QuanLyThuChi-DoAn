@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuChi_DoAn
+namespace QuanLyThuChi_DoAn
 {
     partial class ucCashFund
     {
@@ -404,6 +404,7 @@
             txtBalance.TabIndex = 6;
             txtBalance.TextAlign = HorizontalAlignment.Right;
             txtBalance.ThousandsSeparator = true;
+            txtBalance.DecimalPlaces = 0;
             // 
             // label3
             // 

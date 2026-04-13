@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuChi_DoAn
+namespace QuanLyThuChi_DoAn
 {
     partial class frmFundTransfer
     {
@@ -57,9 +57,9 @@
             panel3.SuspendLayout();
             panel2.SuspendLayout();
             panel4.SuspendLayout();
-            panel5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)txtBankFee).BeginInit();
             ((System.ComponentModel.ISupportInitialize)txtAmount).BeginInit();
+            panel5.SuspendLayout();
             SuspendLayout();
             // 
             // panel1
@@ -222,6 +222,7 @@
             // 
             // panel4
             // 
+            panel4.AutoScroll = true;
             panel4.Controls.Add(txtNotes);
             panel4.Controls.Add(label6);
             panel4.Controls.Add(dateTimePicker1);
@@ -241,10 +242,10 @@
             // 
             txtNotes.BorderStyle = BorderStyle.FixedSingle;
             txtNotes.Dock = DockStyle.Top;
-            txtNotes.Location = new Point(16, 263);
+            txtNotes.Location = new Point(16, 281);
             txtNotes.Multiline = true;
             txtNotes.Name = "txtNotes";
-            txtNotes.Size = new Size(212, 62);
+            txtNotes.Size = new Size(195, 62);
             txtNotes.TabIndex = 11;
             // 
             // label6
@@ -252,7 +253,7 @@
             label6.AutoSize = true;
             label6.Dock = DockStyle.Top;
             label6.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label6.Location = new Point(16, 210);
+            label6.Location = new Point(16, 228);
             label6.Name = "label6";
             label6.Padding = new Padding(0, 16, 0, 16);
             label6.Size = new Size(82, 53);
@@ -264,9 +265,9 @@
             dateTimePicker1.CustomFormat = "dd/MM/yyyy";
             dateTimePicker1.Dock = DockStyle.Top;
             dateTimePicker1.Format = DateTimePickerFormat.Custom;
-            dateTimePicker1.Location = new Point(16, 187);
+            dateTimePicker1.Location = new Point(16, 205);
             dateTimePicker1.Name = "dateTimePicker1";
-            dateTimePicker1.Size = new Size(212, 23);
+            dateTimePicker1.Size = new Size(195, 23);
             dateTimePicker1.TabIndex = 9;
             // 
             // label5
@@ -274,7 +275,7 @@
             label5.AutoSize = true;
             label5.Dock = DockStyle.Top;
             label5.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label5.Location = new Point(16, 134);
+            label5.Location = new Point(16, 152);
             label5.Name = "label5";
             label5.Padding = new Padding(0, 16, 0, 16);
             label5.Size = new Size(111, 53);
@@ -286,13 +287,14 @@
             txtBankFee.BorderStyle = BorderStyle.FixedSingle;
             txtBankFee.Dock = DockStyle.Top;
             txtBankFee.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
-            txtBankFee.Location = new Point(16, 111);
-            txtBankFee.Maximum = decimal.MaxValue;
+            txtBankFee.Location = new Point(16, 129);
+            txtBankFee.Maximum = new decimal(new int[] { -1539607552, 465, 0, 0 });
             txtBankFee.Name = "txtBankFee";
-            txtBankFee.Size = new Size(212, 23);
+            txtBankFee.Size = new Size(195, 23);
             txtBankFee.TabIndex = 13;
             txtBankFee.TextAlign = HorizontalAlignment.Right;
             txtBankFee.ThousandsSeparator = true;
+            txtBankFee.DecimalPlaces = 0;
             // 
             // label8
             // 
@@ -302,7 +304,7 @@
             label8.Location = new Point(16, 76);
             label8.Name = "label8";
             label8.Padding = new Padding(0, 16, 0, 16);
-            label8.Size = new Size(96, 35);
+            label8.Size = new Size(110, 53);
             label8.TabIndex = 12;
             label8.Text = "Phí giao dịch";
             // 
@@ -312,12 +314,13 @@
             txtAmount.Dock = DockStyle.Top;
             txtAmount.Increment = new decimal(new int[] { 1000, 0, 0, 0 });
             txtAmount.Location = new Point(16, 53);
-            txtAmount.Maximum = decimal.MaxValue;
+            txtAmount.Maximum = new decimal(new int[] { -1539607552, 465, 0, 0 });
             txtAmount.Name = "txtAmount";
-            txtAmount.Size = new Size(212, 23);
+            txtAmount.Size = new Size(195, 23);
             txtAmount.TabIndex = 7;
             txtAmount.TextAlign = HorizontalAlignment.Right;
             txtAmount.ThousandsSeparator = true;
+            txtAmount.DecimalPlaces = 0;
             // 
             // label4
             // 
@@ -382,9 +385,9 @@
             panel2.PerformLayout();
             panel4.ResumeLayout(false);
             panel4.PerformLayout();
-            panel5.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)txtBankFee).EndInit();
             ((System.ComponentModel.ISupportInitialize)txtAmount).EndInit();
+            panel5.ResumeLayout(false);
             ResumeLayout(false);
         }
 

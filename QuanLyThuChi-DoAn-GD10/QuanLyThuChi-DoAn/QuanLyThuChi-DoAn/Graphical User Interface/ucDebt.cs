@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -66,8 +66,8 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             btnResetView.Click += btnResetView_Click;
             btnApproveDebt.Click += btnApproveDebt_Click;
 
-            btnPayDebt.Visible = SessionManager.CanApproveDebt;
-            btnApproveDebt.Visible = SessionManager.CanApproveDebt;
+            btnPayDebt.Visible = SessionManager.IsBranchManager || SessionManager.IsTenantAdmin;
+            btnApproveDebt.Visible = SessionManager.IsBranchManager || SessionManager.IsTenantAdmin;
 
             UpdateToggleViewAppearance();
             ApplyFilterModeUI();
@@ -667,10 +667,12 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
             dgvDebts.DataSource = displayData;
 
             decimal totalReceivable = displayData
-                .Where(x => string.Equals(x.RawDebtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase))
+                .Where(x => string.Equals(x.RawDebtType, "RECEIVABLE", StringComparison.OrdinalIgnoreCase) 
+                            && !string.Equals(x.RawStatus, "NEW", StringComparison.OrdinalIgnoreCase))
                 .Sum(x => x.Remaining);
             decimal totalPayable = displayData
-                .Where(x => string.Equals(x.RawDebtType, "PAYABLE", StringComparison.OrdinalIgnoreCase))
+                .Where(x => string.Equals(x.RawDebtType, "PAYABLE", StringComparison.OrdinalIgnoreCase)
+                            && !string.Equals(x.RawStatus, "NEW", StringComparison.OrdinalIgnoreCase))
                 .Sum(x => x.Remaining);
 
             lblTotalReceivable.Text = $"Khách nợ: {totalReceivable:N0} đ";
@@ -952,7 +954,7 @@ namespace QuanLyThuChi_DoAn.Graphical_User_Interface
                 return;
             }
 
-            btnApproveDebt.Visible = SessionManager.CanApproveDebt;
+            btnApproveDebt.Visible = SessionManager.IsBranchManager || SessionManager.IsTenantAdmin;
 
             if (_isLoadingData || _isOpeningPayment)
             {

@@ -259,6 +259,7 @@
             btnAddNewDebt.Text = "Thêm công nợ";
             btnAddNewDebt.TextAlign = ContentAlignment.MiddleRight;
             btnAddNewDebt.UseVisualStyleBackColor = false;
+            btnAddNewDebt.Click += btnAddNewDebt_Click;
             // 
             // pnlStats
             // 

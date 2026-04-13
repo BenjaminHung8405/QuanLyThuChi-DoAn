@@ -73,7 +73,17 @@ namespace QuanLyThuChi_DoAn.BLL.Common
         }
 
         // Số càng lớn quyền càng cao: 100=SuperAdmin, 80=TenantAdmin, 50=BranchManager, 10=Staff
-        public static int CurrentPriorityLevel { get; set; } = int.MaxValue;
+        public static int CurrentPriorityLevel
+        {
+            get
+            {
+                if (IsSuperAdmin) return 100;
+                if (IsTenantAdmin) return 80;
+                if (IsBranchManager) return 50;
+                if (IsStaff) return 10;
+                return 0; // Default/Unknown
+            }
+        }
         public static string RoleName { get; set; } = string.Empty;
 
         // Helper: map RoleId to enum for clearer checks
@@ -107,6 +117,7 @@ namespace QuanLyThuChi_DoAn.BLL.Common
 
         public static bool CanChangeTenantContext => IsSuperAdmin;
         public static bool CanChangeBranchContext => IsSuperAdmin || IsTenantAdmin;
+        public static bool CanAccessDebtScreen => IsSuperAdmin || IsTenantAdmin || IsBranchManager || IsStaff;
         public static bool CanApproveDebt => IsSuperAdmin || IsTenantAdmin || IsBranchManager;
         public static bool CanManageUsers => IsSuperAdmin || IsTenantAdmin;
         public static bool CanManageBranches => IsSuperAdmin || IsTenantAdmin;
@@ -144,7 +155,6 @@ namespace QuanLyThuChi_DoAn.BLL.Common
             FixedBranchId = null;
             RoleId = 0;
             RoleCode = string.Empty;
-            CurrentPriorityLevel = int.MaxValue;
             RoleName = string.Empty;
         }
 

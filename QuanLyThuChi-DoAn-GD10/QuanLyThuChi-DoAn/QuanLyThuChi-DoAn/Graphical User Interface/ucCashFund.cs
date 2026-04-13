@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -82,7 +82,7 @@ namespace QuanLyThuChi_DoAn
             dgvCashFunds.DataSource = null;
             dgvCashFunds.DataSource = funds;
 
-            lblTotalBalance.Text = funds.Sum(f => f.Balance).ToString("N0");
+            lblTotalBalance.Text = funds.Sum(f => f.Balance).ToString("N0") + " đ";
 
             ResetForm();
             SetInputFieldsEnabled(false); btnSyncSelected.Enabled = false;
@@ -126,7 +126,7 @@ namespace QuanLyThuChi_DoAn
             }
 
             // Cập nhật tổng số dư trên sổ
-            lblTotalBalance.Text = funds.Sum(f => f.Balance).ToString("N0");
+            lblTotalBalance.Text = funds.Sum(f => f.Balance).ToString("N0") + " đ";
 
             ResetForm();
             SetInputFieldsEnabled(false);
@@ -431,7 +431,7 @@ namespace QuanLyThuChi_DoAn
 
             e.CellStyle.Format = "N0";
             e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-            e.Value = string.Format("{0:#,0} đ", balance);
+            e.Value = balance.ToString("N0") + " đ";
 
             if (balance < 500_000m)
             {

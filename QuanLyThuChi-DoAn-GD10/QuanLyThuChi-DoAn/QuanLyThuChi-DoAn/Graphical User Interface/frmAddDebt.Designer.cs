@@ -228,6 +228,7 @@ namespace QuanLyThuChi_DoAn
             txtTotalAmount.TabIndex = 2;
             txtTotalAmount.TextAlign = HorizontalAlignment.Right;
             txtTotalAmount.ThousandsSeparator = true;
+            txtTotalAmount.DecimalPlaces = 0;
             // 
             // lblDueDate
             // 
